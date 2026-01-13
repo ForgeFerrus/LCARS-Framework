@@ -1,0 +1,20 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- LCARS brushes used by controls -->
+    <SolidColorBrush x:Key="LCARS.Black" Color="#000000"/>
+    <SolidColorBrush x:Key="LCARS.White" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="LCARS.Orange" Color="#FF9900"/>
+    <SolidColorBrush x:Key="LCARS.Purple" Color="#663399"/>
+    <SolidColorBrush x:Key="LCARS.Blue" Color="#3399FF"/>
+    <SolidColorBrush x:Key="LCARS.Cyan" Color="#33CCFF"/>
+    <SolidColorBrush x:Key="LCARS.Magenta" Color="#FF33CC"/>
+
+    <!-- Base text style -->
+    <Style x:Key="LCARS.Text" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource LCARS.White}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+    </Style>
+</ResourceDictionary>

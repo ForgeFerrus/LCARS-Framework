@@ -1,0 +1,16 @@
+{
+  "GEANT4_PATH": "C:\\geant4",
+  "env_vars": {
+    "GEANT4_INSTALL": "C:\\geant4\\install",
+    "GEANT4_INSTALL_DATA": "C:\\geant4\\data"
+  },
+  "projects": {
+    "auto_discover": true,
+    "default_build_type": "Release"
+  },
+  "ui": {
+    "theme": "lcars",
+    "window_width": 1400,
+    "window_height": 900
+  }
+}

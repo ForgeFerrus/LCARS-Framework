@@ -1,0 +1,37 @@
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\Control\LCARSButton.baml
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\Style\Base.baml
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\App.baml
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\Control\LCARSButton.g.cs
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\MainWindow.g.cs
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\App.g.cs
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\GeneratedInternalTypeHelper.g.cs
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\LCARS Framework_MarkupCompile.cache
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\LCARS Framework_MarkupCompile.lref
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\bin\Debug\net9.0-windows\LCARS Framework.exe
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\bin\Debug\net9.0-windows\LCARS Framework.deps.json
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\bin\Debug\net9.0-windows\LCARS Framework.runtimeconfig.json
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\bin\Debug\net9.0-windows\LCARS Framework.dll
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\bin\Debug\net9.0-windows\LCARS Framework.pdb
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\MainWindow.baml
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\LCARS Framework.g.resources
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\LCARS Framework.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\LCARS Framework.AssemblyInfoInputs.cache
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\LCARS Framework.AssemblyInfo.cs
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\LCARS Framework.csproj.CoreCompileInputs.cache
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\LCARS Framework.dll
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\refint\LCARS Framework.dll
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\LCARS Framework.pdb
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\LCARS Framework.genruntimeconfig.cache
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\ref\LCARS Framework.dll
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\LauncherWindow.baml
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\LauncherWindow.g.cs
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\Control\LCARSComb.baml
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\Control\LCARSPanel.baml
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\Control\LCARSRib.baml
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\Control\LCARSComb.g.cs
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\Control\LCARSPanel.g.cs
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\Control\LCARSRib.g.cs
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\Control\LCARSMenu.baml
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\Control\LCARSMenu.g.cs
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\UI\LCARSModalWindow.baml
+C:\Users\Forge\MyProject\Geant4\Enterprise\NCC-project\LCARS-Framework\lcars_data\LCARS Framework\obj\Debug\net9.0-windows\UI\LCARSModalWindow.g.cs

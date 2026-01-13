@@ -1,0 +1,43 @@
+﻿<Window x:Class="LCARSWorkbench.LauncherWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LCARS Launcher" Width="480" Height="360" Background="Black">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Launcher - Select Faction and Era" Foreground="White" FontWeight="Bold" FontSize="16"/>
+
+        <StackPanel Grid.Row="1" Margin="6">
+            <TextBlock Text="Faction" Foreground="White" FontWeight="Bold"/>
+            <ListBox x:Name="LauncherFactionList" Margin="4" SelectedIndex="0">
+                <ListBoxItem>Federation</ListBoxItem>
+                <ListBoxItem>Romulan</ListBoxItem>
+                <ListBoxItem>Klingon</ListBoxItem>
+                <ListBoxItem>Cardassian</ListBoxItem>
+            </ListBox>
+
+            <TextBlock Text="Era" Foreground="White" FontWeight="Bold" Margin="8,12,0,4"/>
+            <ComboBox x:Name="LauncherEraComboBox" Margin="4" SelectedIndex="2">
+                <ComboBoxItem>Era22</ComboBoxItem>
+                <ComboBoxItem>Era23</ComboBoxItem>
+                <ComboBoxItem>Era24</ComboBoxItem>
+                <ComboBoxItem>Era25</ComboBoxItem>
+                <ComboBoxItem>Era26</ComboBoxItem>
+                <ComboBoxItem>Era27</ComboBoxItem>
+                <ComboBoxItem>Era28</ComboBoxItem>
+                <ComboBoxItem>Era29</ComboBoxItem>
+                <ComboBoxItem>Era30</ComboBoxItem>
+            </ComboBox>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="4">
+            <Button Width="90" Margin="4" Click="OnOk">OK</Button>
+            <Button Width="90" Margin="4" Click="OnCancel">Cancel</Button>
+            <Button Width="140" Margin="4" Click="OnBuildThemeDll">Build Theme DLL</Button>
+        </StackPanel>
+    </Grid>
+</Window>

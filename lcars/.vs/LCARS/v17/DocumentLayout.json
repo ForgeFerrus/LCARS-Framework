@@ -1,0 +1,53 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{4D4C7B75-CD02-45F3-BC1E-D40495D3BE8C}|LCARS.vbproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{4D4C7B75-CD02-45F3-BC1E-D40495D3BE8C}|LCARS.vbproj|solutionrelative:mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4D4C7B75-CD02-45F3-BC1E-D40495D3BE8C}|LCARS.vbproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars\\mainwindow.xaml.vb||{2C015C70-C72C-11D0-88C3-00A0C9110049}",
+      "RelativeMoniker": "D:0:0:{4D4C7B75-CD02-45F3-BC1E-D40495D3BE8C}|LCARS.vbproj|solutionrelative:mainwindow.xaml.vb||{2C015C70-C72C-11D0-88C3-00A0C9110049}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "MainWindow.xaml",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars\\MainWindow.xaml",
+              "RelativeDocumentMoniker": "MainWindow.xaml",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars\\MainWindow.xaml",
+              "RelativeToolTip": "MainWindow.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-01-12T00:16:27.478Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "MainWindow.xaml.vb",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars\\MainWindow.xaml.vb",
+              "RelativeDocumentMoniker": "MainWindow.xaml.vb",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars\\MainWindow.xaml.vb",
+              "RelativeToolTip": "MainWindow.xaml.vb",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAqwAsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003361|",
+              "WhenOpened": "2025-01-12T00:16:12.41Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+﻿using LCARSFramework.Control;
+using LCARSFramework.Theme;
+using System.Data;
+using System.Windows;
+using System.Windows.Controls;
+
+namespace LCARSWorkbench
+{
+    public partial class MainWindow : Window
+    {
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            // Initialize preview with defaults
+            FactionList.SelectionChanged += OnSelectionChanged;
+            EraComboBox.SelectionChanged += OnSelectionChanged;
+            UpdatePreview();
+        }
+
+        private void OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdatePreview();
+        }
+
+        private void UpdatePreview()
+        {
+            if (FactionList.SelectedItem is ListBoxItem fItem && EraComboBox.SelectedItem is ComboBoxItem eItem)
+            {
+                if (System.Enum.TryParse<Faction>(fItem.Content.ToString(), out var faction))
+                {
+                    ActivateButton.Faction = faction;
+                    SamplePanel.Faction = faction;
+                    SampleRib.Faction = faction;
+                    SampleComb.Faction = faction;
+                    PreviewMenu.RenderPreview(faction, SamplePanel.Era);
+                }
+
+                if (System.Enum.TryParse<Era>(eItem.Content.ToString(), out var era))
+                {
+                    ActivateButton.Era = era;
+                    SamplePanel.Era = era;
+                    SampleRib.Role = Role.Tactical; // keep role defaults for now
+                    SampleComb.Role = Role.Interface;
+                    PreviewMenu.RenderPreview(SamplePanel.Faction, era);
+                }
+            }
+        }
+
+        private void OnOpenLauncher(object sender, RoutedEventArgs e)
+        {
+            var dlg = new LauncherWindow();
+            if (dlg.ShowDialog() == true)
+            {
+                // Apply selection
+                ActivateButton.Faction = dlg.SelectedFaction;
+                ActivateButton.Era = dlg.SelectedEra;
+
+                // Also update side selectors
+                FactionList.SelectedItem = null;
+                foreach (ListBoxItem it in FactionList.Items)
+                    if (it.Content.ToString() == dlg.SelectedFaction.ToString()) { FactionList.SelectedItem = it; break; }
+
+                foreach (ComboBoxItem it in EraComboBox.Items)
+                    if (it.Content.ToString() == dlg.SelectedEra.ToString()) { EraComboBox.SelectedItem = it; break; }
+
+                UpdatePreview();
+            }
+        }
+
+        private void OnActivate(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("LCARS Button pressed!");
+        }
+    }
+}

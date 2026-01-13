@@ -1,0 +1,29 @@
+[
+  {
+    "class": "QPushButton",
+    "objectName": "run_button",
+    "x": 20,
+    "y": 20,
+    "w": 140,
+    "h": 40,
+    "text": "Run Project"
+  },
+  {
+    "class": "QLabel",
+    "objectName": "title_label",
+    "x": 200,
+    "y": 18,
+    "w": 400,
+    "h": 40,
+    "text": "GEANT4 SIMULATION CONTROL"
+  },
+  {
+    "class": "QLineEdit",
+    "objectName": "project_path",
+    "x": 20,
+    "y": 80,
+    "w": 360,
+    "h": 30,
+    "text": "./projects/example"
+  }
+]

@@ -1,0 +1,93 @@
+﻿using System.Windows;
+using System.Windows.Controls;
+using LCARSFramework.Theme;
+using System.IO;
+using System.Diagnostics;
+using System;
+
+namespace LCARSWorkbench
+{
+    public partial class LauncherWindow : Window
+    {
+        public Faction SelectedFaction { get; private set; }
+        public Era SelectedEra { get; private set; }
+        public LauncherWindow()
+        {
+            InitializeComponent();
+        }
+
+        private void OnOk(object sender, RoutedEventArgs e)
+        {
+            if (LauncherFactionList.SelectedItem is ListBoxItem fItem && LauncherEraComboBox.SelectedItem is ComboBoxItem eItem)
+            {
+                System.Enum.TryParse<Faction>(fItem.Content.ToString(), out var fac);
+                System.Enum.TryParse<Era>(eItem.Content.ToString(), out var era);
+                SelectedFaction = fac;
+                SelectedEra = era;
+                DialogResult = true;
+            }
+            else DialogResult = false;
+            Close();
+        }
+
+        private void OnCancel(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
+            Close();
+        }
+
+        private void OnBuildThemeDll(object sender, RoutedEventArgs e)
+        {
+            // Simple exporter: generate a class library project with palette class for selected faction/era
+            if (!(LauncherFactionList.SelectedItem is ListBoxItem fItem) || !(LauncherEraComboBox.SelectedItem is ComboBoxItem eItem))
+            {
+                MessageBox.Show("Select a faction and era first.");
+                return;
+            }
+
+            System.Enum.TryParse<Faction>(fItem.Content.ToString(), out var fac);
+            System.Enum.TryParse<Era>(eItem.Content.ToString(), out var era);
+
+            try
+            {
+                var outDir = Path.Combine(Directory.GetCurrentDirectory(), "output", fac.ToString(), era.ToString());
+                Directory.CreateDirectory(outDir);
+
+                // create csproj
+                var projName = $"LCARS.Theme.{fac}.{era}";
+                var csproj = $@"<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <TargetFramework>net9.0-windows</TargetFramework>\n    <UseWPF>true</UseWPF>\n    <ImplicitUsings>enable</ImplicitUsings>\n  </PropertyGroup>\n</Project>";
+                File.WriteAllText(Path.Combine(outDir, projName + ".csproj"), csproj);
+
+                // create theme class
+                var colors = LCARSFramework.LCARS.Theme.ThemeManager.GetColors(fac, era);
+                var classCode = GeneratePaletteClass(projName, fac, era, colors);
+                File.WriteAllText(Path.Combine(outDir, "ThemeData.cs"), classCode);
+
+                // run dotnet build
+                var psi = new ProcessStartInfo("dotnet", "build") { WorkingDirectory = outDir, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+                var proc = Process.Start(psi);
+                proc.WaitForExit(60000);
+                var stdout = proc.StandardOutput.ReadToEnd();
+                var stderr = proc.StandardError.ReadToEnd();
+
+                if (proc.ExitCode == 0)
+                {
+                    MessageBox.Show($"Built {projName} successfully. Output: " + stdout);
+                }
+                else
+                {
+                    MessageBox.Show($"Build failed. Error: " + stderr);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Export failed: " + ex.Message);
+            }
+        }
+
+        private string GeneratePaletteClass(string ns, Faction fac, Era era, System.Windows.Media.Color[] colors)
+        {
+            var entries = new System.Text.StringBuilder();
+            for (int i = 0; i < colors.Length; i++)
+            {
+                entries.AppendLine($"        public static readonly string Color{i} = \"#{colors[i].R:X2}{colors[i].G:X2}{colors[i].B:X2}\";");

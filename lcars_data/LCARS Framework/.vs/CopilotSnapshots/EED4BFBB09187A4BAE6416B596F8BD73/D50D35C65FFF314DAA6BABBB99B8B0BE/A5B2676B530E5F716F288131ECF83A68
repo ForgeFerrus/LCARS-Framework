@@ -1,0 +1,13 @@
+﻿using System.Windows;
+using System.Windows.Controls;
+using LCARSFramework.Theme;
+
+namespace LCARSFramework.Control
+{
+    public class LCARSPanel : UserControl
+    {
+        public string Label { get; set; }
+        public Faction Faction { get; set; }
+        public Era Era { get; set; }
+    }
+}

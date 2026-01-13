@@ -1,0 +1,23 @@
+﻿using LCARSFramework.LCARS.Theme;
+using System.Data;
+using System.Windows.Media;
+
+namespace LCARSFramework.LCARS.Theme
+{
+    public static class ThemeManager
+    {
+        public static Color[] GetColors(Faction faction, Era? era = null, Role? role = null)
+        {
+            return faction switch
+            {
+                Faction.Federation => LCARSPalette.Federation[era ?? Era.Era24],
+                Faction.Romulan => LCARSPalette.Romulan[role ?? Role.Tactical],
+                Faction.Klingon => LCARSPalette.Klingon[role ?? Role.Command],
+                Faction.Cardassian => LCARSPalette.Cardassian[role ?? Role.Ops],
+                _ => LCARSPalette.Federation[Era.Era24]
+            };
+        }
+
+        public static SolidColorBrush Brush(Color c) => new SolidColorBrush(c);
+    }
+}

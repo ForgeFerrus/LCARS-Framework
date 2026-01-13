@@ -1,0 +1,156 @@
+[
+  {
+    "type": "rect",
+    "position": [
+      70,
+      50
+    ],
+    "size": [
+      710,
+      430
+    ],
+    "color": "#9EA5BA",
+    "text": "DATA",
+    "logic": ""
+  },
+  {
+    "type": "\u041a\u043e\u043b\u043e",
+    "position": [
+      50,
+      30
+    ],
+    "size": [
+      50,
+      50
+    ],
+    "color": "#9EA5BA",
+    "text": "DATA",
+    "logic": ""
+  },
+  {
+    "type": "\u0422\u0440\u0438\u043a\u0443\u0442\u043d\u0438\u043a",
+    "position": [
+      -240,
+      60
+    ],
+    "size": [
+      70,
+      40
+    ],
+    "color": "#6D748C",
+    "text": "DATA",
+    "logic": ""
+  },
+  {
+    "type": "\u041f\u0440\u044f\u043c\u043e\u043a\u0443\u0442\u043d\u0438\u043a",
+    "position": [
+      40,
+      400
+    ],
+    "size": [
+      60,
+      60
+    ],
+    "color": "#E7442A",
+    "text": "DATA",
+    "logic": ""
+  },
+  {
+    "type": "\u041f\u0440\u044f\u043c\u043e\u043a\u0443\u0442\u043d\u0438\u043a",
+    "position": [
+      40,
+      320
+    ],
+    "size": [
+      60,
+      60
+    ],
+    "color": "#37A6D1",
+    "text": "DATA",
+    "logic": ""
+  },
+  {
+    "type": "\u041f\u0440\u044f\u043c\u043e\u043a\u0443\u0442\u043d\u0438\u043a",
+    "position": [
+      40,
+      240
+    ],
+    "size": [
+      60,
+      60
+    ],
+    "color": "#FFBB00",
+    "text": "DATA",
+    "logic": ""
+  },
+  {
+    "type": "\u041f\u0440\u044f\u043c\u043e\u043a\u0443\u0442\u043d\u0438\u043a",
+    "position": [
+      110,
+      60
+    ],
+    "size": [
+      660,
+      410
+    ],
+    "color": "#2F3749",
+    "text": "DATA",
+    "logic": ""
+  },
+  {
+    "type": "\u041a\u043e\u043b\u043e",
+    "position": [
+      60,
+      40
+    ],
+    "size": [
+      30,
+      30
+    ],
+    "color": "#E7442A",
+    "text": "DATA",
+    "logic": ""
+  },
+  {
+    "type": "\u041a\u0432\u0430\u0434\u0440\u0430\u0442",
+    "position": [
+      50,
+      410
+    ],
+    "size": [
+      40,
+      40
+    ],
+    "color": "#5C5C5C",
+    "text": "DATA",
+    "logic": ""
+  },
+  {
+    "type": "\u041a\u0432\u0430\u0434\u0440\u0430\u0442",
+    "position": [
+      50,
+      330
+    ],
+    "size": [
+      40,
+      40
+    ],
+    "color": "#00A35F",
+    "text": "DATA",
+    "logic": ""
+  },
+  {
+    "type": "\u041a\u0432\u0430\u0434\u0440\u0430\u0442",
+    "position": [
+      50,
+      250
+    ],
+    "size": [
+      40,
+      40
+    ],
+    "color": "#9EA5BA",
+    "text": "DATA",
+    "logic": ""
+  }
+]

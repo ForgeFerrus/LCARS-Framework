@@ -1,0 +1,21 @@
+<Window x:Class="LCARSWorkbench.LCARSModalWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LCARS Modal" Height="200" Width="420" WindowStyle="None" ResizeMode="NoResize" Background="Black" AllowsTransparency="True" WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <Border CornerRadius="10" Background="#0D0D0D" BorderBrush="#444" BorderThickness="2" Padding="12">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock x:Name="ModalTitle" Text="TITLE" FontWeight="Bold" Foreground="White" FontSize="16"/>
+            <TextBlock x:Name="ModalMessage" Grid.Row="1" Text="Message" Foreground="White" Margin="0,8,0,8" TextWrapping="Wrap"/>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="ModalOk" Width="90" Height="28" Margin="4" Click="ModalOk_Click">OK</Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

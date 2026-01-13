@@ -1,0 +1,162 @@
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
+using LCARSFramework.Theme;
+
+namespace LCARSFramework.Control
+{
+    public partial class LCARSMenu : UserControl
+    {
+        public LCARSMenu()
+        {
+            InitializeComponent();
+        }
+
+        public void RenderPreview(Faction faction, Era era)
+        {
+            PreviewCanvas.Children.Clear();
+            var colors = LCARSFramework.LCARS.Theme.ThemeManager.GetColors(faction, era);
+            // Use the primary color for fill and last color for stroke
+            var fill = new SolidColorBrush(colors[0]);
+            var stroke = new SolidColorBrush(colors[^1]);
+
+            switch (faction)
+            {
+                case Faction.Federation:
+                    RenderFederation(era, colors);
+                    break;
+                case Faction.Klingon:
+                    RenderKlingon(era, fill, stroke);
+                    break;
+                case Faction.Romulan:
+                    RenderRomulan(era, fill, stroke);
+                    break;
+                case Faction.Cardassian:
+                    RenderCardassian(era, fill, stroke);
+                    break;
+            }
+        }
+
+        private void RenderFederation(Era era, Color[] colors)
+        {
+            // More complete Federation layout. Era22 = squared rectangles, later eras more rounded
+            double canvasW = double.IsNaN(PreviewCanvas.Width) || PreviewCanvas.Width == 0 ? PreviewCanvas.ActualWidth : PreviewCanvas.Width;
+            double canvasH = double.IsNaN(PreviewCanvas.Height) || PreviewCanvas.Height == 0 ? PreviewCanvas.ActualHeight : PreviewCanvas.Height;
+            if (canvasW == 0) canvasW = 600;
+            if (canvasH == 0) canvasH = 420;
+
+            // Outer frames
+            var frameColors = new[] { Colors.LightGray, Colors.Gray, Colors.DimGray };
+            double[] thickness = { 14, 10, 6 };
+            double margin = 6;
+            for (int i = 0; i < 3; i++)
+            {
+                var rect = new Rectangle
+                {
+                    Width = canvasW - margin * 2 - i * 24,
+                    Height = canvasH - margin * 2 - i * 24,
+                    Stroke = new SolidColorBrush(frameColors[i]),
+                    StrokeThickness = thickness[i],
+                    RadiusX = era == Era.Era22 ? 0 : 16 - i * 4,
+                    RadiusY = era == Era.Era22 ? 0 : 16 - i * 4,
+                    Fill = Brushes.Transparent
+                };
+                Canvas.SetLeft(rect, margin + i * 12);
+                Canvas.SetTop(rect, margin + i * 12);
+                PreviewCanvas.Children.Add(rect);
+            }
+
+            // Inner area (panel background)
+            var inner = new Rectangle
+            {
+                Width = canvasW * 0.5,
+                Height = canvasH * 0.35,
+                Stroke = new SolidColorBrush(Colors.DarkGray),
+                StrokeThickness = 2,
+                RadiusX = era == Era.Era22 ? 0 : 8,
+                RadiusY = era == Era.Era22 ? 0 : 8,
+                Fill = Brushes.Black
+            };
+            Canvas.SetLeft(inner, (canvasW - inner.Width) / 2);
+            Canvas.SetTop(inner, (canvasH - inner.Height) / 2);
+            PreviewCanvas.Children.Add(inner);
+
+            // Badges inside inner panel (Era22: squared, others rounded)
+            double bx = inner.Width * 0.1 + Canvas.GetLeft(inner);
+            double by = Canvas.GetTop(inner) + 16;
+            double bw = inner.Width * 0.6;
+            double bh = 28;
+            // Use palette colors for badges
+            for (int i = 0; i < 4; i++)
+            {
+                var badge = new Rectangle
+                {
+                    Width = bw - i * 20,
+                    Height = bh,
+                    Fill = new SolidColorBrush(colors.Length > i + 1 ? colors[i + 1] : colors[0]),
+                    Stroke = new SolidColorBrush(colors[^1]),
+                    StrokeThickness = 2,
+                    RadiusX = era == Era.Era22 ? 0 : 6,
+                    RadiusY = era == Era.Era22 ? 0 : 6
+                };
+                Canvas.SetLeft(badge, Canvas.GetLeft(inner) + (inner.Width - badge.Width) / 2);
+                Canvas.SetTop(badge, by + i * (bh + 8));
+                PreviewCanvas.Children.Add(badge);
+            }
+
+            // Small corner indicators (like status dots)
+            var dot = new Ellipse { Width = 12, Height = 12, Fill = new SolidColorBrush(colors[^2]) };
+            Canvas.SetLeft(dot, Canvas.GetLeft(inner) + inner.Width - 18);
+            Canvas.SetTop(dot, Canvas.GetTop(inner) + 8);
+            PreviewCanvas.Children.Add(dot);
+        }
+
+        private void RenderKlingon(Era era, Brush fill, Brush stroke)
+        {
+            // Klingon: triangles; orientation/size vary by era - keep as before but centered
+            double baseX = (PreviewCanvas.ActualWidth) / 2 - 80;
+            double baseY = (PreviewCanvas.ActualHeight) / 2 - 40;
+            for (int i = 0; i < 4; i++)
+            {
+                var tri = new Polygon { Fill = fill, Stroke = stroke, StrokeThickness = 2 };
+                tri.Points = new PointCollection { new Point(baseX + i * 24, baseY + i * 12), new Point(baseX + 60 + i * 24, baseY - 12 + i * 12), new Point(baseX + 120 + i * 24, baseY + i * 12) };
+                PreviewCanvas.Children.Add(tri);
+            }
+        }
+
+        private void RenderRomulan(Era era, Brush fill, Brush stroke)
+        {
+            // Romulan: trapezoids / parallelograms - centered
+            double baseX = (PreviewCanvas.ActualWidth) / 2 - 180;
+            double baseY = (PreviewCanvas.ActualHeight) / 2 - 40;
+            for (int i = 0; i < 4; i++)
+            {
+                var poly = new Polygon { Fill = fill, Stroke = stroke, StrokeThickness = 2 };
+                poly.Points = new PointCollection { new Point(baseX + i * 40, baseY + i * 8), new Point(baseX + 340 - i * 40, baseY + i * 8), new Point(baseX + 300 - i * 40, baseY + 40 + i * 8), new Point(baseX + 40 + i * 40, baseY + 40 + i * 8) };
+                PreviewCanvas.Children.Add(poly);
+            }
+        }
+
+        private void RenderCardassian(Era era, Brush fill, Brush stroke)
+        {
+            // Cardassian: polygons (hexagon-like) - centered and larger
+            double centerX = (PreviewCanvas.ActualWidth) / 2;
+            double centerY = (PreviewCanvas.ActualHeight) / 2;
+            for (int i = 0; i < 3; i++)
+            {
+                var poly = new Polygon { Fill = fill, Stroke = stroke, StrokeThickness = 2 };
+                double cx = centerX + (i - 1) * 120;
+                double cy = centerY;
+                var pts = new PointCollection();
+                for (int p = 0; p < 6; p++)
+                {
+                    double angle = p * System.Math.PI * 2 / 6;
+                    pts.Add(new Point(cx + System.Math.Cos(angle) * 40, cy + System.Math.Sin(angle) * 32));
+                }
+                poly.Points = pts;
+                PreviewCanvas.Children.Add(poly);
+            }
+        }
+    }
+}

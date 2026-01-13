@@ -1,0 +1,131 @@
+﻿using System.Windows;
+using System.Windows.Controls;
+using LCARSFramework.Theme;
+using System.IO;
+using System.Diagnostics;
+using System;
+
+namespace LCARSWorkbench
+{
+    public partial class LauncherWindow : Window
+    {
+        public Faction SelectedFaction { get; private set; } = Faction.Federation;
+        public Era SelectedEra { get; private set; } = Era.Era22;
+
+        public LauncherWindow()
+        {
+            InitializeComponent();
+            LauncherPreview.RenderPreview(SelectedFaction, SelectedEra);
+        }
+
+        private void FactionSelect_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is LCARSFramework.Control.LCARSButton b && Enum.TryParse<Faction>(b.Label, out var f))
+            {
+                SelectedFaction = f;
+                LauncherPreview.RenderPreview(SelectedFaction, SelectedEra);
+                StatusText.Text = $"Selected faction: {SelectedFaction}";
+            }
+        }
+
+        private void EraSelect_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is LCARSFramework.Control.LCARSButton b && Enum.TryParse<Era>(b.Label, out var era))
+            {
+                SelectedEra = era;
+                LauncherPreview.RenderPreview(SelectedFaction, SelectedEra);
+                StatusText.Text = $"Selected era: {SelectedEra}";
+            }
+        }
+
+        private void OnOk_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = true;
+            Close();
+        }
+
+        private void OnCancel_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
+            Close();
+        }
+
+        private void OnBuildThemeDll_Click(object sender, RoutedEventArgs e)
+        {
+            StatusText.Text = "Building...";
+            try
+            {
+                var outDir = Path.Combine(Directory.GetCurrentDirectory(), "output", SelectedFaction.ToString(), SelectedEra.ToString());
+                Directory.CreateDirectory(outDir);
+
+                var projName = $"LCARS.Theme.{SelectedFaction}.{SelectedEra}";
+                var csproj =
+                    "<Project Sdk=\"Microsoft.NET.Sdk\">" + Environment.NewLine +
+                    "  <PropertyGroup>" + Environment.NewLine +
+                    "    <TargetFramework>net9.0-windows</TargetFramework>" + Environment.NewLine +
+                    "    <UseWPF>true</UseWPF>" + Environment.NewLine +
+                    "    <ImplicitUsings>enable</ImplicitUsings>" + Environment.NewLine +
+                    "  </PropertyGroup>" + Environment.NewLine +
+                    "</Project>";
+
+                File.WriteAllText(Path.Combine(outDir, projName + ".csproj"), csproj);
+
+                var colors = LCARSFramework.LCARS.Theme.ThemeManager.GetColors(SelectedFaction, SelectedEra);
+                var classCode = GeneratePaletteClass(projName, SelectedFaction, SelectedEra, colors);
+                File.WriteAllText(Path.Combine(outDir, "ThemeData.cs"), classCode);
+
+                var psi = new ProcessStartInfo("dotnet", "build --configuration Release")
+                {
+                    WorkingDirectory = outDir,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var proc = Process.Start(psi);
+                if (proc == null)
+                {
+                    StatusText.Text = "Failed to start dotnet process.";
+                    return;
+                }
+                proc.WaitForExit(60000);
+                var stdout = proc.StandardOutput.ReadToEnd();
+                var stderr = proc.StandardError.ReadToEnd();
+
+                if (proc.ExitCode == 0)
+                {
+                    StatusText.Text = $"Built {projName} successfully.";
+                }
+                else
+                {
+                    StatusText.Text = $"Build failed: {stderr}";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusText.Text = "Export failed: " + ex.Message;
+            }
+        }
+
+        private string GeneratePaletteClass(string ns, Faction fac, Era era, System.Windows.Media.Color[] colors)
+        {
+            var entries = new System.Text.StringBuilder();
+            for (int i = 0; i < colors.Length; i++)
+            {
+                entries.AppendLine($"        public static readonly string Color{i} = \"#{colors[i].R:X2}{colors[i].G:X2}{colors[i].B:X2}\";");
+            }
+
+            var classText = new System.Text.StringBuilder();
+            classText.AppendLine("namespace " + ns);
+            classText.AppendLine("{");
+            classText.AppendLine("    public static class ThemeData");
+            classText.AppendLine("    {");
+            classText.Append(entries.ToString());
+            classText.AppendLine("    }");
+            classText.AppendLine("}");
+
+            return classText.ToString();
+        }
+    }
+}

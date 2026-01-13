@@ -1,0 +1,71 @@
+﻿using LCARSFramework.Control;
+using LCARSFramework.Theme;
+using System.Data;
+using System.Windows;
+using System.Windows.Controls;
+
+namespace LCARSWorkbench
+{
+    public partial class MainWindow : Window
+    {
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            // Initialize preview with defaults
+            FactionList.SelectionChanged += OnSelectionChanged;
+            EraComboBox.SelectionChanged += OnSelectionChanged;
+            UpdatePreview();
+        }
+
+        private void OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdatePreview();
+        }
+
+        private void UpdatePreview()
+        {
+            if (FactionList.SelectedItem is ListBoxItem fItem && EraComboBox.SelectedItem is ComboBoxItem eItem)
+            {
+                if (System.Enum.TryParse<Faction>(fItem.Content.ToString(), out var faction))
+                {
+                    ActivateButton.Faction = faction;
+                }
+
+                if (System.Enum.TryParse<Era>(eItem.Content.ToString(), out var era))
+                {
+                    ActivateButton.Era = era;
+                }
+            }
+        }
+
+        private void OnOpenLauncher(object sender, RoutedEventArgs e)
+        {
+            // Placeholder: later we'll open a dedicated launcher window
+            MessageBox.Show("Launcher will open here (TBD).");
+        }
+
+        private void OnActivate(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("LCARS Button pressed!");
+        }
+        private void OnAddPanel(object sender, RoutedEventArgs e)
+        {
+            var panel = new LCARSPanel { Label = "NEW PANEL", Faction = Faction.Federation, Era = Era.Era24, Margin = new Thickness(8) };
+            // Add to a known container in your frame; for demo, show dialog
+            MessageBox.Show("Panel created (attach to container or ItemsControl).");
+        }
+
+        private void OnAddRib(object sender, RoutedEventArgs e)
+        {
+            var rib = new LCARSRib { Faction = Faction.Klingon, Role = Role.Tactical, Margin = new Thickness(8) };
+            MessageBox.Show("Rib created (attach to container).");
+        }
+
+        private void OnAddComb(object sender, RoutedEventArgs e)
+        {
+            var comb = new LCARSComb { Faction = Faction.Romulan, Role = Role.Interface, Margin = new Thickness(8) };
+            MessageBox.Show("Comb created (attach to container).");
+        }
+    }
+}

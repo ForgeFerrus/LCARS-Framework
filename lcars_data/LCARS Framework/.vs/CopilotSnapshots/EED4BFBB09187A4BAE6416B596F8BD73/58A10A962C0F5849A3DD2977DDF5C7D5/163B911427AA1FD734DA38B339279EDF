@@ -1,0 +1,12 @@
+﻿using System.Windows;
+using System.Windows.Controls;
+using LCARSFramework.Theme;
+
+namespace LCARSFramework.Control
+{
+    public class LCARSRib : UserControl
+    {
+        public Faction Faction { get; set; }
+        public Role Role { get; set; }
+    }
+}

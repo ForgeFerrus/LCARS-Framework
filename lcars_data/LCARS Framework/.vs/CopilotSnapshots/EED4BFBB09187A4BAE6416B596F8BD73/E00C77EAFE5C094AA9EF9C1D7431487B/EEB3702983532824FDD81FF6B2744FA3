@@ -1,0 +1,101 @@
+﻿using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
+using LCARSFramework.Theme;
+
+namespace LCARSFramework.Control
+{
+    public partial class LCARSMenu : UserControl
+    {
+        public LCARSMenu()
+        {
+            InitializeComponent();
+        }
+
+        public void RenderPreview(Faction faction, Era era)
+        {
+            PreviewCanvas.Children.Clear();
+            var colors = LCARSFramework.LCARS.Theme.ThemeManager.GetColors(faction, era);
+            // Use the primary color for fill and last color for stroke
+            var fill = new SolidColorBrush(colors[0]);
+            var stroke = new SolidColorBrush(colors[^1]);
+
+            switch (faction)
+            {
+                case Faction.Federation:
+                    RenderFederation(era, fill, stroke);
+                    break;
+                case Faction.Klingon:
+                    RenderKlingon(era, fill, stroke);
+                    break;
+                case Faction.Romulan:
+                    RenderRomulan(era, fill, stroke);
+                    break;
+                case Faction.Cardassian:
+                    RenderCardassian(era, fill, stroke);
+                    break;
+            }
+        }
+
+        private void RenderFederation(Era era, Brush fill, Brush stroke)
+        {
+            // Federation: rectangles with rounded corners; earlier eras more squared
+            double r = era switch
+            {
+                Era.Era22 => 0,
+                Era.Era23 => 4,
+                Era.Era24 => 12,
+                _ => 8
+            };
+
+            for (int i = 0; i < 4; i++)
+            {
+                var rect = new Rectangle { Width = 180 - i * 30, Height = 36, RadiusX = r, RadiusY = r, Fill = fill, Stroke = stroke, StrokeThickness = 2 };
+                Canvas.SetLeft(rect, 20 + i * 10);
+                Canvas.SetTop(rect, 20 + i * 40);
+                PreviewCanvas.Children.Add(rect);
+            }
+        }
+
+        private void RenderKlingon(Era era, Brush fill, Brush stroke)
+        {
+            // Klingon: triangles; orientation/size vary by era
+            for (int i = 0; i < 4; i++)
+            {
+                var tri = new Polygon { Fill = fill, Stroke = stroke, StrokeThickness = 2 };
+                tri.Points = new PointCollection { new Point(30 + i * 20, 30 + i * 20), new Point(60 + i * 20, 10 + i * 20), new Point(90 + i * 20, 30 + i * 20) };
+                PreviewCanvas.Children.Add(tri);
+            }
+        }
+
+        private void RenderRomulan(Era era, Brush fill, Brush stroke)
+        {
+            // Romulan: trapezoids / parallelograms
+            for (int i = 0; i < 4; i++)
+            {
+                var poly = new Polygon { Fill = fill, Stroke = stroke, StrokeThickness = 2 };
+                poly.Points = new PointCollection { new Point(20 + i * 30, 30 + i * 20), new Point(160 - i * 20, 30 + i * 20), new Point(140 - i * 20, 50 + i * 20), new Point(40 + i * 20, 50 + i * 20) };
+                PreviewCanvas.Children.Add(poly);
+            }
+        }
+
+        private void RenderCardassian(Era era, Brush fill, Brush stroke)
+        {
+            // Cardassian: polygons (hexagon-like)
+            for (int i = 0; i < 3; i++)
+            {
+                var poly = new Polygon { Fill = fill, Stroke = stroke, StrokeThickness = 2 };
+                double cx = 60 + i * 60, cy = 80;
+                var pts = new PointCollection();
+                for (int p = 0; p < 6; p++)
+                {
+                    double angle = p * Math.PI * 2 / 6;
+                    pts.Add(new Point(cx + Math.Cos(angle) * 30, cy + Math.Sin(angle) * 24));
+                }
+                poly.Points = pts;
+                PreviewCanvas.Children.Add(poly);
+            }
+        }
+    }
+}

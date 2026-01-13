@@ -1,0 +1,161 @@
+LCARS Palette - Centralized color schemes for LCARS themes
+"""
+# Example usage:
+# palette = get_era_palette(FactionEra.FEDERATION_25TH)
+# apply_palette_to_component(my_component, palette)
+# integrate_palette_with_ui (my_component, LCARSEra.FEDERATION_25TH)
+from enum import Enum
+
+class LCARSEra(Enum):
+    """LCARS-specific era combinations based on ship classes"""
+    PCARS_22ND_CENTURY = "NX_class"
+    PCARS_23RD_CENTURY = "Constitution_class"
+    PCARS_23ST_CENTURY = "Excelsior_class"
+    LCARS_24TH_CENTURY = "Galaxy_class"
+    LCARS_25TH_CENTURY = "Titan_class"
+    TCARS_29TH_CENTURY = "Relativity_class"
+
+# Update base palette with provided LCARS Palette
+BASE_PALETTE = {
+    'background_color': "#000000",
+    'panel_color': "#000000",
+    'text_color': "#FFFFFF",
+    'primary_color': "#336699",
+    'secondary_color': "#6699CC",
+    'accent_color': "#D37445",
+    'highlight_color': "#F0B942",
+    'shadow_color': "#606060",
+    'gradient_color': "#BA985D",
+    'border_color': '#444444',
+    'button_hover': "#50571A",
+    'button_active': "#0066CC",
+    'warning_color': "#E4122B",
+}
+
+# Merge base palette with specific era palettes
+def merge_palettes(base, specific):
+    """Merge a base palette with specific overrides."""
+    return {**base, **specific}
+
+# Era color schemes - expanded from reference palette
+ERA_THEMES = {
+    LCARSEra.PCARS_22ND_CENTURY: merge_palettes(BASE_PALETTE, {
+        'primary_color': "#FFE600",
+        'secondary_color': "#008AE6",
+        'accent_color': "#5C5C5C",
+        'border_color': '#4D6184',
+        'button_hover': "#27F8FF",
+        'button_active': "#018D76",
+        'warning_color': "#FFBB00",
+        'success_color': "#00A35F",
+        'error_color': "#D80000",
+        'dark_color': "#2062EE",
+        'medium_color': "#CE6363",
+        'light_color': '#9EFFB5'
+    }), 
+    LCARSEra.PCARS_23RD_CENTURY  : merge_palettes(BASE_PALETTE, {
+        'primary_color': '#FFFF00',
+        'secondary_color': '#FF0000',
+        'accent_color': '#00FF00',
+        'border_color': "#D3A200",
+        'button_hover': "#FA7B13",
+        'button_active': '#66FF66',
+        'warning_color': "#FFAE00",
+        'success_color': '#00FF00',
+        'error_color': "#E60000",
+        'dark_color': "#003819",
+        'medium_color': "#156B15",
+        'light_color': '#FFFF99'
+    }),
+    LCARSEra.PCARS_23ST_CENTURY: merge_palettes(BASE_PALETTE, {
+        'primary_color': '#002FFF',
+        'secondary_color': '#006321',
+        'accent_color': "#693FFF",
+        'border_color': '#0066FF',
+        'button_hover': '#3399FF',
+        'button_active': '#009933',
+        'warning_color': "#FFD900",
+        'success_color': "#21D17F",
+        'error_color': "#CA2525",
+        'dark_color': '#0A0A12',
+        'medium_color': '#1A1A2E',
+        'light_color': '#2F3749'
+    }),
+    LCARSEra.LCARS_24TH_CENTURY: merge_palettes(BASE_PALETTE, {
+        'primary_color': '#FFCC66',
+        'secondary_color': '#FF9900',
+        'accent_color': '#9999FF',
+        'border_color': '#664466',
+        'button_hover': '#B1957A',
+        'button_active': '#EEC222',
+        'warning_color': '#A30E2A',
+        'success_color': '#3399FF',
+        'error_color': '#CD6363',
+        'dark_color': '#646DCC',
+        'medium_color': '#99CCFF',
+        'light_color': '#FFFF9C'
+    }),
+    LCARSEra.LCARS_25TH_CENTURY: merge_palettes(BASE_PALETTE, {
+        'primary_color': '#2F3749',
+        'secondary_color': '#52596E',
+        'accent_color': '#FF6753',
+        'border_color': '#9EA5BA',
+        'button_hover': '#3B111D',
+        'button_active': '#FF977B',
+        'warning_color': '#E7442A',
+        'success_color': '#4BBEBF',
+        'error_color': "#A80F00",
+        'dark_color': '#1C3C55',
+        'medium_color': '#2A7193',
+        'light_color': '#37A6D1'
+    }),
+    LCARSEra.TCARS_29TH_CENTURY: merge_palettes(BASE_PALETTE, {
+        'primary_color': '#31C9F4',
+        'secondary_color': '#805070',
+        'accent_color': '#24BEB2',
+        'border_color': '#D19FAE',
+        'button_hover': '#72E2E4',
+        'button_active': '#31C9F4',
+        'warning_color': '#CC6633',
+        'success_color': '#99FFCC',
+        'error_color': '#CC0000',
+        'dark_color': '#2062EE',
+        'medium_color': '#20788C',
+        'light_color': '#FFCC99'
+    }),
+}
+
+# NOTE: palettes are normalized by `ensure_normalized()` below.
+# Avoid mutating `ERA_THEMES` at import time — callers should invoke
+# `ensure_normalized()` during app startup to populate fallback values.
+# This keeps the module safe for headless imports (tests, CLI tools).
+
+# Full reference color palettes for each era
+REFERENCE_PALETTES = {
+    '22nd': ['#FFE600', "#0064E6", '#5C5C5C', '#0099FF', '#27F8FF', '#018D76'],
+    '23rd': ['#FFFF00', '#FF0000', '#00FF00', '#FFFF99', '#FF6666', '#66FF66'],
+    '23st': ["#002FFF", "#006321", "#6338FF", "#0051FF", '#009933', '#6600CC'],
+    '24th': ['#FFFF99', '#FFC299', '#FF9966', '#CC6699', '#CC99CC', '#99CCFF', '#6699CC', '#3366CC'],
+    '25th': ['#2F3749', '#52596E', '#6D748C', '#9EA5BA', '#E7442A', '#FF6753', '#FF977B', '#1C3C55', '#2A7193', '#37A6D1'],
+    '29th': ['#31C9F4', '#72E2E4', '#20788C', '#24BEB2', "#A656C5", '#D19FAE', '#99FFCC', '#CC6633', '#CC0000', '#805070'],
+}
+
+# Corrected ship class color palettes with associated years
+SHIP_CLASS_PALETTES = {
+    'galaxy': {
+        'year': 2357,
+        'colors': ['#FFFF99', '#FFC266', '#FF9933', '#663366', '#CC99CC', '#99CCFF', '#3366CC', '#006699']
+    },
+    'intrepid': {
+        'year': 2369,
+        'colors': ['#9999FF', '#CC99CC', '#CC6699', '#CC6666', '#FF9966', "#FF9900", '#FFCC66', '#C2B74B']
+    },
+    'defiant': {
+        'year': 2375,
+        'colors': ['#6699CC', '#4455BB', '#9977AA', '#CC6699', '#DD6644', '#AA5533', '#BB6622', '#EE9955']
+    },
+    'sovereign': {
+        'year': 2379,
+        'colors': ['#99CCFF', '#5599FF', '#3366FF', '#0000FF', '#000088', '#BBAA55', '#BB4411', '#882211']
+    }
+}

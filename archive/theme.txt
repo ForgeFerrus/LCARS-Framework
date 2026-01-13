@@ -1,0 +1,233 @@
+faction = faction.lower()
+        era = era.lower() if era else None
+        #FFFFFF
+        #000000
+
+library(trekcolors)
+library(ggplot2)
+trek_pal("starfleet")
+#> [1] "#5B1414" "#AD722C" "#1A6384"
+trek_pal("lcars_2357")
+#> [1] "#FFFF99" "#FFCC99" "#FFCC66" "#FF9933" "#664466" "#CC99CC" "#99CCFF"
+#> [8] "#3366CC" "#006699"
+
+# lcars_pals() # print list of all LCARS palettes
+LCARSEra.LCARS_25TH: {
+        'panel_border': '#2F3749',
+        'button_colors': [
+            '#2F3749', '#52596E', '#6D748C', '#9EA5BA',
+            '#1C3C55','#2A7193', '#37A6D1', '#4BBEBF'
+            '#E7442A', '#FF6753', '#FF977B', 
+        ],
+        'alert_colors': ['#E7442A', '#A80F00','#FF6753']
+    },
+
+lcars_colors() # full set of unique names across the four palettes
+#>      pale-canary            tanoi     golden-tanoi      neon-carrot 
+#>        "#FFFF99"        "#FFCC99"        "#FFCC66"        "#FF9933" 
+#>         eggplant            lilac          anakiwa          mariner 
+#>        "#664466"        "#CC99CC"        "#99CCFF"        "#3366CC" 
+#>      bahama-blue        blue-bell          melrose          hopbush 
+#>        "#006699"        "#9999CC"        "#9999FF"        "#CC6699" 
+#>    chestnut-rose      orange-peel atomic-tangerine            danub 
+#>        "#CC6666"        "#FF9966"        "#FF9900"        "#6688CC" 
+#>           indigo  lavender-purple           cosmic       red-damask 
+#>        "#4455BB"        "#9977AA"        "#774466"        "#DD6644" 
+#>   medium-carmine          bourbon      sandy-brown       periwinkle 
+#>        "#AA5533"        "#BB6622"        "#EE9955"        "#CCDDFF" 
+#>      dodger-pale      dodger-soft        near-blue        navy-blue 
+#>        "#5599FF"        "#3366FF"        "#0011EE"        "#000088" 
+#>             husk             rust        tamarillo 
+#>        "#BBAA55"        "#BB4411"        "#882211"
+
+lcars_2357() # specific color series; also 2369, 2375, 2379
+#>  pale-canary        tanoi golden-tanoi  neon-carrot     eggplant        lilac 
+#>    "#FFFF99"    "#FFCC99"    "#FFCC66"    "#FF9933"    "#664466"    "#CC99CC" 
+#>      anakiwa      mariner  bahama-blue 
+#>    "#99CCFF"    "#3366CC"    "#006699"
+
+lcars_2357("lilac", "mariner") # select by name
+#>     lilac   mariner 
+#> "#CC99CC" "#3366CC"
+
+LCARSEra.LCARS_24ST: {
+        'panel_border': '#000088',     # Navy-blue рамка (Sovereign class)
+        'button_colors': [
+            '#AA5533', '#BB6622', '#EE9955', '#CCDDFF',  # medium-carmine, bourbon, sandy-brown, periwinkle
+            '#5599FF', '#3366FF', '#0011EE', '#000088',  # dodger-pale, dodger-soft, near-blue, navy-blue
+            '#BBAA55', '#BB4411', '#882211'             # husk, rust, tamarillo
+        ],
+        'alert_colors': ['#BB4411', '#882211']  # rust, tamarillo (Enterprise-E)
+    },
+    
+    FACTION_COLOR_PALETTES = {
+    # Romulan with era variations
+    FactionEra.ROMULAN_22ND: {
+            'panel_border': '#336666',
+            'panel_color': '#339999',
+            'button_colors': [
+                '#336666', '#339999', '#336633', '#009166',
+                '#33B89E', '#86E3B2', '#4ADDFB', '#2EB2E4',
+                '#3599CD', '#1C8BAA', '#00A8B6', '#00CED5'
+                '#CC9966', '#FBC6B4', '#FFD2BD', '#CC6633'
+            ],
+            'alert_colors': ['#CC6633', '#CC9966', '#FBC6B4']
+        },
+        
+    FactionEra.ROMULAN_23RD: {
+                'panel_border': '#3EDB58',
+                'panel_color': '#00B100',
+                'button_colors': [
+                    '#3EDB58', '#00B100', '#7CF92B', '#99FF99',
+                    '#F0E570', '#FFF708', '#C93300', '#C0101D',
+                    '#016EB4', '#24A1E8'
+                ],
+                'alert_colors': ['#C0101D', '#C93300']
+            },
+            
+    FactionEra.ROMULAN_23ST: {
+                'panel_border': '#BAFF80',
+                'panel_color': '#7CDE2C',
+                'button_colors': [
+                    '#BAFF80', '#7CDE2C', '#49B600', '#66CC00',
+                    '#59E52E', '#00B100', '#009900', '#F89DB2',
+                    '#72DEDE'
+                ],
+                'alert_colors': ['#FA5876', '#F89DB2']
+            },
+    
+    FactionEra.ROMULAN_24TH: {
+                'panel_border': '#0E563E',
+                'panel_color': '#007633',
+                'button_colors': [
+                    '#0E563E', '#007633', '#408360', '#6CBD92',
+                    '#068F3A', '#28B856', '#61DB86', '#72DEDE',
+                    '#00C9C3', '#26D1E0', '#1E94A9', '#F89DB2'
+                ],
+                'alert_colors': ['#FA5876', '#E2497F']
+            },
+
+    FactionEra.ROMULAN_25TH: {
+                'panel_border': '#00523B',
+                'panel_color': '#2D513B',
+                'button_colors': [
+                    '#00523B', '#2D513B', '#227D51', '#1D995D',
+                    '#56A334', '#61DB86', '#8BFF9C', '#DAFBF1',
+                    '#29E5B5', '#72DEDE', '#2ACCD3', '#9583BC'
+                ],
+                'alert_colors': ['#E2497F', '#79547F', '#9583BC']
+            },
+            
+    FactionEra.ROMULAN_29TH: {
+                'panel_border': '#0A1A1A',
+                'panel_color': '#006666',
+                'button_colors': [
+                    '#0A1A1A', '#006666', '#1C7736', '#99CC99',
+                    '#FFFF99', '#E0D060', '#BAB444', '#3399CC',
+                    '#2CB1F7', '#999999', '#C2C1C2', '#F398C4'
+                ],
+                'alert_colors': ['#BB5A87', '#F398C4']
+            },
+            
+    # Klingon palettes
+    FactionEra.KLINGON_22ND: {
+        'panel_border': '#400000',
+        'panel_color': '#CC0000',
+        'button_colors': [
+            '#400000', '#CC0000', '#FF0000', '#FF3300',
+            '#EE6900', '#FF9900', '#A99706', '#95FF00',
+            '#A59797'
+        ],
+        'alert_colors': ['#400000', '#CC0000', '#FF0000', '#FF3300', '#EE6900']
+    },
+    
+    FactionEra.KLINGON_23RD: {
+        'panel_border': '#CC0000',
+        'panel_color': '#FF0000',
+        'button_colors': [
+            '#CC0000', '#FF0000', '#FA362A', '#D73713',
+            '#E96C29', '#F39C35', '#F1BB2F', '#F6EE24',
+            '#F6F0B8', '#B9B170', '#5C8B49'
+        ],
+        'alert_colors': ['#CC0000', '#FF0000', '#FA362A', '#D73713',
+            '#E96C29']
+    },
+    
+    FactionEra.KLINGON_24TH: {
+        'panel_border': '#660000',
+        'panel_color': '#CA0000',
+        'button_colors': [
+            '#660000', '#980000', '#CA0000', '#D73713',
+            '#E7730E', '#FFCB66', '#F6EE24', '#F6F0B8',
+            '#C99600', '#CA6400'
+        ],
+        'alert_colors': ['#CA6400', '#660000', '#980000', '#CA0000', '#D73713']
+    },
+    
+    FactionEra.KLINGON_25TH: {
+        'panel_border': '#660000',
+        'panel_color': '#A61A35',
+        'button_colors': [
+            '#660000', '#A61A35', '#CA0000', '#05C6DE',
+            '#99F5F9', '#CDFC80', '#F0E075', '#008B9E',
+            '#E68D5D', '#E96C29', '#DBBA78'
+        ],
+        'alert_colors': ['#660000', '#A61A35', '#CA0000','#E96C29', '#E68D5D']
+    },
+    
+    # Cardassian palettes (зміни за епохами)
+    FactionEra.CARDASSIAN_22ND: {
+        'panel_border': '#664422',
+        'panel_color': '#886644',
+        'button_colors': [
+            '#664422', '#886644', '#AA8866', '#CCAA88',
+            '#4A3C1C', '#6B5D3D', '#8C7E5E', '#AD9F7F',
+            '#332211', '#554433', '#776655', '#998877'
+        ],
+        'alert_colors': ['#CC6600', '#AA5500']
+    },
+    
+    FactionEra.CARDASSIAN_23RD: {
+        'panel_border': '#CC3300',
+        'panel_color': '#FF4400',
+        'button_colors': [
+            '#CC3300', '#FF4400', '#FF5500', '#FF6600',
+            '#003366', '#004488', '#0055AA', '#0066CC',
+            '#FF9900', '#FFAA00', '#00CC66', '#00DD77'
+        ],
+        'alert_colors': ['#FF0000', '#CC0000']
+    },
+    
+    FactionEra.CARDASSIAN_24TH: {
+        'panel_border': '#990000',
+        'panel_color': '#CC0000',
+        'button_colors': [
+            '#990000', '#CC0000', '#FF0000', '#FF1111',
+            '#001122', '#002244', '#003366', '#004488',
+            '#AA2200', '#BB3300', '#CC4400', '#DD5500'
+        ],
+        'alert_colors': ['#FF3333', '#CC2222']
+    },
+    
+    FactionEra.CARDASSIAN_25TH: {
+        'panel_border': '#AA4444',
+        'panel_color': '#CC6666',
+        'button_colors': [
+            '#AA4444', '#CC6666', '#DD8888', '#EEAAAA',
+            '#4466AA', '#6688CC', '#88AADD', '#AACCFF',
+            '#FFAA44', '#FFBB66', '#FFCC88', '#FFDDAA'
+        ],
+        'alert_colors': ['#FF6666', '#DD4444']
+    },
+    
+    FactionEra.CARDASSIAN_29TH: {
+        'panel_border': '#666699',
+        'panel_color': '#8888BB',
+        'button_colors': [
+            '#666699', '#8888BB', '#AAAADD', '#CCCCFF',
+            '#996666', '#BB8888', '#DDAAAA', '#FFCCCC',
+            '#669966', '#88BB88', '#AADDAA', '#CCFFCC'
+        ],
+        'alert_colors': ['#9999FF', '#7777DD']
+    }
+}

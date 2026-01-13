@@ -1,0 +1,37 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- LCARS brushes used by controls -->
+    <SolidColorBrush x:Key="LCARS.Black" Color="#000000"/>
+    <SolidColorBrush x:Key="LCARS.White" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="LCARS.Orange" Color="#FF9900"/>
+    <SolidColorBrush x:Key="LCARS.Purple" Color="#663399"/>
+    <SolidColorBrush x:Key="LCARS.Blue" Color="#3399FF"/>
+    <SolidColorBrush x:Key="LCARS.Cyan" Color="#33CCFF"/>
+    <SolidColorBrush x:Key="LCARS.Magenta" Color="#FF33CC"/>
+
+    <!-- Accent gradient for buttons -->
+    <LinearGradientBrush x:Key="LCARS.ButtonGradient" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#FFF6A623" Offset="0"/>
+        <GradientStop Color="#FFCC7A00" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- Base text style -->
+    <Style x:Key="LCARS.Text" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource LCARS.White}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+    </Style>
+
+    <!-- Badge style for small rectangular badges in launcher -->
+    <Style x:Key="LCARS.Badge" TargetType="Border">
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="6,4"/>
+        <Setter Property="Background" Value="{StaticResource LCARS.ButtonGradient}"/>
+        <Setter Property="BorderBrush" Value="#333"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+
+</ResourceDictionary>

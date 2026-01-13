@@ -1,0 +1,400 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\lcars framework.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:lcars framework.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\control\\lcarsrib.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:control\\lcarsrib.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\control\\lcarsbutton.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:control\\lcarsbutton.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\control\\lcarsrib.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:control\\lcarsrib.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\style\\base.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:style\\base.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\theme\\thememanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:theme\\thememanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\theme\\lcarspalette.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:theme\\lcarspalette.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\control\\lcarsbutton.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:control\\lcarsbutton.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\control\\lcarspanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:control\\lcarspanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\control\\lcarscomb.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:control\\lcarscomb.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\launcherwindow.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:launcherwindow.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\launcherwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:launcherwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\control\\lcarspanel.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:control\\lcarspanel.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\control\\lcarscomb.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:control\\lcarscomb.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\control\\lcarsmenu.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:control\\lcarsmenu.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\control\\lcarsmenu.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:control\\lcarsmenu.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\theme\\themeapplier.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:theme\\themeapplier.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\ui\\lcarsmodalwindow.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:ui\\lcarsmodalwindow.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|c:\\users\\forge\\myproject\\geant4\\enterprise\\ncc-project\\lcars-framework\\lcars_data\\lcars framework\\ui\\lcarsmodalwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4734782B-74CD-439B-93C5-943D64D2D5A6}|LCARS Framework.csproj|solutionrelative:ui\\lcarsmodalwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 23,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "LCARSModalWindow.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\UI\\LCARSModalWindow.xaml.cs",
+              "RelativeDocumentMoniker": "UI\\LCARSModalWindow.xaml.cs",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\UI\\LCARSModalWindow.xaml.cs",
+              "RelativeToolTip": "UI\\LCARSModalWindow.xaml.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-13T00:19:28.911Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "LCARSModalWindow.xaml",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\UI\\LCARSModalWindow.xaml",
+              "RelativeDocumentMoniker": "UI\\LCARSModalWindow.xaml",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\UI\\LCARSModalWindow.xaml",
+              "RelativeToolTip": "UI\\LCARSModalWindow.xaml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-12-13T00:19:21.568Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "ThemeApplier.cs",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Theme\\ThemeApplier.cs",
+              "RelativeDocumentMoniker": "Theme\\ThemeApplier.cs",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Theme\\ThemeApplier.cs",
+              "RelativeToolTip": "Theme\\ThemeApplier.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACIAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-13T00:18:14.817Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "Base.xaml",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Style\\Base.xaml",
+              "RelativeDocumentMoniker": "Style\\Base.xaml",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Style\\Base.xaml",
+              "RelativeToolTip": "Style\\Base.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-12-13T00:06:44.378Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "App.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\App.xaml.cs",
+              "RelativeDocumentMoniker": "App.xaml.cs",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\App.xaml.cs",
+              "RelativeToolTip": "App.xaml.cs",
+              "ViewState": "AgIAACQAAAAAAAAAAABRwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-12T22:58:09.772Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "ThemeManager.cs",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Theme\\ThemeManager.cs",
+              "RelativeDocumentMoniker": "Theme\\ThemeManager.cs",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Theme\\ThemeManager.cs",
+              "RelativeToolTip": "Theme\\ThemeManager.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-12T22:47:27.949Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "LCARSMenu.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSMenu.xaml.cs",
+              "RelativeDocumentMoniker": "Control\\LCARSMenu.xaml.cs",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSMenu.xaml.cs",
+              "RelativeToolTip": "Control\\LCARSMenu.xaml.cs",
+              "ViewState": "AgIAAJ4AAAAAAAAAAEBVwKIAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-10T15:40:51.613Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "LCARSMenu.xaml",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSMenu.xaml",
+              "RelativeDocumentMoniker": "Control\\LCARSMenu.xaml",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSMenu.xaml",
+              "RelativeToolTip": "Control\\LCARSMenu.xaml",
+              "ViewState": "AgIAAAYAAAAAAAAAAABBwAcAAAAOAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-12-10T15:40:12.057Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "LCARSComb.xaml",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSComb.xaml",
+              "RelativeDocumentMoniker": "Control\\LCARSComb.xaml",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSComb.xaml",
+              "RelativeToolTip": "Control\\LCARSComb.xaml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAOAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-12-10T14:21:17.891Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "LCARSRib.xaml",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSRib.xaml",
+              "RelativeDocumentMoniker": "Control\\LCARSRib.xaml",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSRib.xaml",
+              "RelativeToolTip": "Control\\LCARSRib.xaml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAOAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-12-10T14:21:03.489Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "LCARSPanel.xaml",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSPanel.xaml",
+              "RelativeDocumentMoniker": "Control\\LCARSPanel.xaml",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSPanel.xaml",
+              "RelativeToolTip": "Control\\LCARSPanel.xaml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAOAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-12-10T14:20:45.409Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "LauncherWindow.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\LauncherWindow.xaml.cs",
+              "RelativeDocumentMoniker": "LauncherWindow.xaml.cs",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\LauncherWindow.xaml.cs",
+              "RelativeToolTip": "LauncherWindow.xaml.cs",
+              "ViewState": "AgIAAI4AAAAAAAAAAEBVwJIAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-09T19:34:39.726Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "LauncherWindow.xaml",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\LauncherWindow.xaml",
+              "RelativeDocumentMoniker": "LauncherWindow.xaml",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\LauncherWindow.xaml",
+              "RelativeToolTip": "LauncherWindow.xaml",
+              "ViewState": "AgIAAD0AAAAAAAAAAABBwD4AAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-12-09T19:34:29.332Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "LCARSComb.cs",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSComb.cs",
+              "RelativeDocumentMoniker": "Control\\LCARSComb.cs",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSComb.cs",
+              "RelativeToolTip": "Control\\LCARSComb.cs",
+              "ViewState": "AgIAACkAAAAAAAAAAEBVwC0AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-08T18:11:35.974Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "LCARSRib.cs",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSRib.cs",
+              "RelativeDocumentMoniker": "Control\\LCARSRib.cs",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSRib.cs",
+              "RelativeToolTip": "Control\\LCARSRib.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAAwAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-08T18:11:33.289Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "LCARSPanel.cs",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSPanel.cs",
+              "RelativeDocumentMoniker": "Control\\LCARSPanel.cs",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSPanel.cs",
+              "RelativeToolTip": "Control\\LCARSPanel.cs",
+              "ViewState": "AgIAADYAAAAAAAAAAIBZwDsAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-08T18:11:30.671Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "LCARSPalette.cs",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Theme\\LCARSPalette.cs",
+              "RelativeDocumentMoniker": "Theme\\LCARSPalette.cs",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Theme\\LCARSPalette.cs",
+              "RelativeToolTip": "Theme\\LCARSPalette.cs",
+              "ViewState": "AgIAACgAAAAAAAAAAAAcwAcAAAAYAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-08T18:10:12.91Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "MainWindow.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\MainWindow.xaml.cs",
+              "RelativeDocumentMoniker": "MainWindow.xaml.cs",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\MainWindow.xaml.cs",
+              "RelativeToolTip": "MainWindow.xaml.cs",
+              "ViewState": "AgIAAEIAAAAAAAAAAAAswFMAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-08T18:09:57.091Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "LCARSButton.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSButton.xaml.cs",
+              "RelativeDocumentMoniker": "Control\\LCARSButton.xaml.cs",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSButton.xaml.cs",
+              "RelativeToolTip": "Control\\LCARSButton.xaml.cs",
+              "ViewState": "AgIAAH0AAAAAAAAAAEBVwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-08T17:41:37.777Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "LCARSButton.xaml",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSButton.xaml",
+              "RelativeDocumentMoniker": "Control\\LCARSButton.xaml",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\Control\\LCARSButton.xaml",
+              "RelativeToolTip": "Control\\LCARSButton.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-12-08T17:41:30.539Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "App.xaml",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\App.xaml",
+              "RelativeDocumentMoniker": "App.xaml",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\App.xaml",
+              "RelativeToolTip": "App.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-12-08T17:39:09.031Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "MainWindow.xaml",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\MainWindow.xaml",
+              "RelativeDocumentMoniker": "MainWindow.xaml",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\MainWindow.xaml",
+              "RelativeToolTip": "MainWindow.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-12-07T10:33:48.972Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "LCARS Framework.csproj",
+              "DocumentMoniker": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\LCARS Framework.csproj",
+              "RelativeDocumentMoniker": "LCARS Framework.csproj",
+              "ToolTip": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\LCARS-Framework\\lcars_data\\LCARS Framework\\LCARS Framework.csproj",
+              "RelativeToolTip": "LCARS Framework.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAYAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2025-12-07T10:33:42.2Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

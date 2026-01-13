@@ -1,0 +1,59 @@
+﻿using LCARSFramework.LCARS.Theme;
+using LCARSFramework.Theme;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+
+namespace LCARSFramework.Control
+{
+    public partial class LCARSButton : UserControl
+    {
+        public LCARSButton()
+        {
+            InitializeComponent();
+            UpdateTheme();
+        }
+
+        public static readonly DependencyProperty LabelProperty =
+            DependencyProperty.Register(nameof(Label), typeof(string), typeof(LCARSButton),
+                new PropertyMetadata("BUTTON"));
+
+        public string Label
+        {
+            get => (string)GetValue(LabelProperty);
+            set => SetValue(LabelProperty, value);
+        }
+
+        public static readonly DependencyProperty FactionProperty =
+            DependencyProperty.Register(nameof(Faction), typeof(Faction), typeof(LCARSButton),
+                new PropertyMetadata(Faction.Federation, OnThemeChanged));
+
+        public Faction Faction
+        {
+            get => (Faction)GetValue(FactionProperty);
+            set => SetValue(FactionProperty, value);
+        }
+
+        public static readonly DependencyProperty EraProperty =
+            DependencyProperty.Register(nameof(Era), typeof(Era), typeof(LCARSButton),
+                new PropertyMetadata(Era.Era24, OnThemeChanged));
+
+        public Era Era
+        {
+            get => (Era)GetValue(EraProperty);
+            set => SetValue(EraProperty, value);
+        }
+
+        private static void OnThemeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is LCARSButton b) b.UpdateTheme();
+        }
+
+        private void UpdateTheme()
+        {
+            var colors = ThemeManager.GetColors(Faction, Era);
+            ButtonBorder.Background = new SolidColorBrush(colors[0]);
+            ButtonBorder.BorderBrush = new SolidColorBrush(colors[^1]);
+        }
+    }
+}

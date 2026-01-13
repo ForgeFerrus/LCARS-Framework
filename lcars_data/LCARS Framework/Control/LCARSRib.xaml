@@ -1,0 +1,10 @@
+<UserControl x:Class="LCARSFramework.Control.LCARSRib"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root" Width="120" Height="200">
+    <Border x:Name="RibBorder" CornerRadius="8" BorderThickness="2" Padding="6" Background="Black" BorderBrush="#222">
+        <StackPanel>
+            <TextBlock x:Name="RibLabel" Text="RIB" Style="{StaticResource LCARS.Text}"/>
+        </StackPanel>
+    </Border>
+</UserControl>

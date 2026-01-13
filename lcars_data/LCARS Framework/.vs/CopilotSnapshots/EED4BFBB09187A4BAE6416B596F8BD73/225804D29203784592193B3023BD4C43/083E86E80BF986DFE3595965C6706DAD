@@ -1,0 +1,60 @@
+﻿using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using LCARSFramework.Theme;
+
+namespace LCARSFramework.Control
+{
+    public partial class LCARSPanel : UserControl
+    {
+        public LCARSPanel()
+        {
+            InitializeComponent();
+        }
+
+        public static readonly DependencyProperty LabelProperty =
+            DependencyProperty.Register(nameof(Label), typeof(string), typeof(LCARSPanel), new PropertyMetadata("PANEL", OnLabelChanged));
+
+        public string Label
+        {
+            get => (string)GetValue(LabelProperty);
+            set => SetValue(LabelProperty, value);
+        }
+
+        public static readonly DependencyProperty FactionProperty =
+            DependencyProperty.Register(nameof(Faction), typeof(Faction), typeof(LCARSPanel), new PropertyMetadata(Faction.Federation, OnThemeChanged));
+
+        public Faction Faction
+        {
+            get => (Faction)GetValue(FactionProperty);
+            set => SetValue(FactionProperty, value);
+        }
+
+        public static readonly DependencyProperty EraProperty =
+            DependencyProperty.Register(nameof(Era), typeof(Era), typeof(LCARSPanel), new PropertyMetadata(Era.Era24, OnThemeChanged));
+
+        public Era Era
+        {
+            get => (Era)GetValue(EraProperty);
+            set => SetValue(EraProperty, value);
+        }
+
+        private static void OnLabelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is LCARSPanel p) p.PanelLabel.Text = (string)e.NewValue;
+        }
+
+        private static void OnThemeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is LCARSPanel p) p.UpdateTheme();
+        }
+
+        private void UpdateTheme()
+        {
+            var colors = LCARSFramework.LCARS.Theme.ThemeManager.GetColors(Faction, Era);
+            PanelBorder.Background = new SolidColorBrush(colors[1]);
+            PanelBorder.BorderBrush = new SolidColorBrush(colors[^1]);
+            PanelMeta.Text = $"{Faction} / {Era}";
+        }
+    }
+}

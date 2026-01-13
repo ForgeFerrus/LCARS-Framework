@@ -1,0 +1,4 @@
+C:\Users\Forge\source\LCARS\obj\Debug\net9.0-windows\MainWindow.g.vb
+C:\Users\Forge\source\LCARS\obj\Debug\net9.0-windows\Application.g.vb
+C:\Users\Forge\source\LCARS\obj\Debug\net9.0-windows\LCARS_MarkupCompile.cache
+C:\Users\Forge\source\LCARS\obj\Debug\net9.0-windows\LCARS_MarkupCompile.lref

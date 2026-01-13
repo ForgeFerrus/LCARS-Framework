@@ -1,0 +1,62 @@
+name: "Detector Control"
+version: "1.0.0"
+author: "Enterprise Team"
+description: >
+  Управління детектором: налаштування параметрів, моніторинг стану,
+  керування живленням та калібрацією.
+
+# Залежності на інші плагіни
+dependencies:
+  - "core >= 1.0"
+  - "event_bus >= 1.0"
+
+# Що експортує цей плагін
+exports:
+  - class: "DetectorControlPlugin"
+    type: "service"
+    description: "Main detector control service"
+
+# Хуки, які слухає плагін
+hooks:
+  - on_load
+  - on_startup
+  - on_shutdown
+
+# Налаштування за замовчуванням
+config:
+  detector:
+    energy: 0.0
+    particles: 0
+    power: "off"
+    shield_thickness: 1.0
+    temperature: 20.0
+    hv: 0
+
+# Список функцій, доступних через export()
+api:
+  - name: "configure_detector"
+    params:
+      - name: "energy"
+        type: "float"
+        description: "Енергія у MeV"
+      - name: "particles"
+        type: "int"
+        description: "Кількість частинок"
+    returns: "bool"
+  
+  - name: "get_state"
+    params: []
+    returns: "Dict"
+  
+  - name: "set_power"
+    params:
+      - name: "enabled"
+        type: "bool"
+    returns: "bool"
+  
+  - name: "calibrate"
+    params: []
+    returns: "bool"
+
+# Версія Python
+min_python: "3.9"

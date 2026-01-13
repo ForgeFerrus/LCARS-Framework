@@ -1,0 +1,36 @@
+﻿using System.Windows;
+using System.Windows.Controls;
+using LCARSFramework.Theme;
+
+namespace LCARSWorkbench
+{
+    public partial class LauncherWindow : Window
+    {
+        public Faction SelectedFaction { get; private set; }
+        public Era SelectedEra { get; private set; }
+        public LauncherWindow()
+        {
+            InitializeComponent();
+        }
+
+        private void OnOk(object sender, RoutedEventArgs e)
+        {
+            if (LauncherFactionList.SelectedItem is ListBoxItem fItem && LauncherEraComboBox.SelectedItem is ComboBoxItem eItem)
+            {
+                System.Enum.TryParse<Faction>(fItem.Content.ToString(), out var fac);
+                System.Enum.TryParse<Era>(eItem.Content.ToString(), out var era);
+                SelectedFaction = fac;
+                SelectedEra = era;
+                DialogResult = true;
+            }
+            else DialogResult = false;
+            Close();
+        }
+
+        private void OnCancel(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
+            Close();
+        }
+    }
+}
