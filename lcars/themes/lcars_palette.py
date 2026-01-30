@@ -22,8 +22,6 @@ class LCARSEra(Enum):
 
 # Універсальні кольори для всіх LCARS ер
 UNIVERSAL_BACKGROUND = '#000000'  # Завжди чорний фон
-UNIVERSAL_TEXT = '#FFFFFF'        # Завжди білий текст
-
 # LCARS Color Palettes - списки кольорів для кожної ери
 # Кнопки вибирають з цих кольорів випадково або програмовано
 ERA_COLOR_PALETTES = {
@@ -33,7 +31,7 @@ ERA_COLOR_PALETTES = {
         # Набір кольорів для кнопок (вибираються випадково/програмовано)
         'button_colors': [
             '#FFE600', "#269EEE", '#5C5C5C', '#27F8FF', 
-            '#018D76', '#FFBB00', '#00A35F', 
+            '#018D76', '#FFBB00', '#00A35F',
             '#2062EE', '#CE6363', '#9EFFB5'
         ],
         # Спеціальні кольори для alert/warning
@@ -142,6 +140,17 @@ def get_random_button_color(era: LCARSEra) -> str:
     palette = get_era_palette(era)
     return random.choice(palette['button_colors'])
 
+def get_faction_random_color(faction_era: FactionEra) -> str:
+    """
+    Рандомний колір кнопки з фракційної палітри
+    """
+    if faction_era in FACTION_COLOR_PALETTES:
+        palette = FACTION_COLOR_PALETTES[faction_era]
+        return random.choice(palette['button_colors'])
+    else:
+        # Fallback до LCARS_25TH
+        return get_random_button_color(LCARSEra.LCARS_25TH)
+
 def get_button_color_cycle(era: LCARSEra, index: int) -> str:
     """
     Отримати колір за індексом для циклічної анімації
@@ -169,10 +178,6 @@ def get_alert_color(era: LCARSEra, alert_level: int = 0) -> str:
 def get_background_color() -> str:
     """Колір фону для всіх LCARS ер"""
     return UNIVERSAL_BACKGROUND
-
-def get_text_color() -> str:
-    """Колір тексту для всіх LCARS ер"""
-    return UNIVERSAL_TEXT
 
 def get_palette_by_name(name: str) -> dict:
     """

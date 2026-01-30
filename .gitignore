@@ -28,6 +28,7 @@ wheels/
 # IDE
 .vscode/
 .idea/
+.vs/
 *.swp
 *.swo
 
@@ -47,3 +48,7 @@ logs/
 *.exe
 *.msi
 *.dmg
+
+# Large vendor/data dumps
+lcars_data/
+.env

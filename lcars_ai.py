@@ -14,7 +14,12 @@ class HuggingFaceProvider(AIProvider):
         self.model = model
         # Безкоштовний API ключ (публічний або пустий для обмежених запитів)
         self.api_url = f"https://api-inference.huggingface.co/models/{model}"
-        self.headers = {"Authorization": "Bearer hf_vNXzWlVxLzXzXzXzXzXzXzXzXzXzXzXzXz"} # Placeholder
+        # Read token from environment if present; otherwise run without key
+        hf_token = os.environ.get("HUGGINGFACE_API_TOKEN", "")
+        if hf_token:
+            self.headers = {"Authorization": f"Bearer {hf_token}"}
+        else:
+            self.headers = {}
 
     def ask(self, prompt: str) -> str:
         try:

@@ -13,9 +13,10 @@ from lcars.ui.lcars_central import LCARSCentralCommand
 def main():
     """Центральна точка входу в систему LCARS Framework"""
     app = QApplication(sys.argv)
+    # app.setStyle("Fusion")  # Removed to allow custom LCARS dark theme
     
-    # Налаштування стилю додатку
-    app.setStyle("Fusion")
+    # Ініціалізація шрифтів перед запуском
+    setup_lcars_font()
     
     # Запуск головного вікна керування
     window = LCARSCentralCommand()
