@@ -1,0 +1,48 @@
+name: Nova Act Integration
+id: plugins.nova
+version: 0.2.0
+entrypoint: plugins:SetupNova
+license: Apache-2.0
+author: LCARS / Nova Act PoC
+
+description: "Nova Act IDE + SDK: робоче середовище розробки з інтеграцією AWS Nova."
+
+tags:
+  - ide
+  - sdk
+  - nova
+  - development
+
+config:
+  type: object
+  properties:
+    ide:
+      type: object
+      properties:
+        autoOpen:
+          type: boolean
+          default: false
+          description: "Автовідкриття IDE панелі"
+        editorTheme:
+          type: string
+          default: "lcars"
+          description: "Тема редактора"
+    sdk:
+      type: object
+      properties:
+        useSdk:
+          type: boolean
+          default: false
+          description: "Використовувати реальний Nova Act SDK"
+        autoConnect:
+          type: boolean
+          default: false
+          description: "Автопідключення SDK"
+        apiKey:
+          type: string
+          description: "API ключ для Nova Act"
+  additionalProperties: false
+
+security:
+  requireExplicitEnable: true
+  importTimeDisk: false

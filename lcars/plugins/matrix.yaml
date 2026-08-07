@@ -1,0 +1,41 @@
+name: matrix
+version: 1.0.0
+entrypoint: plugins:SetupMatrix
+license: MIT
+author: LCARS Framework
+
+description: "Core: ядро системи, нексус, шина подій та матриця."
+
+tags:
+  - core
+  - kernel
+  - nexus
+  - matrix
+
+config:
+  type: object
+  properties:
+    eventBus:
+      type: object
+      properties:
+        asyncMode:
+          type: boolean
+          default: true
+        maxQueue:
+          type: integer
+          default: 1000
+    matrix:
+      type: object
+      properties:
+        syncInterval:
+          type: number
+          default: 3.0
+        chronoCycle:
+          type: string
+          default: "normal"
+          enum: ["normal", "yellow", "red"]
+  additionalProperties: false
+
+security:
+  requireExplicitEnable: false
+  importTimeDisk: false

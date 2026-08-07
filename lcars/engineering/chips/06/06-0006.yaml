@@ -1,0 +1,61 @@
+# ◤ LCARS Isolinear Chip 06-0006 — Email & SMS Gateway
+# Інтеграція з Email (SMTP) та SMS (Twilio)
+# Версія: 44.20
+# Дата: 2025
+
+metadata:
+  chip_id: "06-0006"
+  name: "Email SMS Gateway"
+  category: "communication"
+  version: "44.20"
+  status: "active"
+  description: "Email SMTP та SMS Twilio інтеграція для LCARS"
+  author: "LCARS Development Team"
+  requires_core: "06-0002"
+
+entry_points:
+  InitializeEmailSMS: "lcars.modules.comm_email:InitializeEmailSMS"
+  SendEmail: "lcars.modules.comm_email:EmailConnector.send"
+  SendSMS: "lcars.modules.comm_email:SMSConnector.send"
+  ConnectSMTP: "lcars.modules.comm_email:EmailConnector.connect"
+  ConnectTwilio: "lcars.modules.comm_email:SMSConnector.connect"
+
+config:
+  email:
+    smtp_port: 587
+    use_tls: true
+    timeout: 30
+    max_attachment_size: 10485760
+  sms:
+    provider: "twilio"
+    api_version: "2010-04-01"
+    timeout: 10
+  storage:
+    log_sent: true
+    queue_failed: true
+    retention_days: 90
+
+database:
+  path: "lcars/database/06-0006-email.db"
+  tables:
+    - smtp_accounts: "host, port, username, encrypted_pass, active"
+    - twilio_accounts: "account_sid, auth_token, from_number, active"
+    - email_log: "recipient, subject, status, timestamp"
+    - sms_log: "to_number, body, status, timestamp"
+    - failed_queue: "type, payload, retries, next_try"
+
+paths:
+  module_path: "lcars/modules/comm_email"
+  database_path: "lcars/database"
+
+dependencies:
+  - "engineering.isolinear"
+  - "modules.comm"  # 06-0002 Core
+
+tags:
+  - "communication"
+  - "email"
+  - "smtp"
+  - "sms"
+  - "twilio"
+  - "external-api"

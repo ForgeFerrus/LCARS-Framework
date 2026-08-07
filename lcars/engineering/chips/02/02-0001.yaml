@@ -1,0 +1,51 @@
+metadata:
+  id: system.registry
+  name: LCARS System Registry
+  version: 44.20.0
+  faction: Federation
+  type: system
+  category: 02
+
+specs:
+  capacity: 1024
+  color_code: '#33CC33'
+  security_level: 9
+  priority: 2
+
+entrypoints:
+  main: lcars.system.registry:InitializeRegistry
+  lookup: lcars.registry.lookup:InitializeLookup
+  mapping: lcars.registry.mapping:InitializeMapping
+
+config:
+  registry:
+    distributed: true
+    replication_factor: 3
+    consistency: strong
+  lookup:
+    cache_ttl: 600
+    index_type: btree
+
+paths:
+  registry_path: lcars/system/registry
+  lookup_path: lcars/registry/lookup
+  mapping_path: lcars/registry/mapping
+
+dependencies:
+  - database.primary
+  - system.control
+
+interfaces:
+  - RegistryAPI
+  - LookupAPI
+
+boot:
+  sequence:
+    - init_database
+    - init_registry
+  default_state: active
+
+tags:
+  - system
+  - registry
+  - federation

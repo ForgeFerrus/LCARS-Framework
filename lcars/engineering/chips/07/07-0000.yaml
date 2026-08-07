@@ -1,0 +1,56 @@
+metadata:
+  id: services.core
+  name: LCARS Core Services
+  version: 44.20.0
+  faction: Federation
+  type: service
+  category: 07
+
+specs:
+  capacity: 1400
+  color_code: '#99CC99'
+  security_level: 6
+  priority: 6
+
+entrypoints:
+  main: lcars.services.core:InitializeServices
+  cron: lcars.services.cron:InitializeCron
+  monitor: lcars.services.monitor:InitializeMonitor
+  sync: lcars.services.sync:InitializeSync
+
+config:
+  services:
+    autostart: true
+    parallel: true
+  cron:
+    resolution: minute
+    persistence: true
+  monitor:
+    interval: 5
+    alerts: true
+
+paths:
+  services_path: lcars/services
+  cron_path: lcars/services/cron
+  monitor_path: lcars/services/monitor
+
+dependencies:
+  - system.control
+  - database.primary
+
+interfaces:
+  - ServiceAPI
+
+boot:
+  sequence:
+    - init_control
+    - init_database
+    - init_services
+  default_state: active
+
+tags:
+  - service
+  - cron
+  - monitor
+  - background
+  - federation

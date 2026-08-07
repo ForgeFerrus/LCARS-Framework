@@ -1,0 +1,55 @@
+metadata:
+  id: core.romulan
+  name: Romulan Core Systems
+  version: 44.20.0
+  faction: Romulan
+  type: core
+  category: 00
+
+specs:
+  capacity: 2048
+  color_code: '#00CC00'
+  security_level: 10
+  priority: 1
+
+entrypoints:
+  main: lcars.romulan.core:InitializeRomulanCore
+  cloak: lcars.romulan.cloak:InitializeCloak
+  intel: lcars.romulan.intel:InitializeIntelligence
+
+config:
+  core:
+    auto_start: true
+    stealth_mode: true
+    cipher_strength: maximum
+  cloak:
+    device_type: quantum
+    power_drain: 0.85
+    signature_suppression: 0.99
+  intel:
+    encryption: tal_shiar
+    dead_drops: enabled
+
+paths:
+  core_path: lcars/romulan/core
+  cloak_path: lcars/romulan/cloak
+  intel_path: lcars/romulan/intel
+
+dependencies: []
+
+interfaces:
+  - RomulanCoreAPI
+  - CloakAPI
+
+boot:
+  sequence:
+    - init_cloak
+    - init_intel
+    - init_core
+  default_state: active
+
+tags:
+  - core
+  - romulan
+  - cloak
+  - intelligence

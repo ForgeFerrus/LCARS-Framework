@@ -1,0 +1,57 @@
+metadata:
+  id: core.borg
+  name: Borg Collective Core
+  version: 44.21.0
+  faction: Borg
+  type: core
+  category: 00
+
+specs:
+  capacity: 8192
+  color_code: '#00FF00'
+  security_level: 10
+  priority: 0
+
+entrypoints:
+  main: lcars.borg.core:InitializeBorgCore
+  collective: lcars.borg.collective:InitializeCollective
+  assimilation: lcars.borg.assimilation:InitializeAssimilation
+  drone: lcars.borg.drone:InitializeDroneControl
+
+config:
+  core:
+    auto_start: true
+    hive_mind: true
+    distributed_processing: true
+    resistance_futile: true
+  collective:
+    node_count: infinite
+    synchronization: continuous
+  assimilation:
+    target_scan: active
+    nanite_probes: enabled
+
+paths:
+  core_path: lcars/borg/core
+  collective_path: lcars/borg/collective
+  assimilation_path: lcars/borg/assimilation
+
+dependencies: []
+
+interfaces:
+  - BorgCoreAPI
+  - CollectiveAPI
+
+boot:
+  sequence:
+    - init_collective
+    - init_assimilation
+    - init_core
+  default_state: active
+
+tags:
+  - core
+  - borg
+  - collective
+  - assimilation
+  - hive_mind

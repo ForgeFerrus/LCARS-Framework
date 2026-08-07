@@ -1,0 +1,61 @@
+metadata:
+  id: system.control
+  name: LCARS System Control
+  version: 44.20.0
+  faction: Federation
+  type: system
+  category: 02
+
+specs:
+  capacity: 2048
+  color_code: '#33CC33'
+  security_level: 9
+  priority: 2
+
+entrypoints:
+  main: lcars.system.control:InitializeControl
+  matrix: lcars.system.matrix:InitializeMatrix
+  security: lcars.system.security:InitializeSecurity
+
+config:
+  control:
+    master_control: true
+    override_enabled: false
+    auto_recover: true
+  matrix:
+    dimensions: 3
+    processing_units: 16
+    quantum_enabled: false
+  security:
+    encryption: aes256
+    biometric: true
+    clearance_levels: 10
+
+paths:
+  control_path: lcars/system/control
+  matrix_path: lcars/system/matrix
+  security_path: lcars/system/security
+
+dependencies:
+  - core.alpha
+  - database.primary
+
+interfaces:
+  - ControlAPI
+  - MatrixAPI
+  - SecurityAPI
+
+boot:
+  sequence:
+    - init_core
+    - init_security
+    - init_matrix
+    - init_control
+  default_state: active
+
+tags:
+  - system
+  - control
+  - matrix
+  - security
+  - federation

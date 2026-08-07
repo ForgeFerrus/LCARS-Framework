@@ -1,0 +1,50 @@
+metadata:
+  id: core.emergency
+  name: LCARS Emergency Core
+  version: 44.20.0
+  faction: Federation
+  type: core
+  category: 00
+
+specs:
+  capacity: 512
+  color_code: '#FF0000'
+  security_level: 10
+  priority: 0
+
+entrypoints:
+  main: lcars.core.emergency:InitializeEmergency
+  alert: lcars.emergency.alert:InitializeAlert
+  shutdown: lcars.emergency.shutdown:InitializeShutdown
+
+config:
+  emergency:
+    auto_activate: true
+    red_alert_override: true
+    minimal_mode: true
+  alert:
+    sound_enabled: true
+    visual_enabled: true
+    broadcast: all_stations
+
+paths:
+  emergency_path: lcars/core/emergency
+  alert_path: lcars/emergency/alert
+  shutdown_path: lcars/emergency/shutdown
+
+dependencies: []
+
+interfaces:
+  - EmergencyAPI
+
+boot:
+  sequence:
+    - init_emergency
+  default_state: standby
+
+tags:
+  - core
+  - emergency
+  - alert
+  - redalert
+  - federation

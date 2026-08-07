@@ -1,0 +1,53 @@
+metadata:
+  id: core.bajoran
+  name: Bajoran Core Systems
+  version: 44.20.0
+  faction: Bajoran
+  type: core
+  category: 00
+
+specs:
+  capacity: 1536
+  color_code: '#FF6600'
+  security_level: 9
+  priority: 1
+
+entrypoints:
+  main: lcars.bajoran.core:InitializeBajoranCore
+  faith: lcars.bajoran.faith:InitializeFaith
+  resistance: lcars.bajoran.resistance:InitializeResistance
+
+config:
+  core:
+    auto_start: true
+    spiritual_integration: true
+    prophecy_mode: enabled
+  faith:
+    orb_connection: true
+    vedek_council_link: true
+  resistance:
+    cell_structure: distributed
+    secrecy_level: maximum
+
+paths:
+  core_path: lcars/bajoran/core
+  faith_path: lcars/bajoran/faith
+  resistance_path: lcars/bajoran/resistance
+
+dependencies: []
+
+interfaces:
+  - BajoranCoreAPI
+
+boot:
+  sequence:
+    - init_faith
+    - init_resistance
+    - init_core
+  default_state: active
+
+tags:
+  - core
+  - bajoran
+  - faith
+  - resistance

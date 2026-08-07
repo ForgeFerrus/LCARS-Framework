@@ -1,0 +1,83 @@
+# ◤ ISOLINEAR CHIP — CORE SYSTEM
+# Опис: Базове ядро системи LCARS — центральний чіп управління
+# Призначення: Ініціалізація шин, управління пам'яттю, базові протоколи
+# Епоха: 00-0000 — Core Era (до TNG)
+
+metadata:
+  id: core.alpha
+  name: LCARS Core System
+  version: 44.20.0
+  faction: Federation
+  type: core
+  status: critical
+
+# Фізичні параметри чіпа
+specs:
+  capacity: 2048
+  color_code: '#FF9900'
+  security_level: 10
+  priority: 1
+
+# Точки входу для активації
+entrypoints:
+  main: lcars.core.system:InitializeCore
+  memory: lcars.core.memory:InitializeMemory
+  bus: lcars.core.bus:InitializeBus
+
+# Конфігурація ядра
+config:
+  core:
+    auto_start: true
+    debug_mode: false
+    telemetry_enabled: true
+  memory:
+    heap_size: 512
+    cache_enabled: true
+    swap_enabled: false
+  bus:
+    protocol: ODNv3
+    baud_rate: 115200
+    channels: 16
+
+# Шляхи до компонентів ядра
+paths:
+  system_root: lcars/core
+  memory_path: lcars/core/memory
+  bus_path: lcars/core/bus
+  registry_path: lcars/engineering/registry
+  controller_path: lcars/engineering/controller
+
+# Залежності (які чіпи потрібні для роботи ядра)
+dependencies: []
+
+# Інтерфейси які надає ядро
+interfaces:
+  - SystemAPI
+  - MemoryAPI
+  - BusAPI
+  - RegistryAPI
+
+# Статус чіпа при завантаженні
+boot:
+  sequence:
+    - init_memory
+    - init_bus
+    - init_registry
+    - init_controller
+    - activate_core
+  default_state: active
+
+# Опис функціоналу
+description: |
+  Центральний ізолінійний чіп LCARS Core System.
+  Керує базовою інфраструктурою, ініціалізує шини даних,
+  управляє пам'яттю та забезпечує зв'язок з іншими чіпами.
+  Має найвищий пріоритет та рівень безпеки.
+
+# Теги для класифікації
+tags:
+  - core
+  - system
+  - critical
+  - infrastructure
+  - federation

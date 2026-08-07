@@ -1,0 +1,52 @@
+metadata:
+  id: modules.backup
+  name: LCARS Backup Module
+  version: 44.20.0
+  faction: Federation
+  type: module
+  category: 03
+
+specs:
+  capacity: 2000
+  color_code: '#FFCC33'
+  security_level: 7
+  priority: 3
+
+entrypoints:
+  main: lcars.modules.backup:InitializeBackup
+  snapshot: lcars.backup.snapshot:InitializeSnapshot
+  restore: lcars.backup.restore:InitializeRestore
+
+config:
+  backup:
+    schedule: daily
+    retention: 30
+    compression: true
+    encryption: aes256
+  snapshot:
+    auto_create: true
+    max_snapshots: 10
+
+paths:
+  backup_path: lcars/modules/backup
+  snapshot_path: lcars/backup/snapshot
+  restore_path: lcars/backup/restore
+
+dependencies:
+  - database.primary
+  - modules.agent
+
+interfaces:
+  - BackupAPI
+
+boot:
+  sequence:
+    - init_database
+    - init_backup
+  default_state: inserted
+
+tags:
+  - module
+  - backup
+  - snapshot
+  - federation

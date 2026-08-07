@@ -1,0 +1,23 @@
+metadata:
+  id: network.primary
+  name: Network Operations Chip
+  version: 44.20.0
+  faction: Federation
+  type: database
+  category: 06
+
+specs:
+  capacity: 2048
+  color_code: '#6699CC'
+  security_level: 8
+  priority: 2
+
+config:
+  database:
+    engine: sqlite
+    path: lcars/database/06/06-0009-network-operations-chip.db
+
+tags:
+  - network
+  - security
+  - logs

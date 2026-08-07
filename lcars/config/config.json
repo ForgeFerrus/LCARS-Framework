@@ -1,0 +1,14 @@
+{
+  "name": "LCARS Enterprise",
+  "version": "0.1.0",
+  "debug": false,
+  "theme": "Classic",
+  "app": {
+    "faction": "Federation",
+    "era": "Classic",
+    "alert_mode": false
+  },
+  "logging": {
+    "level": "INFO"
+  }
+}

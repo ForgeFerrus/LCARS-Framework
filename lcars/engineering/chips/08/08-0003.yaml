@@ -1,0 +1,23 @@
+metadata:
+  id: archive.backup
+  name: Backup Archive Chip
+  version: 44.20.0
+  faction: Federation
+  type: database
+  category: 08
+
+specs:
+  capacity: 8192
+  color_code: '#9966CC'
+  security_level: 7
+  priority: 2
+
+config:
+  database:
+    engine: sqlite
+    path: lcars/database/08/08-0003-backup-archive-chip.db
+
+tags:
+  - backup
+  - archive
+  - restore

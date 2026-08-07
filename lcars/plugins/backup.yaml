@@ -1,0 +1,26 @@
+name: backup
+id: plugins.backup
+version: 0.1.0
+entrypoint: plugins:SetupBackup
+license: MIT
+author: LCARS Framework
+
+description: "Provides safe backup and restore utilities for project folders."
+
+tags:
+  - backup
+  - restore
+  - safety
+
+config:
+  type: object
+  properties:
+    backupRoot:
+      type: string
+      default: data/backups
+  additionalProperties: false
+
+dependencies: []
+security:
+  importTimeDisk: true
+  requireExplicitEnable: true

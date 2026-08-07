@@ -1,0 +1,61 @@
+# ◤ LCARS Isolinear Chip 06-0007 — Meta Connector
+# Інтеграція з Meta (Facebook Messenger, Instagram)
+# Версія: 44.20
+# Дата: 2025
+
+metadata:
+  chip_id: "06-0007"
+  name: "Meta Connector"
+  category: "communication"
+  version: "44.20"
+  status: "active"
+  description: "Meta Graph API інтеграція для Messenger та Instagram"
+  author: "LCARS Development Team"
+  requires_core: "06-0002"
+
+entry_points:
+  InitializeMeta: "lcars.modules.comm_meta:InitializeMeta"
+  Connect: "lcars.modules.comm_meta:MetaConnector.connect"
+  SendMessenger: "lcars.modules.comm_meta:MetaConnector.sendMessenger"
+  SendInstagram: "lcars.modules.comm_meta:MetaConnector.sendInstagram"
+  WebhookHandler: "lcars.modules.comm_meta:MetaConnector.handleWebhook"
+
+config:
+  meta:
+    api_version: "v18.0"
+    api_base: "https://graph.facebook.com"
+    webhook_verify_token: ""
+    timeout: 10
+  messenger:
+    page_id: ""
+    app_id: ""
+  instagram:
+    instagram_account_id: ""
+  storage:
+    cache_messages: true
+    log_delivery: true
+
+database:
+  path: "lcars/database/06-0007-meta.db"
+  tables:
+    - credentials: "page_access_token, page_id, app_id, instagram_id"
+    - conversations: "psid, platform, last_message, timestamp"
+    - message_log: "recipient, content, platform, status, timestamp"
+    - webhook_events: "event_type, sender, payload, timestamp"
+
+paths:
+  module_path: "lcars/modules/comm_meta"
+  database_path: "lcars/database"
+
+dependencies:
+  - "engineering.isolinear"
+  - "modules.comm"  # 06-0002 Core
+
+tags:
+  - "communication"
+  - "meta"
+  - "facebook"
+  - "messenger"
+  - "instagram"
+  - "external-api"
+  - "messaging"

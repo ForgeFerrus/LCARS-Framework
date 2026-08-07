@@ -1,0 +1,57 @@
+metadata:
+  id: engineering.system
+  name: LCARS Engineering Systems
+  version: 44.20.0
+  faction: Federation
+  type: engineering
+  category: 06
+
+specs:
+  capacity: 1800
+  color_code: '#FF6666'
+  security_level: 8
+  priority: 4
+
+entrypoints:
+  main: lcars.engineering.system:InitializeEngSystem
+  telemetry: lcars.engineering.telemetry:InitializeTelemetry
+  warp: lcars.engineering.warp:InitializeWarp
+  deflector: lcars.engineering.deflector:InitializeDeflector
+
+config:
+  engineering:
+    alert_level: green
+    auto_diagnostic: true
+  telemetry:
+    sample_rate: 1000
+    retention: 86400
+  warp:
+    max_speed: 9.975
+    core_monitoring: true
+
+paths:
+  engineering_path: lcars/engineering
+  telemetry_path: lcars/engineering/telemetry
+  warp_path: lcars/engineering/warp
+
+dependencies:
+  - core.alpha
+  - system.control
+
+interfaces:
+  - EngineeringAPI
+  - TelemetryAPI
+
+boot:
+  sequence:
+    - init_core
+    - init_control
+    - init_engineering
+  default_state: inserted
+
+tags:
+  - engineering
+  - telemetry
+  - warp
+  - deflector
+  - federation

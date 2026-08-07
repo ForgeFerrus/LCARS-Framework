@@ -1,0 +1,54 @@
+metadata:
+  id: theme.ent
+  name: Enterprise Era Theme
+  version: 44.20.0
+  faction: Federation
+  type: theme
+  category: 04
+  era: 2150
+
+specs:
+  capacity: 800
+  color_code: '#CC9966'
+  security_level: 5
+  priority: 5
+
+entrypoints:
+  main: lcars.theme.ent:InitializeENTTheme
+  style: lcars.theme.ent.style:LoadStyle
+  colors: lcars.theme.ent.colors:LoadColors
+
+config:
+  theme:
+    name: Enterprise
+    base_color: '#CC9966'
+    accent_color: '#996633'
+    dark_mode: false
+    font: lcars_22
+  layout:
+    rounded_corners: false
+    button_style: classic
+    panel_density: low
+
+paths:
+  theme_path: lcars/theme/ent
+  style_path: lcars/theme/ent/style
+  colors_path: lcars/theme/ent/colors
+
+dependencies:
+  - modules.ui
+
+interfaces:
+  - ThemeAPI
+
+boot:
+  sequence:
+    - init_ui
+    - init_theme
+  default_state: inserted
+
+tags:
+  - theme
+  - ent
+  - 22nd_century
+  - federation

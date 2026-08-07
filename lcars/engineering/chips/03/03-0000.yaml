@@ -1,0 +1,62 @@
+metadata:
+  id: modules.agent
+  name: LCARS Agent Module
+  version: 44.20.0
+  faction: Federation
+  type: module
+  category: 03
+
+specs:
+  capacity: 1500
+  color_code: '#FFCC33'
+  security_level: 7
+  priority: 3
+
+entrypoints:
+  agent: lcars.service.copilot:SetupAgent
+  storage: lcars.core.storage:SetupStorage
+  backup: lcars.core.backup:SetupBackup
+
+config:
+  agent:
+    allow_shell: false
+    ai_enabled: true
+    providers:
+      - groq
+      - default
+  storage:
+    root: data/storage
+    format: json
+    compression: true
+  backup:
+    root: data/backups
+    schedule: daily
+    retention: 30
+
+paths:
+  agent_path: lcars/service/copilot
+  storage_path: lcars/core/storage
+  backup_path: lcars/core/backup
+
+dependencies:
+  - core.alpha
+  - database.primary
+
+interfaces:
+  - AgentAPI
+  - StorageAPI
+  - BackupAPI
+
+boot:
+  sequence:
+    - init_core
+    - init_database
+    - init_agent
+  default_state: inserted
+
+tags:
+  - module
+  - agent
+  - storage
+  - backup
+  - federation

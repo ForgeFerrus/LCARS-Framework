@@ -1,0 +1,53 @@
+metadata:
+  id: archive.primary
+  name: LCARS Primary Archive
+  version: 44.20.0
+  faction: Federation
+  type: archive
+  category: 08
+
+specs:
+  capacity: 3200
+  color_code: '#CC9999'
+  security_level: 7
+  priority: 7
+
+entrypoints:
+  main: lcars.archive.primary:InitializeArchive
+  logs: lcars.archive.logs:InitializeLogs
+  history: lcars.archive.history:InitializeHistory
+  backup: lcars.archive.backup:InitializeBackup
+
+config:
+  archive:
+    compression: lz4
+    encryption: aes256
+    retention_years: 100
+  logs:
+    level: info
+    rotation: daily
+    max_size: 100MB
+
+paths:
+  archive_path: lcars/archive
+  logs_path: data/logs
+  history_path: data/history
+
+dependencies:
+  - database.primary
+
+interfaces:
+  - ArchiveAPI
+
+boot:
+  sequence:
+    - init_database
+    - init_archive
+  default_state: active
+
+tags:
+  - archive
+  - logs
+  - history
+  - backup
+  - federation

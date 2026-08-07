@@ -1,0 +1,57 @@
+metadata:
+  id: database.primary
+  name: LCARS Primary Database
+  version: 44.20.0
+  faction: Federation
+  type: database
+  category: 01
+
+specs:
+  capacity: 4096
+  color_code: '#CC99FF'
+  security_level: 9
+  priority: 2
+
+entrypoints:
+  main: lcars.database.primary:InitializePrimaryDB
+  sqlite: lcars.database.sqlite:InitializeSQLite
+  query: lcars.database.query:InitializeQueryEngine
+
+config:
+  database:
+    engine: sqlite
+    path: data/primary.db
+    encryption: aes256
+    compression: true
+    max_connections: 32
+  sqlite:
+    journal_mode: wal
+    synchronous: normal
+    cache_size: 2000
+
+paths:
+  db_path: lcars/database
+  sqlite_path: lcars/database/sqlite
+  query_path: lcars/database/query
+
+dependencies:
+  - core.alpha
+  - core.memory
+  - core.bus
+
+interfaces:
+  - DatabaseAPI
+  - QueryAPI
+
+boot:
+  sequence:
+    - init_core
+    - init_memory
+    - init_database
+  default_state: active
+
+tags:
+  - database
+  - sqlite
+  - storage
+  - federation

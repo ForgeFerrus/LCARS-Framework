@@ -1,0 +1,56 @@
+metadata:
+  id: database.temporal
+  name: LCARS Temporal Database
+  version: 44.21.0
+  faction: Federation
+  type: database
+  category: 01
+
+specs:
+  capacity: 4096
+  color_code: '#66AAFF'
+  security_level: 9
+  priority: 3
+
+entrypoints:
+  main: lcars.database.temporal:InitializeTemporalDB
+  timeline: lcars.temporal.timeline:InitializeTimeline
+  paradox: lcars.temporal.paradox:InitializeParadoxDetector
+  sync: lcars.temporal.sync:InitializeTemporalSync
+
+config:
+  temporal:
+    time_resolution: nanosecond
+    paradox_check: strict
+    branches_allowed: true
+  timeline:
+    max_branches: 1000
+    pruning: true
+  sync:
+    protocol: timeship_standard
+    drift_tolerance: 0.001
+
+paths:
+  temporal_path: lcars/database/temporal
+  timeline_path: lcars/temporal/timeline
+  paradox_path: lcars/temporal/paradox
+
+dependencies:
+  - database.primary
+  - database.cache
+
+interfaces:
+  - TemporalDBAPI
+
+boot:
+  sequence:
+    - init_primary
+    - init_temporal
+  default_state: inserted
+
+tags:
+  - database
+  - temporal
+  - timeline
+  - timeship
+  - federation

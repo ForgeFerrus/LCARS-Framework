@@ -1,0 +1,23 @@
+metadata:
+  id: archive.logbook
+  name: Logbook Archive Chip
+  version: 44.20.0
+  faction: Federation
+  type: database
+  category: 08
+
+specs:
+  capacity: 4096
+  color_code: '#CC9966'
+  security_level: 7
+  priority: 2
+
+config:
+  database:
+    engine: sqlite
+    path: lcars/database/08/08-0002-logbook-archive-chip.db
+
+tags:
+  - logbook
+  - archive
+  - history

@@ -1,0 +1,7 @@
+id: 01-0005
+name: Starfleet Authorization DB
+type: AUTH
+description: Authorization PIN codes mapped to categories.
+blue_level: 5
+green_level: 5
+channel: iso://01-0005

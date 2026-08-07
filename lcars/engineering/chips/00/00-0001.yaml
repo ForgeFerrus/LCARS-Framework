@@ -1,0 +1,54 @@
+metadata:
+  id: core.memory
+  name: LCARS Memory Core
+  version: 44.20.0
+  faction: Federation
+  type: core
+  category: 00
+
+specs:
+  capacity: 1024
+  color_code: '#FF9900'
+  security_level: 10
+  priority: 1
+
+entrypoints:
+  main: lcars.core.memory:InitializeMemory
+  cache: lcars.core.cache:InitializeCache
+  swap: lcars.core.swap:InitializeSwap
+
+config:
+  memory:
+    heap_size: 512
+    stack_size: 256
+    cache_enabled: true
+    swap_enabled: false
+  cache:
+    l1_size: 64
+    l2_size: 128
+    eviction_policy: lru
+
+paths:
+  memory_path: lcars/core/memory
+  cache_path: lcars/core/cache
+  swap_path: lcars/core/swap
+
+dependencies:
+  - core.alpha
+
+interfaces:
+  - MemoryAPI
+  - CacheAPI
+
+boot:
+  sequence:
+    - init_heap
+    - init_cache
+    - init_stack
+  default_state: active
+
+tags:
+  - core
+  - memory
+  - cache
+  - federation

@@ -1,0 +1,7 @@
+{
+  "GEANT4_PATH": null,
+  "env_vars": {
+    "GEANT4_INSTALL": "",
+    "GEANT4_INSTALL_DATA": ""
+  }
+}

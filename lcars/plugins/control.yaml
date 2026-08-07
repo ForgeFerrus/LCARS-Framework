@@ -1,0 +1,26 @@
+name: control
+version: 1.0.0
+entrypoint: plugins:SetupControl
+license: MIT
+author: LCARS Framework
+
+description: "Загальний контроль системи: моніторинг, налаштування, управління."
+
+tags:
+  - control
+  - system
+  - monitoring
+
+config:
+  type: object
+  properties:
+    autoMonitor:
+      type: boolean
+      default: true
+    logLevel:
+      type: string
+      default: info
+  additionalProperties: false
+
+security:
+  requireExplicitEnable: true

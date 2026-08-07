@@ -1,0 +1,54 @@
+metadata:
+  id: utils.toolkit
+  name: LCARS Utility Toolkit
+  version: 44.20.0
+  faction: Federation
+  type: utility
+  category: 09
+
+specs:
+  capacity: 1000
+  color_code: '#999999'
+  security_level: 5
+  priority: 8
+
+entrypoints:
+  main: lcars.utils.toolkit:InitializeUtils
+  debug: lcars.utils.debug:InitializeDebug
+  helpers: lcars.utils.helpers:InitializeHelpers
+  scripts: lcars.utils.scripts:InitializeScripts
+
+config:
+  utils:
+    dev_mode: false
+    profiling: false
+  debug:
+    verbose: false
+    stack_trace: true
+  scripts:
+    allow_user: true
+    sandboxed: true
+
+paths:
+  utils_path: lcars/utils
+  debug_path: lcars/utils/debug
+  scripts_path: lcars/utils/scripts
+
+dependencies:
+  - core.alpha
+
+interfaces:
+  - UtilsAPI
+
+boot:
+  sequence:
+    - init_core
+    - init_utils
+  default_state: inserted
+
+tags:
+  - utility
+  - debug
+  - helper
+  - script
+  - federation

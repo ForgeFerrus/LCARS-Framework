@@ -1,0 +1,63 @@
+{
+  "vocabulary": [
+    {
+      "english": "Space",
+      "ukrainian": "Простір / Космос",
+      "part_of_speech": "noun",
+      "level": "A1",
+      "example_sentence": "We are exploring space.",
+      "difficulty": 1
+    },
+    {
+      "english": "Ship",
+      "ukrainian": "Корабель",
+      "part_of_speech": "noun",
+      "level": "A1",
+      "example_sentence": "The ship is ready.",
+      "difficulty": 1
+    },
+    {
+      "english": "Learn",
+      "ukrainian": "Вчити",
+      "part_of_speech": "verb",
+      "level": "A1",
+      "example_sentence": "I want to learn English.",
+      "difficulty": 1
+    },
+    {
+      "english": "System",
+      "ukrainian": "Система",
+      "part_of_speech": "noun",
+      "level": "A2",
+      "example_sentence": "System is online.",
+      "difficulty": 2
+    },
+    {
+      "english": "Command",
+      "ukrainian": "Команда",
+      "part_of_speech": "noun",
+      "level": "A2",
+      "example_sentence": "Awaiting command.",
+      "difficulty": 2
+    }
+  ],
+  "phrases": [
+    {
+      "english": "How are you?",
+      "ukrainian": "Як справи?",
+      "level": "A1",
+      "context": "Greeting",
+      "example_usage": "Hello, how are you?"
+    }
+  ],
+  "grammar_rules": [
+    {
+      "title": "Present Simple",
+      "rule_text": "Використовується для регулярних дій.",
+      "examples": "I work every day.",
+      "level": "A1"
+    }
+  ],
+  "mini_texts": [],
+  "tests": []
+}

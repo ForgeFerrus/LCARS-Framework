@@ -1,0 +1,55 @@
+metadata:
+  id: core.bus
+  name: LCARS Data Bus
+  version: 44.20.0
+  faction: Federation
+  type: core
+  category: 00
+
+specs:
+  capacity: 512
+  color_code: '#FF9900'
+  security_level: 10
+  priority: 1
+
+entrypoints:
+  main: lcars.core.bus:InitializeBus
+  odn: lcars.core.odn:InitializeODN
+  channels: lcars.core.channels:InitializeChannels
+
+config:
+  bus:
+    protocol: ODNv3
+    baud_rate: 115200
+    channels: 16
+    arbitration: round_robin
+  odn:
+    optical_enabled: true
+    wavelength: 1310
+    bandwidth: 10000
+
+paths:
+  bus_path: lcars/core/bus
+  odn_path: lcars/core/odn
+  channels_path: lcars/core/channels
+
+dependencies:
+  - core.alpha
+  - core.memory
+
+interfaces:
+  - BusAPI
+  - ODNAPI
+
+boot:
+  sequence:
+    - init_bus
+    - init_odn
+    - init_channels
+  default_state: active
+
+tags:
+  - core
+  - bus
+  - odn
+  - federation

@@ -1,0 +1,54 @@
+metadata:
+  id: modules.ui
+  name: LCARS UI Module
+  version: 44.20.0
+  faction: Federation
+  type: module
+  category: 03
+
+specs:
+  capacity: 1200
+  color_code: '#FFCC33'
+  security_level: 6
+  priority: 4
+
+entrypoints:
+  main: lcars.ui.core:InitializeUI
+  widgets: lcars.ui.widgets:InitializeWidgets
+  layout: lcars.ui.layout:InitializeLayout
+
+config:
+  ui:
+    framework: qt
+    renderer: hardware
+    scale_factor: 1.0
+  widgets:
+    touch_enabled: true
+    voice_enabled: false
+    haptic_feedback: false
+
+paths:
+  ui_path: lcars/ui
+  widgets_path: lcars/ui/widgets
+  layout_path: lcars/ui/layout
+
+dependencies:
+  - core.alpha
+  - system.control
+
+interfaces:
+  - UIAPI
+  - WidgetAPI
+
+boot:
+  sequence:
+    - init_core
+    - init_control
+    - init_ui
+  default_state: inserted
+
+tags:
+  - module
+  - ui
+  - interface
+  - federation

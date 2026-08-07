@@ -1,0 +1,56 @@
+metadata:
+  id: theme.constitution
+  name: Constitution Class Theme
+  version: 44.20.0
+  faction: Federation
+  type: theme
+  category: 04
+  era: 2260
+
+specs:
+  capacity: 800
+  color_code: '#FF9900'
+  security_level: 5
+  priority: 5
+
+entrypoints:
+  main: lcars.theme.tos:InitializeTOSTheme
+  style: lcars.theme.tos.style:LoadStyle
+  colors: lcars.theme.tos.colors:LoadColors
+
+config:
+  theme:
+    name: Constitution
+    base_color: '#FF9900'
+    accent_color: '#CC0000'
+    dark_mode: true
+    font: lcars_23
+  layout:
+    rounded_corners: false
+    button_style: tactile
+    panel_density: medium
+    bridge_layout: constitution
+
+paths:
+  theme_path: lcars/theme/tos
+  style_path: lcars/theme/tos/style
+  colors_path: lcars/theme/tos/colors
+
+dependencies:
+  - modules.ui
+
+interfaces:
+  - ThemeAPI
+
+boot:
+  sequence:
+    - init_ui
+    - init_theme
+  default_state: inserted
+
+tags:
+  - theme
+  - tos
+  - constitution
+  - 23rd_century
+  - federation

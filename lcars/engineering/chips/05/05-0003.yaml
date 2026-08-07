@@ -1,0 +1,23 @@
+metadata:
+  id: program.learning.english
+  name: English Isolinear Chip
+  version: 44.20.0
+  faction: Federation
+  type: database
+  category: 05
+
+specs:
+  capacity: 4096
+  color_code: '#99CCFF'
+  security_level: 5
+  priority: 3
+
+config:
+  database:
+    engine: sqlite
+    path: lcars/database/05/05-0003-english-isolinear-chip.db
+
+tags:
+  - learning
+  - english
+  - isolinear

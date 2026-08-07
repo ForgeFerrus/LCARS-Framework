@@ -1,0 +1,90 @@
+metadata:
+  id: communication.subsystem
+  name: LCARS Communication Subsystem
+  version: 44.20.0
+  faction: Federation
+  type: communication
+  category: 06
+  number: 0002
+
+specs:
+  capacity: 2000
+  color_code: '#99CCFF'
+  security_level: 7
+  priority: 3
+
+entrypoints:
+  main: lcars.modules.comm:InitializeCommSubsystem
+  contacts: lcars.modules.comm:InitializeContacts
+  messages: lcars.modules.comm:InitializeMessages
+  calls: lcars.modules.comm:InitializeCalls
+
+database:
+  path: lcars/database/06-0002-comm.db
+  type: isolinear
+  chip_number: 06-0002
+  tables:
+    - contacts
+    - messages
+    - calls
+
+config:
+  communication:
+    tcp_port: 7777
+    tcp_host: 0.0.0.0
+    max_connections: 64
+    message_retention: 2592000
+  contacts:
+    max_contacts: 10000
+    auto_sync: true
+  calls:
+    log_duration: true
+    auto_record: false
+  external_apis:
+    telegram: enabled
+    whatsapp: enabled
+    viber: enabled
+    meta: enabled
+    twitter: enabled
+    email_smtp: enabled
+    sms_twilio: enabled
+  presence:
+    track_status: true
+    broadcast_interval: 60
+  encryption:
+    algorithm: AES256
+    enabled: true
+    key_rotation: 86400
+
+paths:
+  module_path: lcars/modules/comm
+  database_path: lcars/database
+  socket_path: lcars/engineering/isolinear
+
+dependencies:
+  - core.alpha
+  - engineering.isolinear
+  - system.control
+
+interfaces:
+  - CommunicationAPI
+  - ContactAPI
+  - MessageAPI
+  - CallAPI
+
+boot:
+  sequence:
+    - init_core
+    - init_isolinear
+    - init_communication
+  default_state: inserted
+  auto_activate: true
+
+tags:
+  - communication
+  - contacts
+  - messages
+  - calls
+  - tcp
+  - network
+  - federation

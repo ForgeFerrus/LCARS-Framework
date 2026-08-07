@@ -1,0 +1,517 @@
+{
+  "Version": "0.2.0-alpha",
+  "Settings": {
+    "Resolution": "1920X1080",
+    "RefreshRate": "60 HZ",
+    "Fullscreen": true,
+    "Era": "25TH CENTURY",
+    "Faction": "STARFLEET",
+    "Language": "UKRAINIAN",
+    "Keyboard": "QWERTY",
+    "Target": "desktop",
+    "SecureBoot": true,
+    "BootOrder": [
+      "TITANIUM-OS",
+      "RECOVERY",
+      "BIOS-SETUP",
+      "AI-AUTONOMOUS",
+      "DESIGNER"
+    ],
+    "SafeMode": false,
+    "Diagnostics": true,
+    "Autofix": false,
+    "RecoveryTarget": "recovery",
+    "ODNMode": "NORMAL",
+    "BlackBox": true,
+    "ServiceMode": "STANDARD",
+    "Audio": true,
+    "Animations": true
+  },
+  "Catalog": {
+    "DISPLAY": [
+      {
+        "Name": "Resolution",
+        "Value": "1920X1080",
+        "Options": [
+          "1280X720",
+          "1920X1080",
+          "2560X1440",
+          "3840X2160"
+        ],
+        "Locked": false,
+        "Description": "\u0420\u043e\u0437\u043c\u0456\u0440 \u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0433\u043e LCARS-\u043f\u043e\u043b\u044f \u0434\u043b\u044f \u0435\u043a\u0440\u0430\u043d\u0456\u0432 \u0456 PADD."
+      },
+      {
+        "Name": "RefreshRate",
+        "Value": "60 HZ",
+        "Options": [
+          "60 HZ",
+          "120 HZ",
+          "144 HZ"
+        ],
+        "Locked": false,
+        "Description": "\u0426\u0456\u043b\u044c\u043e\u0432\u0430 \u0447\u0430\u0441\u0442\u043e\u0442\u0430 \u043e\u043d\u043e\u0432\u043b\u0435\u043d\u043d\u044f \u0434\u043b\u044f \u0430\u043d\u0456\u043c\u0430\u0446\u0456\u0439."
+      },
+      {
+        "Name": "Fullscreen",
+        "Value": true,
+        "Options": [
+          false,
+          true
+        ],
+        "Locked": false,
+        "Description": "\u0417\u0430\u043f\u0443\u0441\u043a\u0430\u0442\u0438 \u043e\u0431\u043e\u043b\u043e\u043d\u043a\u0443 \u043d\u0430 \u0432\u0435\u0441\u044c \u0435\u043a\u0440\u0430\u043d \u0430\u0431\u043e \u044f\u043a \u043f\u0435\u0440\u0435\u043d\u043e\u0441\u043d\u0438\u0439 PADD."
+      }
+    ],
+    "IDENTITY": [
+      {
+        "Name": "Era",
+        "Value": "25TH CENTURY",
+        "Options": [
+          "22ND CENTURY",
+          "23RD CENTURY",
+          "24TH CENTURY",
+          "25TH CENTURY"
+        ],
+        "Locked": false,
+        "Description": "\u0410\u043a\u0442\u0438\u0432\u043d\u0438\u0439 \u0447\u0430\u0441\u043e\u0432\u0438\u0439 \u0441\u0442\u0438\u043b\u044c LCARS."
+      },
+      {
+        "Name": "Faction",
+        "Value": "STARFLEET",
+        "Options": [
+          "STARFLEET",
+          "KLINGON",
+          "ROMULAN",
+          "VULCAN",
+          "BORG"
+        ],
+        "Locked": false,
+        "Description": "\u0424\u0440\u0430\u043a\u0446\u0456\u044f, \u044f\u043a\u0430 \u0437\u0430\u0434\u0430\u0454 \u043f\u0440\u043e\u0442\u043e\u043a\u043e\u043b\u0438 \u0439 \u0441\u0442\u0438\u043b\u044c \u043e\u0431\u043e\u043b\u043e\u043d\u043a\u0438."
+      }
+    ],
+    "LOCALIZATION": [
+      {
+        "Name": "Language",
+        "Value": "UKRAINIAN",
+        "Options": [
+          "UKRAINIAN",
+          "ENGLISH"
+        ],
+        "Locked": false,
+        "Description": "\u041c\u043e\u0432\u0430 \u0441\u0438\u0441\u0442\u0435\u043c\u043d\u0438\u0445 \u0435\u043a\u0440\u0430\u043d\u0456\u0432 \u0456 \u0441\u043b\u0443\u0436\u0431\u043e\u0432\u0438\u0445 \u043f\u043e\u0432\u0456\u0434\u043e\u043c\u043b\u0435\u043d\u044c."
+      },
+      {
+        "Name": "Keyboard",
+        "Value": "QWERTY",
+        "Options": [
+          "QWERTY",
+          "QWERTZ",
+          "AZERTY"
+        ],
+        "Locked": false,
+        "Description": "\u041f\u0456\u0434\u043a\u0430\u0437\u043a\u0430 \u0440\u043e\u0437\u043a\u043b\u0430\u0434\u043a\u0438 \u0434\u043b\u044f \u043f\u043e\u043b\u0456\u0432 \u0432\u0432\u0435\u0434\u0435\u043d\u043d\u044f."
+      }
+    ],
+    "UEFI": [
+      {
+        "Name": "Target",
+        "Value": "desktop",
+        "Options": [
+          "desktop",
+          "recovery",
+          "bios",
+          "shell",
+          "ai_boot",
+          "designer"
+        ],
+        "Locked": false,
+        "Description": "\u0426\u0456\u043b\u044c \u0437\u0430\u043f\u0443\u0441\u043a\u0443, \u044f\u043a\u0443 \u0432\u0438\u0431\u0438\u0440\u0430\u0454 UEFI-\u0440\u0456\u0432\u0435\u043d\u044c."
+      },
+      {
+        "Name": "SecureBoot",
+        "Value": true,
+        "Options": [
+          false,
+          true
+        ],
+        "Locked": false,
+        "Description": "\u0414\u043e\u0437\u0432\u043e\u043b\u044f\u0442\u0438 \u0442\u0456\u043b\u044c\u043a\u0438 \u0437\u0430\u0445\u0438\u0449\u0435\u043d\u0456 \u0437\u0430\u043f\u0438\u0441\u0438 \u0437\u0430\u043f\u0443\u0441\u043a\u0443."
+      },
+      {
+        "Name": "BootOrder",
+        "Value": [
+          "TITANIUM-OS",
+          "RECOVERY",
+          "BIOS-SETUP",
+          "AI-AUTONOMOUS",
+          "DESIGNER"
+        ],
+        "Options": [],
+        "Locked": false,
+        "Description": "\u041f\u043e\u0440\u044f\u0434\u043e\u043a \u0437\u0430\u043f\u0438\u0441\u0456\u0432 \u0437\u0430\u043f\u0443\u0441\u043a\u0443."
+      }
+    ],
+    "RECOVERY": [
+      {
+        "Name": "SafeMode",
+        "Value": false,
+        "Options": [
+          false,
+          true
+        ],
+        "Locked": false,
+        "Description": "\u041f\u0440\u0438\u043c\u0443\u0441\u043e\u0432\u043e \u0437\u0430\u043f\u0443\u0441\u043a\u0430\u0442\u0438 \u0441\u043a\u043e\u0440\u043e\u0447\u0435\u043d\u0438\u0439 \u0431\u0435\u0437\u043f\u0435\u0447\u043d\u0438\u0439 \u043b\u0430\u043d\u0446\u044e\u0433."
+      },
+      {
+        "Name": "Diagnostics",
+        "Value": true,
+        "Options": [
+          false,
+          true
+        ],
+        "Locked": false,
+        "Description": "\u0412\u0438\u043a\u043e\u043d\u0443\u0432\u0430\u0442\u0438 \u043f\u043e\u0432\u043d\u0443 \u0434\u0456\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0443 \u043f\u0435\u0440\u0435\u0434 \u0441\u0442\u0430\u0440\u0442\u043e\u043c."
+      },
+      {
+        "Name": "Autofix",
+        "Value": false,
+        "Options": [
+          false,
+          true
+        ],
+        "Locked": false,
+        "Description": "\u0414\u043e\u0437\u0432\u043e\u043b\u0438\u0442\u0438 \u0430\u0432\u0430\u0440\u0456\u0439\u043d\u043e\u043c\u0443 \u0440\u0456\u0432\u043d\u044e \u0432\u0438\u043f\u0440\u0430\u0432\u043b\u044f\u0442\u0438 \u0432\u0456\u0434\u043e\u043c\u0456 \u0437\u0431\u043e\u0457."
+      },
+      {
+        "Name": "RecoveryTarget",
+        "Value": "recovery",
+        "Options": [
+          "recovery",
+          "bios",
+          "shell"
+        ],
+        "Locked": false,
+        "Description": "\u041a\u0443\u0434\u0438 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0438\u0442\u0438 \u043f\u0456\u0441\u043b\u044f \u043a\u0440\u0438\u0442\u0438\u0447\u043d\u043e\u0457 \u043f\u043e\u043c\u0438\u043b\u043a\u0438."
+      }
+    ],
+    "NETWORK": [
+      {
+        "Name": "ODNMode",
+        "Value": "NORMAL",
+        "Options": [
+          "NORMAL",
+          "SAFE",
+          "DIAGNOSTIC"
+        ],
+        "Locked": false,
+        "Description": "\u0420\u0435\u0436\u0438\u043c \u043f\u0435\u0440\u0435\u0434\u0430\u0447\u0456 \u043a\u0430\u043d\u0430\u043b\u0430\u043c\u0438 ODN."
+      },
+      {
+        "Name": "BlackBox",
+        "Value": true,
+        "Options": [
+          false,
+          true
+        ],
+        "Locked": false,
+        "Description": "\u0417\u0430\u043f\u0438\u0441\u0443\u0432\u0430\u0442\u0438 \u043f\u043e\u0434\u0456\u0457 \u0437\u0430\u043f\u0443\u0441\u043a\u0443 \u0443 \u0447\u043e\u0440\u043d\u0443 \u0441\u043a\u0440\u0438\u043d\u044c\u043a\u0443 ODN."
+      }
+    ],
+    "SERVICES": [
+      {
+        "Name": "ServiceMode",
+        "Value": "STANDARD",
+        "Options": [
+          "MINIMAL",
+          "STANDARD",
+          "FULL"
+        ],
+        "Locked": false,
+        "Description": "\u042f\u043a\u0438\u0439 \u043d\u0430\u0431\u0456\u0440 \u0441\u043b\u0443\u0436\u0431 \u043f\u0456\u0434\u043d\u0456\u043c\u0430\u0442\u0438 \u043f\u0456\u0441\u043b\u044f \u0456\u043d\u0456\u0446\u0456\u0430\u043b\u0456\u0437\u0430\u0446\u0456\u0457."
+      },
+      {
+        "Name": "Audio",
+        "Value": true,
+        "Options": [
+          false,
+          true
+        ],
+        "Locked": false,
+        "Description": "\u0414\u043e\u0437\u0432\u043e\u043b\u0438\u0442\u0438 \u0437\u0432\u0443\u043a\u043e\u0432\u0438\u0439 \u0432\u0456\u0434\u0433\u0443\u043a LCARS."
+      },
+      {
+        "Name": "Animations",
+        "Value": true,
+        "Options": [
+          false,
+          true
+        ],
+        "Locked": false,
+        "Description": "\u0414\u043e\u0437\u0432\u043e\u043b\u0438\u0442\u0438 \u0430\u043d\u0456\u043c\u0430\u0446\u0456\u0439\u043d\u0456 \u043f\u0440\u043e\u0442\u043e\u043a\u043e\u043b\u0438 LCARS."
+      }
+    ]
+  },
+  "UEFI": {
+    "Target": "desktop",
+    "SecureBoot": true,
+    "BootOrder": [
+      "TITANIUM-OS",
+      "RECOVERY",
+      "BIOS-SETUP",
+      "AI-AUTONOMOUS",
+      "DESIGNER"
+    ],
+    "Entries": [
+      {
+        "Name": "TITANIUM-OS",
+        "Description": "\u041e\u0441\u043d\u043e\u0432\u043d\u0438\u0439 LCARS-\u0456\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441",
+        "Target": "desktop",
+        "Priority": 1,
+        "IsDefault": true,
+        "Secure": true
+      },
+      {
+        "Name": "RECOVERY",
+        "Description": "\u041e\u0431\u0441\u043b\u0443\u0433\u043e\u0432\u0443\u0432\u0430\u043d\u043d\u044f \u0439 \u0430\u0432\u0430\u0440\u0456\u0439\u043d\u0438\u0439 \u0440\u0435\u0436\u0438\u043c",
+        "Target": "recovery",
+        "Priority": 2,
+        "IsDefault": false,
+        "Secure": true
+      },
+      {
+        "Name": "BIOS-SETUP",
+        "Description": "\u0415\u043a\u0440\u0430\u043d \u043d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u044c LCARS BIOS",
+        "Target": "bios",
+        "Priority": 3,
+        "IsDefault": false,
+        "Secure": true
+      },
+      {
+        "Name": "AI-AUTONOMOUS",
+        "Description": "\u041f\u0440\u044f\u043c\u0438\u0439 \u0437\u0430\u043f\u0443\u0441\u043a AI-\u0440\u0456\u0432\u043d\u044f",
+        "Target": "ai_boot",
+        "Priority": 4,
+        "IsDefault": false,
+        "Secure": true
+      },
+      {
+        "Name": "DESIGNER",
+        "Description": "LCARS-\u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440 \u0456\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0456\u0432",
+        "Target": "designer",
+        "Priority": 5,
+        "IsDefault": false,
+        "Secure": true
+      }
+    ],
+    "Firmware": {
+      "Version": "44.20-Titanium",
+      "BuildDate": "2026.06.20",
+      "Language": "ukrainian",
+      "DefaultBoot": "desktop",
+      "Hardware": {
+        "Cpu": "LCARS-Core-Ti",
+        "MemoryTotal": 32768,
+        "StorageDevices": [],
+        "NetworkInterfaces": []
+      },
+      "Entries": [
+        {
+          "Name": "TITANIUM-OS",
+          "Description": "\u041e\u0441\u043d\u043e\u0432\u043d\u0438\u0439 LCARS-\u0456\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441",
+          "Target": "desktop",
+          "Priority": 1,
+          "IsDefault": true,
+          "Secure": true
+        },
+        {
+          "Name": "RECOVERY",
+          "Description": "\u041e\u0431\u0441\u043b\u0443\u0433\u043e\u0432\u0443\u0432\u0430\u043d\u043d\u044f \u0439 \u0430\u0432\u0430\u0440\u0456\u0439\u043d\u0438\u0439 \u0440\u0435\u0436\u0438\u043c",
+          "Target": "recovery",
+          "Priority": 2,
+          "IsDefault": false,
+          "Secure": true
+        },
+        {
+          "Name": "BIOS-SETUP",
+          "Description": "\u0415\u043a\u0440\u0430\u043d \u043d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u044c LCARS BIOS",
+          "Target": "bios",
+          "Priority": 3,
+          "IsDefault": false,
+          "Secure": true
+        },
+        {
+          "Name": "AI-AUTONOMOUS",
+          "Description": "\u041f\u0440\u044f\u043c\u0438\u0439 \u0437\u0430\u043f\u0443\u0441\u043a AI-\u0440\u0456\u0432\u043d\u044f",
+          "Target": "ai_boot",
+          "Priority": 4,
+          "IsDefault": false,
+          "Secure": true
+        },
+        {
+          "Name": "DESIGNER",
+          "Description": "LCARS-\u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440 \u0456\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0456\u0432",
+          "Target": "designer",
+          "Priority": 5,
+          "IsDefault": false,
+          "Secure": true
+        }
+      ]
+    }
+  },
+  "LCARS": {
+    "Display": {
+      "Resolution": "1920X1080",
+      "RefreshRate": "60 HZ",
+      "Fullscreen": true
+    },
+    "Identity": {
+      "Era": "25TH CENTURY",
+      "Faction": "STARFLEET",
+      "Language": "UKRAINIAN",
+      "Keyboard": "QWERTY"
+    },
+    "Services": {
+      "ServiceMode": "STANDARD",
+      "Audio": true,
+      "Animations": true,
+      "ODNMode": "NORMAL",
+      "BlackBox": true
+    },
+    "Recovery": {
+      "SafeMode": false,
+      "Diagnostics": true,
+      "Target": "recovery",
+      "ServiceMode": "STANDARD"
+    },
+    "Autofix": {
+      "Enabled": false,
+      "AllowedStages": [
+        "REGISTER MAP",
+        "ODN BUS",
+        "BIOS POST",
+        "KERNEL MAP"
+      ],
+      "RequiresBlackBox": true
+    }
+  },
+  "BootEntries": [
+    {
+      "Name": "TITANIUM-OS",
+      "Description": "\u041e\u0441\u043d\u043e\u0432\u043d\u0438\u0439 LCARS-\u0456\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441",
+      "Target": "desktop",
+      "Priority": 1,
+      "IsDefault": true,
+      "Secure": true
+    },
+    {
+      "Name": "RECOVERY",
+      "Description": "\u041e\u0431\u0441\u043b\u0443\u0433\u043e\u0432\u0443\u0432\u0430\u043d\u043d\u044f \u0439 \u0430\u0432\u0430\u0440\u0456\u0439\u043d\u0438\u0439 \u0440\u0435\u0436\u0438\u043c",
+      "Target": "recovery",
+      "Priority": 2,
+      "IsDefault": false,
+      "Secure": true
+    },
+    {
+      "Name": "BIOS-SETUP",
+      "Description": "\u0415\u043a\u0440\u0430\u043d \u043d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u044c LCARS BIOS",
+      "Target": "bios",
+      "Priority": 3,
+      "IsDefault": false,
+      "Secure": true
+    },
+    {
+      "Name": "AI-AUTONOMOUS",
+      "Description": "\u041f\u0440\u044f\u043c\u0438\u0439 \u0437\u0430\u043f\u0443\u0441\u043a AI-\u0440\u0456\u0432\u043d\u044f",
+      "Target": "ai_boot",
+      "Priority": 4,
+      "IsDefault": false,
+      "Secure": true
+    },
+    {
+      "Name": "DESIGNER",
+      "Description": "LCARS-\u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440 \u0456\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0456\u0432",
+      "Target": "designer",
+      "Priority": 5,
+      "IsDefault": false,
+      "Secure": true
+    }
+  ],
+  "Hardware": {
+    "Cpu": "LCARS-Core-Ti",
+    "MemoryTotal": 32768,
+    "StorageDevices": [],
+    "NetworkInterfaces": []
+  },
+  "Firmware": {
+    "Version": "44.20-Titanium",
+    "BuildDate": "2026.06.20",
+    "Language": "ukrainian",
+    "DefaultBoot": "desktop",
+    "Hardware": {
+      "Cpu": "LCARS-Core-Ti",
+      "MemoryTotal": 32768,
+      "StorageDevices": [],
+      "NetworkInterfaces": []
+    },
+    "Entries": [
+      {
+        "Name": "TITANIUM-OS",
+        "Description": "\u041e\u0441\u043d\u043e\u0432\u043d\u0438\u0439 LCARS-\u0456\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441",
+        "Target": "desktop",
+        "Priority": 1,
+        "IsDefault": true,
+        "Secure": true
+      },
+      {
+        "Name": "RECOVERY",
+        "Description": "\u041e\u0431\u0441\u043b\u0443\u0433\u043e\u0432\u0443\u0432\u0430\u043d\u043d\u044f \u0439 \u0430\u0432\u0430\u0440\u0456\u0439\u043d\u0438\u0439 \u0440\u0435\u0436\u0438\u043c",
+        "Target": "recovery",
+        "Priority": 2,
+        "IsDefault": false,
+        "Secure": true
+      },
+      {
+        "Name": "BIOS-SETUP",
+        "Description": "\u0415\u043a\u0440\u0430\u043d \u043d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u044c LCARS BIOS",
+        "Target": "bios",
+        "Priority": 3,
+        "IsDefault": false,
+        "Secure": true
+      },
+      {
+        "Name": "AI-AUTONOMOUS",
+        "Description": "\u041f\u0440\u044f\u043c\u0438\u0439 \u0437\u0430\u043f\u0443\u0441\u043a AI-\u0440\u0456\u0432\u043d\u044f",
+        "Target": "ai_boot",
+        "Priority": 4,
+        "IsDefault": false,
+        "Secure": true
+      },
+      {
+        "Name": "DESIGNER",
+        "Description": "LCARS-\u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440 \u0456\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0456\u0432",
+        "Target": "designer",
+        "Priority": 5,
+        "IsDefault": false,
+        "Secure": true
+      }
+    ]
+  },
+  "Recovery": {
+    "SafeMode": false,
+    "Diagnostics": true,
+    "Target": "recovery",
+    "ServiceMode": "STANDARD"
+  },
+  "Autofix": {
+    "Enabled": false,
+    "AllowedStages": [
+      "REGISTER MAP",
+      "ODN BUS",
+      "BIOS POST",
+      "KERNEL MAP"
+    ],
+    "RequiresBlackBox": true
+  },
+  "ConfigPath": "C:\\Users\\Forge\\MyProject\\LCARS-Framework\\lcars\\database\\99\\99-9999-lcars-bios-configuration.json"
+}

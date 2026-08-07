@@ -1,0 +1,33 @@
+metadata:
+  id: system.odn.blackbox
+  name: ODN Black Box
+  version: 44.20.0
+  faction: Federation
+  type: database
+  category: 01
+
+specs:
+  capacity: 8192
+  color_code: '#99CCFF'
+  security_level: 10
+  priority: 1
+
+entrypoints:
+  signal: lcars.base.signal:ODN
+
+config:
+  database:
+    engine: sqlite
+    path: lcars/database/01/01-0004-odn-black-box.db
+    journal_mode: wal
+    role: ODN_TRANSMISSION_RECORDER
+
+dependencies:
+  - database.primary
+  - kernel.primary
+
+tags:
+  - odn
+  - transmission
+  - blackbox
+  - diagnostics

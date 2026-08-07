@@ -1,0 +1,52 @@
+# ◤ LCARS Isolinear Chip 06-0003 — Telegram Connector
+# Інтеграція з Telegram Bot API
+# Версія: 44.20
+# Дата: 2025
+
+metadata:
+  chip_id: "06-0003"
+  name: "Telegram Connector"
+  category: "communication"
+  version: "44.20"
+  status: "active"
+  description: "Telegram Bot API інтеграція для LCARS Communication Subsystem"
+  author: "LCARS Development Team"
+  requires_core: "06-0002"
+
+entry_points:
+  Initialize: "lcars.modules.comm:ExternalAPIManager.enableTelegram"
+  Connect: "lcars.modules.comm:TelegramConnector.connect"
+  Send: "lcars.modules.comm:TelegramConnector.send"
+  Poll: "lcars.modules.comm:TelegramConnector.poll"
+
+config:
+  telegram:
+    api_base: "https://api.telegram.org"
+    timeout: 30
+    poll_interval: 5
+    max_messages_per_poll: 100
+  storage:
+    cache_messages: true
+    log_delivery: true
+    retention_days: 30
+
+database:
+  path: "lcars/database/06-0003-telegram.db"
+  tables:
+    - credentials: "api_token, bot_name, active_status"
+    - message_cache: "message_id, chat_id, content, timestamp, direction"
+    - delivery_log: "recipient, content, status, timestamp"
+
+paths:
+  module_path: "lcars/modules/comm"
+  database_path: "lcars/database"
+
+dependencies:
+  - "engineering.isolinear"
+  - "modules.comm"  # 06-0002 Core
+
+tags:
+  - "communication"
+  - "telegram"
+  - "external-api"
+  - "messaging"

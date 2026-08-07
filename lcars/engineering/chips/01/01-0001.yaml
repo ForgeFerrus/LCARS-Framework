@@ -1,0 +1,50 @@
+metadata:
+  id: database.cache
+  name: LCARS Cache Database
+  version: 44.20.0
+  faction: Federation
+  type: database
+  category: 01
+
+specs:
+  capacity: 2048
+  color_code: '#CC99FF'
+  security_level: 8
+  priority: 2
+
+entrypoints:
+  main: lcars.database.cache:InitializeCacheDB
+  l1: lcars.cache.l1:InitializeL1
+  l2: lcars.cache.l2:InitializeL2
+
+config:
+  cache:
+    l1_size: 256
+    l2_size: 512
+    ttl: 3600
+    eviction: lru
+  persistence:
+    enabled: true
+    interval: 300
+
+paths:
+  cache_path: lcars/database/cache
+  l1_path: lcars/cache/l1
+  l2_path: lcars/cache/l2
+
+dependencies:
+  - database.primary
+
+interfaces:
+  - CacheDBAPI
+
+boot:
+  sequence:
+    - init_primary
+    - init_cache
+  default_state: active
+
+tags:
+  - database
+  - cache
+  - federation

@@ -1,0 +1,53 @@
+metadata:
+  id: programs.suite
+  name: LCARS Program Suite
+  version: 44.20.0
+  faction: Federation
+  type: program
+  category: 05
+
+specs:
+  capacity: 1600
+  color_code: '#66CCFF'
+  security_level: 6
+  priority: 5
+
+entrypoints:
+  main: lcars.programs.suite:InitializeSuite
+  viewer: lcars.programs.viewer:InitializeViewer
+  editor: lcars.programs.editor:InitializeEditor
+  calc: lcars.programs.calc:InitializeCalculator
+
+config:
+  programs:
+    autoload: true
+    sandboxed: true
+  viewer:
+    formats: [txt, log, yaml, json]
+    syntax_highlight: true
+  editor:
+    auto_save: true
+    line_numbers: true
+
+paths:
+  programs_path: lcars/programs
+  viewer_path: lcars/programs/viewer
+  editor_path: lcars/programs/editor
+
+dependencies:
+  - modules.ui
+  - modules.agent
+
+interfaces:
+  - ProgramAPI
+
+boot:
+  sequence:
+    - init_ui
+    - init_programs
+  default_state: inserted
+
+tags:
+  - program
+  - application
+  - federation

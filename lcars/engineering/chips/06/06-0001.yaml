@@ -1,0 +1,56 @@
+metadata:
+  id: engineering.isolinear
+  name: LCARS Isolinear Management
+  version: 44.20.0
+  faction: Federation
+  type: engineering
+  category: 06
+
+specs:
+  capacity: 1500
+  color_code: '#FF6666'
+  security_level: 9
+  priority: 2
+
+entrypoints:
+  main: lcars.engineering.isolinear:InitializeIsolinear
+  bank: lcars.isolinear.bank:InitializeBank
+  chip: lcars.isolinear.chip:InitializeChip
+  controller: lcars.isolinear.controller:InitializeController
+
+config:
+  isolinear:
+    max_chips: 100
+    redundancy: true
+    auto_repair: true
+  bank:
+    slots: 16
+    hot_swap: true
+  controller:
+    polling_rate: 100
+
+paths:
+  isolinear_path: lcars/engineering/isolinear
+  bank_path: lcars/isolinear/bank
+  chip_path: lcars/isolinear/chip
+
+dependencies:
+  - core.alpha
+  - engineering.system
+
+interfaces:
+  - IsolinearAPI
+
+boot:
+  sequence:
+    - init_core
+    - init_engineering
+    - init_isolinear
+  default_state: active
+
+tags:
+  - engineering
+  - isolinear
+  - bank
+  - controller
+  - federation

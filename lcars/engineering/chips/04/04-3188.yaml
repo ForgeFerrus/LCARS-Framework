@@ -1,0 +1,57 @@
+metadata:
+  id: theme.discovery
+  name: Discovery Era Theme
+  version: 44.21.0
+  faction: Federation
+  type: theme
+  category: 04
+  era: 3188
+
+specs:
+  capacity: 800
+  color_code: '#CC99FF'
+  security_level: 5
+  priority: 5
+
+entrypoints:
+  main: lcars.theme.discovery:InitializeDiscoveryTheme
+  style: lcars.theme.discovery.style:LoadStyle
+  colors: lcars.theme.discovery.colors:LoadColors
+
+config:
+  theme:
+    name: Discovery
+    base_color: '#CC99FF'
+    accent_color: '#9966CC'
+    dark_mode: true
+    font: lcars_32
+  layout:
+    rounded_corners: true
+    button_style: holographic
+    panel_density: very_high
+    bridge_layout: discovery
+    temporal_display: true
+
+paths:
+  theme_path: lcars/theme/discovery
+  style_path: lcars/theme/discovery/style
+  colors_path: lcars/theme/discovery/colors
+
+dependencies:
+  - modules.ui
+
+interfaces:
+  - ThemeAPI
+
+boot:
+  sequence:
+    - init_ui
+    - init_theme
+  default_state: inserted
+
+tags:
+  - theme
+  - discovery
+  - 32nd_century
+  - future
+  - federation

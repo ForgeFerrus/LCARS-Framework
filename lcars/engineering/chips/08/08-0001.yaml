@@ -1,0 +1,55 @@
+metadata:
+  id: archive.logs
+  name: LCARS Log Archive
+  version: 44.20.0
+  faction: Federation
+  type: archive
+  category: 08
+
+specs:
+  capacity: 2500
+  color_code: '#CC9999'
+  security_level: 7
+  priority: 7
+
+entrypoints:
+  main: lcars.archive.logs:InitializeLogArchive
+  telemetry: lcars.logs.telemetry:InitializeTelemetryLogs
+  security: lcars.logs.security:InitializeSecurityLogs
+  audit: lcars.logs.audit:InitializeAuditLogs
+
+config:
+  logs:
+    level: debug
+    retention_days: 365
+    compression: true
+  telemetry:
+    sample_rate: 1000
+    aggregation: average
+  security:
+    alert_on_anomaly: true
+    classification: confidential
+
+paths:
+  logs_path: lcars/archive/logs
+  telemetry_path: lcars/logs/telemetry
+  security_path: lcars/logs/security
+
+dependencies:
+  - archive.primary
+
+interfaces:
+  - LogArchiveAPI
+
+boot:
+  sequence:
+    - init_archive
+    - init_logs
+  default_state: active
+
+tags:
+  - archive
+  - logs
+  - telemetry
+  - security
+  - federation

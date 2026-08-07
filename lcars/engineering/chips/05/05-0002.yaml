@@ -1,0 +1,23 @@
+metadata:
+  id: program.learning.core
+  name: LCARS Learning Core
+  version: 44.20.0
+  faction: Federation
+  type: database
+  category: 05
+
+specs:
+  capacity: 4096
+  color_code: '#6699CC'
+  security_level: 5
+  priority: 3
+
+config:
+  database:
+    engine: sqlite
+    path: lcars/database/05/05-0002-lcars-learning-core.db
+
+tags:
+  - learning
+  - vocabulary
+  - grammar

@@ -1,0 +1,55 @@
+metadata:
+  id: programs.science
+  name: LCARS Scientific Programs
+  version: 44.20.0
+  faction: Federation
+  type: program
+  category: 05
+
+specs:
+  capacity: 1800
+  color_code: '#66CCFF'
+  security_level: 6
+  priority: 5
+
+entrypoints:
+  main: lcars.programs.science:InitializeScience
+  stellar: lcars.science.stellar:InitializeStellar
+  planetary: lcars.science.planetary:InitializePlanetary
+  astrometrics: lcars.science.astrometrics:InitializeAstrometrics
+
+config:
+  science:
+    data_source: federation_database
+    real_time: true
+  stellar:
+    catalog_version: 44.2
+    spectral_analysis: true
+  astrometrics:
+    resolution: high
+    projection: 3d
+
+paths:
+  science_path: lcars/programs/science
+  stellar_path: lcars/science/stellar
+  planetary_path: lcars/science/planetary
+
+dependencies:
+  - modules.ui
+  - database.primary
+
+interfaces:
+  - ScienceAPI
+
+boot:
+  sequence:
+    - init_ui
+    - init_science
+  default_state: inserted
+
+tags:
+  - program
+  - science
+  - stellar
+  - astrometrics
+  - federation

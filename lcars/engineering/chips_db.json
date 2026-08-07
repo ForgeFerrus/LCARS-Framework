@@ -1,0 +1,231 @@
+{
+  "00": {
+    "00-0000": {
+      "installed": true,
+      "settings": {}
+    },
+    "00-0001": {
+      "installed": true,
+      "settings": {}
+    },
+    "00-0002": {
+      "installed": true,
+      "settings": {}
+    },
+    "00-0003": {
+      "installed": true,
+      "settings": {}
+    },
+    "00-0004": {
+      "installed": true,
+      "settings": {}
+    },
+    "00-0005": {
+      "installed": true,
+      "settings": {}
+    },
+    "00-0006": {
+      "installed": true,
+      "settings": {}
+    },
+    "00-0007": {
+      "installed": true,
+      "settings": {}
+    },
+    "00-0008": {
+      "installed": true,
+      "settings": {}
+    },
+    "00-0009": {
+      "installed": true,
+      "settings": {}
+    }
+  },
+  "01": {
+    "01-0000": {
+      "installed": true,
+      "settings": {}
+    },
+    "01-0001": {
+      "installed": true,
+      "settings": {}
+    },
+    "01-0002": {
+      "installed": true,
+      "settings": {}
+    },
+    "01-0003": {
+      "installed": true,
+      "settings": {}
+    },
+    "01-0004": {
+      "installed": true,
+      "settings": {}
+    },
+    "01-0005": {
+      "installed": true,
+      "settings": {}
+    }
+  },
+  "02": {
+    "02-0000": {
+      "installed": true,
+      "settings": {}
+    },
+    "02-0001": {
+      "installed": true,
+      "settings": {}
+    }
+  },
+  "03": {
+    "03-0000": {
+      "installed": true,
+      "settings": {}
+    },
+    "03-0001": {
+      "installed": true,
+      "settings": {}
+    },
+    "03-0002": {
+      "installed": true,
+      "settings": {}
+    }
+  },
+  "04": {
+    "04-0001": {
+      "installed": true,
+      "settings": {}
+    },
+    "04-0002": {
+      "installed": true,
+      "settings": {}
+    },
+    "04-0003": {
+      "installed": true,
+      "settings": {}
+    },
+    "04-2150": {
+      "installed": true,
+      "settings": {}
+    },
+    "04-2260": {
+      "installed": true,
+      "settings": {}
+    },
+    "04-2350": {
+      "installed": true,
+      "settings": {}
+    },
+    "04-2370": {
+      "installed": true,
+      "settings": {}
+    },
+    "04-3188": {
+      "installed": true,
+      "settings": {}
+    }
+  },
+  "05": {
+    "05-0000": {
+      "installed": true,
+      "settings": {}
+    },
+    "05-0001": {
+      "installed": true,
+      "settings": {}
+    },
+    "05-0002": {
+      "installed": true,
+      "settings": {}
+    },
+    "05-0003": {
+      "installed": true,
+      "settings": {}
+    },
+    "05-0004": {
+      "installed": true,
+      "settings": {}
+    }
+  },
+  "06": {
+    "06-0000": {
+      "installed": true,
+      "settings": {}
+    },
+    "06-0001": {
+      "installed": true,
+      "settings": {}
+    },
+    "06-0002": {
+      "installed": true,
+      "settings": {}
+    },
+    "06-0003": {
+      "installed": true,
+      "settings": {}
+    },
+    "06-0004": {
+      "installed": true,
+      "settings": {}
+    },
+    "06-0005": {
+      "installed": true,
+      "settings": {}
+    },
+    "06-0006": {
+      "installed": true,
+      "settings": {}
+    },
+    "06-0007": {
+      "installed": true,
+      "settings": {}
+    },
+    "06-0008": {
+      "installed": true,
+      "settings": {}
+    },
+    "06-0009": {
+      "installed": true,
+      "settings": {}
+    }
+  },
+  "07": {
+    "07-0000": {
+      "installed": true,
+      "settings": {}
+    }
+  },
+  "08": {
+    "08-0000": {
+      "installed": true,
+      "settings": {}
+    },
+    "08-0001": {
+      "installed": true,
+      "settings": {}
+    },
+    "08-0002": {
+      "installed": true,
+      "settings": {}
+    },
+    "08-0003": {
+      "installed": true,
+      "settings": {}
+    },
+    "08-0004": {
+      "installed": true,
+      "settings": {}
+    }
+  },
+  "09": {
+    "09-0000": {
+      "installed": true,
+      "settings": {}
+    },
+    "09-0001": {
+      "installed": true,
+      "settings": {}
+    }
+  },
+  "10": {}
+}

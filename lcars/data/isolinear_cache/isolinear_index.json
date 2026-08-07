@@ -1,0 +1,12 @@
+[
+  {
+    "id": "cmd-20260613170317-189382c849a9",
+    "kind": "cmd",
+    "source": "C:\\Users\\Forge\\MyProject\\LCARS-Framework\\start_lcars.bat",
+    "output": "scripts\\compiled\\start_lcars.bat",
+    "manifest": "scripts\\compiled\\start_lcars.cmd.lcarc.json",
+    "wrapper": "scripts\\compiled\\start_lcars_cmd_runner.py",
+    "created_at": "2026-06-13T17:03:17.868109Z",
+    "hash": "189382c849a97a30ac4d1e6441cbc1bb52164af1a05cf0f6e525fa65986d4e9f"
+  }
+]

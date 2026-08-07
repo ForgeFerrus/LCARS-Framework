@@ -1,0 +1,53 @@
+metadata:
+  id: core.cardassian
+  name: Cardassian Central Core
+  version: 44.20.0
+  faction: Cardassian
+  type: core
+  category: 00
+
+specs:
+  capacity: 2048
+  color_code: '#996600'
+  security_level: 10
+  priority: 1
+
+entrypoints:
+  main: lcars.cardassian.core:InitializeCardassianCore
+  order: lcars.cardassian.order:InitializeOrder
+  military: lcars.cardassian.military:InitializeMilitary
+
+config:
+  core:
+    auto_start: true
+    centralized: true
+    observation_mode: true
+  order:
+    hierarchy: strict
+    obedience_protocol: mandatory
+  military:
+    garrison_mode: false
+    occupation_protocols: enabled
+
+paths:
+  core_path: lcars/cardassian/core
+  order_path: lcars/cardassian/order
+  military_path: lcars/cardassian/military
+
+dependencies: []
+
+interfaces:
+  - CardassianCoreAPI
+
+boot:
+  sequence:
+    - init_order
+    - init_military
+    - init_core
+  default_state: active
+
+tags:
+  - core
+  - cardassian
+  - order
+  - military

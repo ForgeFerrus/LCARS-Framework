@@ -1,0 +1,7 @@
+id: 09-0001
+name: System Architecture Glossary
+type: DATA
+description: Contains mapping of LCARS system components and terminology.
+blue_level: 2
+green_level: 4
+channel: iso://09-0001

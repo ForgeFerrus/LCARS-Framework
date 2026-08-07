@@ -1,0 +1,61 @@
+# ◤ LCARS Isolinear Chip 06-0008 — Twitter/X Connector
+# Інтеграція з Twitter API v2
+# Версія: 44.20
+# Дата: 2025
+
+metadata:
+  chip_id: "06-0008"
+  name: "Twitter/X Connector"
+  category: "communication"
+  version: "44.20"
+  status: "active"
+  description: "Twitter API v2 інтеграція для Direct Messages та публікацій"
+  author: "LCARS Development Team"
+  requires_core: "06-0002"
+
+entry_points:
+  InitializeTwitter: "lcars.modules.comm_twitter:InitializeTwitter"
+  Connect: "lcars.modules.comm_twitter:TwitterConnector.connect"
+  SendDM: "lcars.modules.comm_twitter:TwitterConnector.sendDM"
+  ReadDM: "lcars.modules.comm_twitter:TwitterConnector.readDM"
+  PostTweet: "lcars.modules.comm_twitter:TwitterConnector.post"
+
+config:
+  twitter:
+    api_version: "2"
+    api_base: "https://api.twitter.com"
+    bearer_token_auth: true
+    timeout: 10
+    rate_limit_handling: true
+  features:
+    direct_messages: true
+    tweet_posting: true
+    media_upload: true
+  storage:
+    cache_dms: true
+    log_posts: true
+
+database:
+  path: "lcars/database/06-0008-twitter.db"
+  tables:
+    - credentials: "bearer_token, api_key, api_secret, access_token, access_secret"
+    - dm_conversations: "conversation_id, participant_id, last_message_id"
+    - dm_history: "message_id, sender, text, timestamp"
+    - tweet_log: "tweet_id, content, media_ids, timestamp"
+    - rate_limits: "endpoint, remaining, reset_time"
+
+paths:
+  module_path: "lcars/modules/comm_twitter"
+  database_path: "lcars/database"
+
+dependencies:
+  - "engineering.isolinear"
+  - "modules.comm"  # 06-0002 Core
+
+tags:
+  - "communication"
+  - "twitter"
+  - "x"
+  - "external-api"
+  - "messaging"
+  - "social-media"

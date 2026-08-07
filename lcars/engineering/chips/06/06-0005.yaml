@@ -1,0 +1,50 @@
+# ◤ LCARS Isolinear Chip 06-0005 — Viber Connector
+# Інтеграція з Viber Public Account API
+# Версія: 44.20
+# Дата: 2025
+
+metadata:
+  chip_id: "06-0005"
+  name: "Viber Connector"
+  category: "communication"
+  version: "44.20"
+  status: "active"
+  description: "Viber Public Account API інтеграція для LCARS"
+  author: "LCARS Development Team"
+  requires_core: "06-0002"
+
+entry_points:
+  Initialize: "lcars.modules.comm:ExternalAPIManager.enableViber"
+  Connect: "lcars.modules.comm:ViberConnector.connect"
+  Send: "lcars.modules.comm:ViberConnector.send"
+
+config:
+  viber:
+    api_base: "https://chatapi.viber.com/pa"
+    timeout: 10
+    webhook_enabled: true
+    max_broadcast: 500
+  storage:
+    cache_messages: true
+    log_delivery: true
+
+database:
+  path: "lcars/database/06-0005-viber.db"
+  tables:
+    - credentials: "auth_token, account_name, active_status"
+    - subscribers: "user_id, name, avatar, subscribed_at"
+    - message_log: "recipient, content, status, timestamp"
+
+paths:
+  module_path: "lcars/modules/comm"
+  database_path: "lcars/database"
+
+dependencies:
+  - "engineering.isolinear"
+  - "modules.comm"  # 06-0002 Core
+
+tags:
+  - "communication"
+  - "viber"
+  - "external-api"
+  - "messaging"

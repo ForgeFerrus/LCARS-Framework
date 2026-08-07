@@ -1,0 +1,57 @@
+metadata:
+  id: theme.sovereign
+  name: Sovereign Class Theme
+  version: 44.20.0
+  faction: Federation
+  type: theme
+  category: 04
+  era: 2370
+
+specs:
+  capacity: 800
+  color_code: '#6699CC'
+  security_level: 5
+  priority: 5
+
+entrypoints:
+  main: lcars.theme.sovereign:InitializeSovereignTheme
+  style: lcars.theme.sovereign.style:LoadStyle
+  colors: lcars.theme.sovereign.colors:LoadColors
+
+config:
+  theme:
+    name: Sovereign
+    base_color: '#6699CC'
+    accent_color: '#3366CC'
+    dark_mode: true
+    font: lcars_movie
+  layout:
+    rounded_corners: true
+    button_style: touch
+    panel_density: high
+    bridge_layout: sovereign
+    tactical_display: true
+
+paths:
+  theme_path: lcars/theme/sovereign
+  style_path: lcars/theme/sovereign/style
+  colors_path: lcars/theme/sovereign/colors
+
+dependencies:
+  - modules.ui
+
+interfaces:
+  - ThemeAPI
+
+boot:
+  sequence:
+    - init_ui
+    - init_theme
+  default_state: inserted
+
+tags:
+  - theme
+  - sovereign
+  - first_contact
+  - 24th_century
+  - federation

@@ -1,0 +1,53 @@
+metadata:
+  id: database.graph
+  name: LCARS Graph Database
+  version: 44.20.0
+  faction: Federation
+  type: database
+  category: 01
+
+specs:
+  capacity: 3072
+  color_code: '#AA66FF'
+  security_level: 8
+  priority: 3
+
+entrypoints:
+  main: lcars.database.graph:InitializeGraphDB
+  nodes: lcars.graph.nodes:InitializeNodes
+  edges: lcars.graph.edges:InitializeEdges
+  query: lcars.graph.query:InitializeGraphQuery
+
+config:
+  graph:
+    engine: neo4j_compatible
+    directed: true
+    weighted: true
+  nodes:
+    auto_index: true
+    label_support: true
+  edges:
+    types: [relation, dependency, flow]
+
+paths:
+  graph_path: lcars/database/graph
+  nodes_path: lcars/graph/nodes
+  edges_path: lcars/graph/edges
+
+dependencies:
+  - database.primary
+
+interfaces:
+  - GraphDBAPI
+
+boot:
+  sequence:
+    - init_primary
+    - init_graph
+  default_state: inserted
+
+tags:
+  - database
+  - graph
+  - neo4j
+  - federation

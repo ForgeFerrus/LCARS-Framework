@@ -1,0 +1,56 @@
+metadata:
+  id: theme.excelsior
+  name: Excelsior Class Theme
+  version: 44.20.0
+  faction: Federation
+  type: theme
+  category: 04
+  era: 2350
+
+specs:
+  capacity: 800
+  color_code: '#FFCC33'
+  security_level: 5
+  priority: 5
+
+entrypoints:
+  main: lcars.theme.excelsior:InitializeExcelsiorTheme
+  style: lcars.theme.excelsior.style:LoadStyle
+  colors: lcars.theme.excelsior.colors:LoadColors
+
+config:
+  theme:
+    name: Excelsior
+    base_color: '#FFCC33'
+    accent_color: '#FF9900'
+    dark_mode: true
+    font: lcars_tng
+  layout:
+    rounded_corners: true
+    button_style: touch
+    panel_density: high
+    bridge_layout: excelsior
+
+paths:
+  theme_path: lcars/theme/excelsior
+  style_path: lcars/theme/excelsior/style
+  colors_path: lcars/theme/excelsior/colors
+
+dependencies:
+  - modules.ui
+
+interfaces:
+  - ThemeAPI
+
+boot:
+  sequence:
+    - init_ui
+    - init_theme
+  default_state: inserted
+
+tags:
+  - theme
+  - tng
+  - excelsior
+  - 24th_century
+  - federation

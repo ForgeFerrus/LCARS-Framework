@@ -1,0 +1,50 @@
+metadata:
+  id: core.auxiliary
+  name: LCARS Auxiliary Core
+  version: 44.20.0
+  faction: Federation
+  type: core
+  category: 00
+
+specs:
+  capacity: 1024
+  color_code: '#FFAA66'
+  security_level: 9
+  priority: 2
+
+entrypoints:
+  main: lcars.core.auxiliary:InitializeAuxCore
+  failover: lcars.core.failover:InitializeFailover
+  redundancy: lcars.core.redundancy:InitializeRedundancy
+
+config:
+  auxiliary:
+    standby_mode: true
+    auto_promote: false
+    sync_interval: 1000
+  failover:
+    trigger_delay: 5000
+    graceful_handover: true
+
+paths:
+  auxiliary_path: lcars/core/auxiliary
+  failover_path: lcars/core/failover
+  redundancy_path: lcars/core/redundancy
+
+dependencies:
+  - core.alpha
+
+interfaces:
+  - AuxiliaryCoreAPI
+
+boot:
+  sequence:
+    - init_primary
+    - init_auxiliary
+  default_state: standby
+
+tags:
+  - core
+  - auxiliary
+  - failover
+  - federation
