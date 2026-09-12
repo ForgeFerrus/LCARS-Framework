@@ -1,0 +1,1671 @@
+
+LCARS Desktop shell for the LCARS Framework.
+This file provides a simplified, robust `LCARSDesktop` QMainWindow
+with Start Menu wiring, basic workspace management, shortcuts,
+live-reload (F5), and non-blocking UI sounds.
+
+The goal is to be concise and defensive so the project can start
+and developers can iterate safely.
+"""
+
+import sys
+import os
+import json
+import subprocess
+import importlib
+import random
+from pathlib import Path
+from datetime import datetime
+from typing import Optional
+
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QLabel, QPushButton, QFrame, QStackedWidget, QLineEdit, QTextEdit,
+    QListWidget, QListWidgetItem
+)
+from PyQt6.QtGui import QKeySequence, QColor
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QUrl
+
+# Optional: QShortcut may live in QtWidgets or QtGui depending on PyQt6 build
+try:
+    from PyQt6.QtWidgets import QShortcut
+except Exception:
+    try:
+        from PyQt6.QtGui import QShortcut
+    except Exception:
+        QShortcut = None
+
+# Optional sound support
+try:
+    from PyQt6.QtMultimedia import QSoundEffect
+    QMUSIC_AVAILABLE = True
+except Exception:
+    QSoundEffect = None
+    QMUSIC_AVAILABLE = False
+
+# Project helpers
+from lcars.system.paths import get_project_root, ensure_in_path, get_config_dir
+from lcars.themes.lcars_palette import (
+    LCARSEra, get_era_palette, get_random_button_color,
+    get_lcars_font_style, setup_lcars_font
+)
+from lcars.ui.widgets import LCARSAppButton, LCARSDialog, LCARSElbow, LCARSFrame, LCARSDataBlock
+
+# Optional modules used by features — imported lazily where needed
+
+project_root = str(get_project_root())
+ensure_in_path(project_root)
+
+
+class LCARSDesktop(QMainWindow):
+    """Simplified LCARS Desktop shell."""
+
+    def __init__(self, embed: bool = False):
+        super().__init__()
+        self._embedded_mode = bool(embed)
+        self.setWindowTitle("LCARS Operating System")
+        self.setGeometry(0, 0, 1280, 800)
+        if not self._embedded_mode:
+            try:
+                self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+                self.setWindowState(Qt.WindowState.WindowFullScreen)
+            except Exception:
+                pass
+
+        # Theme / palette
+        self.current_era = LCARSEra.LCARS_25TH
+        self.colors = get_era_palette(self.current_era)
+        setup_lcars_font()
+
+        # State
+        self.workspace_pages = {}
+        self.sounds_enabled = True
+        self.sound_dir = Path(project_root) / "resources" / "sounds"
+        self._sounds = {}
+
+        # Basic UI
+        self._build_ui()
+        self._setup_shortcuts()
+
+        # Timers
+        self.clock_timer = QTimer(self)
+        self.clock_timer.timeout.connect(self._update_clock)
+        self.clock_timer.start(1000)
+
+        # Load config
+        cfg = get_config_dir()
+        self.config_path = Path(cfg) / "desktop.json"
+        self.desktop_state = {}
+        self._load_config()
+
+        # Post init
+        QTimer.singleShot(200, self._restore_last_launch)
+
+    # ---------- UI construction ----------
+    def _build_ui(self):
+        self.root = QWidget()
+        self.setCentralWidget(self.root)
+        
+        main_layout = QVBoxLayout(self.root)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(0)
+        self.main_layout = main_layout
+
+        # 1. TOP FRAME
+        top_h = QHBoxLayout()
+        top_h.setSpacing(0)
+        
+        # Top-Left Elbow
+        self.tl_elbow = LCARSElbow(self.root, self.colors['button_colors'][0], "top-left", (140, 80))
+        top_h.addWidget(self.tl_elbow)
+        
+        # Header Center Frame (Title Area)
+        self.header_frame = QFrame()
+        self.header_frame.setFixedHeight(50)
+        self.header_frame.setStyleSheet(f"background-color: {self.colors['button_colors'][1]}; border-bottom-right-radius: 20px;")
+        hf_lay = QHBoxLayout(self.header_frame)
+        hf_lay.setContentsMargins(30, 0, 30, 0)
+        
+        title_lbl = QLabel("◢ LCARS PRIMARY COMMAND INTERFACE")
+        title_lbl.setStyleSheet(f"color: #000; {get_lcars_font_style(20, 'normal')}")
+        hf_lay.addWidget(title_lbl)
+        hf_lay.addStretch()
+        
+        self.header_time = QLabel("00:00:00")
+        self.header_time.setStyleSheet(f"color: #000; {get_lcars_font_style(22, 'normal')}")
+        hf_lay.addWidget(self.header_time)
+        
+        top_h.addWidget(self.header_frame, 1)
+        
+        # Top-Right Elbow
+        self.tr_elbow = LCARSElbow(self.root, self.colors['button_colors'][2], "top-right", (140, 80))
+        top_h.addWidget(self.tr_elbow)
+        
+        main_layout.addLayout(top_h)
+
+        # 2. MIDDLE SECTION (Peripheral verticals + Workspace)
+        mid_h = QHBoxLayout()
+        mid_h.setSpacing(10)
+        
+        # Left Vertical Frame (Tactical/Security stream)
+        self.left_sidebar = QVBoxLayout()
+        self.left_sidebar.setSpacing(5)
+        self.left_sidebar.setContentsMargins(0, 0, 0, 0)
+        
+        self.left_frame_seg = LCARSFrame(self.colors['button_colors'][0], "vertical", length=400)
+        self.left_sidebar.addWidget(self.left_frame_seg)
+        
+        # Add some data blocks to the sidebar
+        self.data_blocks = []
+        for label, dtype, color in [("CPU", "cpu", 5), ("MEM", "memory", 3), ("DSK", "disk", 2)]:
+            block = LCARSDataBlock(label, "0%", self.colors['button_colors'][color], dtype)
+            self.data_blocks.append(block)
+            self.left_sidebar.addWidget(block)
+            
+        self.left_sidebar.addStretch()
+        mid_h.addLayout(self.left_sidebar)
+
+        # CENTER WORKSPACE
+        self.center_stack = QStackedWidget()
+        self.mission_hub = self.create_mission_hub()
+        self.workspace = QStackedWidget()
+        self.center_stack.addWidget(self.mission_hub)
+        self.center_stack.addWidget(self.workspace)
+        mid_h.addWidget(self.center_stack, 1)
+
+        # Right Vertical Frame (Engineering/Comm stream)
+        self.right_sidebar = QVBoxLayout()
+        self.right_sidebar.setSpacing(5)
+        
+        self.right_frame_seg = LCARSFrame(self.colors['button_colors'][2], "vertical", length=300)
+        self.right_sidebar.addWidget(self.right_frame_seg)
+        
+        # Add numeric blocks (decorative)
+        for _ in range(8):
+            num = random.randint(100, 9999)
+            self.right_sidebar.addWidget(self.create_numeric_block(num, self.colors['button_colors'][random.randint(0,4)]))
+            
+        self.right_sidebar.addStretch()
+        mid_h.addLayout(self.right_sidebar)
+        
+        main_layout.addLayout(mid_h, 1)
+
+        # 3. BOTTOM FRAME
+        bot_h = QHBoxLayout()
+        bot_h.setSpacing(0)
+        
+        # Bottom-Left Elbow
+        self.bl_elbow = LCARSElbow(self.root, self.colors['button_colors'][3], "bottom-left", (140, 80))
+        bot_h.addWidget(self.bl_elbow)
+        
+        # Footer Action Frame
+        self.footer_frame = QFrame()
+        self.footer_frame.setFixedHeight(50)
+        self.footer_frame.setStyleSheet(f"background-color: {self.colors['button_colors'][4]}; border-top-left-radius: 20px;")
+        ff_lay = QHBoxLayout(self.footer_frame)
+        ff_lay.setContentsMargins(20, 0, 20, 0)
+        
+        # Core controls in footer
+        self.mod_btn = QPushButton("◢ MOD MODE")
+        self.mod_btn.clicked.connect(self.toggle_mod_mode)
+        
+        self.red_alert_btn = QPushButton("◢ RED ALERT")
+        self.red_alert_btn.clicked.connect(self.toggle_red_alert)
+        
+        self.lock_btn = QPushButton("◢ LOCK")
+        self.lock_btn.clicked.connect(self.lock_screen)
+        
+        for b in [self.mod_btn, self.red_alert_btn, self.lock_btn]:
+            b.setStyleSheet(f"background: transparent; color: #000; {get_lcars_font_style(16, 'normal')} border: none;")
+            ff_lay.addWidget(b)
+            
+        ff_lay.addStretch()
+        
+        # System Uptime
+        self.uptime_lbl = QLabel("UPTIME: 00:00")
+        self.uptime_lbl.setStyleSheet(f"color: #000; {get_lcars_font_style(14, 'normal')}")
+        ff_lay.addWidget(self.uptime_lbl)
+        
+        bot_h.addWidget(self.footer_frame, 1)
+        
+        # Bottom-Right Elbow
+        self.br_elbow = LCARSElbow(self.root, self.colors['button_colors'][5], "bottom-right", (140, 80))
+        bot_h.addWidget(self.br_elbow)
+        
+        main_layout.addLayout(bot_h)
+
+    # (Rest of the file unchanged; omitted for brevity in this patch to keep focus on metrics removal)
+
+    def launch_task_manager(self):
+        """Embed the internal Task Manager / System Monitor widget."""
+        try:
+            from lcars.ui.lcars_central import get_central
+            central = get_central()
+            if central:
+                central.launch_system_monitor()
+                return
+        except Exception:
+            pass
+
+        # fallback: previous local behavior
+        try:
+            from lcars.ui.system_monitor import SystemMonitorWidget
+
+            widget = SystemMonitorWidget()
+            self.add_workspace_widget("task_manager", widget, title="Task Manager")
+        except Exception as e:
+            print(f"Failed to launch Task Manager: {e}")
+            self._show_placeholder("Task Manager")
+
+    # ... (the rest of the file continues unchanged) ...
+
+def main():
+    app = QApplication(sys.argv)
+    # Завантаження шрифтів
+    setup_lcars_font()
+    
+    desktop = LCARSDesktop()
+    desktop.show()
+    sys.exit(app.exec())
+
+
+
+
+        # 2. MIDDLE SECTION (Peripheral verticals + Workspace)
+        mid_h = QHBoxLayout()
+        mid_h.setSpacing(10)
+        
+        # Left Vertical Frame (Tactical/Security stream)
+        self.left_sidebar = QVBoxLayout()
+        self.left_sidebar.setSpacing(5)
+        self.left_sidebar.setContentsMargins(0, 0, 0, 0)
+        
+        self.left_frame_seg = LCARSFrame(self.colors['button_colors'][0], "vertical", length=400)
+        self.left_sidebar.addWidget(self.left_frame_seg)
+        
+        # Add some data blocks to the sidebar
+        self.data_blocks = []
+        for label, dtype, color in [("CPU", "cpu", 5), ("MEM", "memory", 3), ("DSK", "disk", 2)]:
+            block = LCARSDataBlock(label, "0%", self.colors['button_colors'][color], dtype)
+            self.data_blocks.append(block)
+            self.left_sidebar.addWidget(block)
+            
+        self.left_sidebar.addStretch()
+        mid_h.addLayout(self.left_sidebar)
+
+        # CENTER WORKSPACE
+        self.center_stack = QStackedWidget()
+        self.mission_hub = self.create_mission_hub()
+        self.workspace = QStackedWidget()
+        self.center_stack.addWidget(self.mission_hub)
+        self.center_stack.addWidget(self.workspace)
+        mid_h.addWidget(self.center_stack, 1)
+
+        # Right Vertical Frame (Engineering/Comm stream)
+        self.right_sidebar = QVBoxLayout()
+        self.right_sidebar.setSpacing(5)
+        
+        self.right_frame_seg = LCARSFrame(self.colors['button_colors'][2], "vertical", length=300)
+        self.right_sidebar.addWidget(self.right_frame_seg)
+        
+        # Add numeric blocks (decorative)
+        for _ in range(8):
+            num = random.randint(100, 9999)
+            self.right_sidebar.addWidget(self.create_numeric_block(num, self.colors['button_colors'][random.randint(0,4)]))
+            
+        self.right_sidebar.addStretch()
+        mid_h.addLayout(self.right_sidebar)
+        
+        main_layout.addLayout(mid_h, 1)
+
+        # 3. BOTTOM FRAME
+        bot_h = QHBoxLayout()
+        bot_h.setSpacing(0)
+        
+        # Bottom-Left Elbow
+        self.bl_elbow = LCARSElbow(self.root, self.colors['button_colors'][3], "bottom-left", (140, 80))
+        bot_h.addWidget(self.bl_elbow)
+        
+        # Footer Action Frame
+        self.footer_frame = QFrame()
+        self.footer_frame.setFixedHeight(50)
+        self.footer_frame.setStyleSheet(f"background-color: {self.colors['button_colors'][4]}; border-top-left-radius: 20px;")
+        ff_lay = QHBoxLayout(self.footer_frame)
+        ff_lay.setContentsMargins(20, 0, 20, 0)
+        
+        # Core controls in footer
+        self.mod_btn = QPushButton("◢ MOD MODE")
+        self.mod_btn.clicked.connect(self.toggle_mod_mode)
+        
+        self.red_alert_btn = QPushButton("◢ RED ALERT")
+        self.red_alert_btn.clicked.connect(self.toggle_red_alert)
+        
+        self.lock_btn = QPushButton("◢ LOCK")
+        self.lock_btn.clicked.connect(self.lock_screen)
+        
+        for b in [self.mod_btn, self.red_alert_btn, self.lock_btn]:
+            b.setStyleSheet(f"background: transparent; color: #000; {get_lcars_font_style(16, 'normal')} border: none;")
+            ff_lay.addWidget(b)
+            
+        ff_lay.addStretch()
+        
+        # System Uptime
+        self.uptime_lbl = QLabel("UPTIME: 00:00")
+        self.uptime_lbl.setStyleSheet(f"color: #000; {get_lcars_font_style(14, 'normal')}")
+        ff_lay.addWidget(self.uptime_lbl)
+        
+        bot_h.addWidget(self.footer_frame, 1)
+        
+        # Bottom-Right Elbow
+        self.br_elbow = LCARSElbow(self.root, self.colors['button_colors'][5], "bottom-right", (140, 80))
+        bot_h.addWidget(self.br_elbow)
+        
+        main_layout.addLayout(bot_h)
+
+    def create_mission_hub(self):
+        """Redesigned Starting Interface: Functional clusters and mission status."""
+        hub = QWidget()
+        layout = QVBoxLayout(hub)
+        layout.setContentsMargins(40, 20, 40, 20)
+        layout.setSpacing(30)
+
+        # 1. Mission Status Header
+        status_row = QHBoxLayout()
+        
+        ship_id = QLabel("◢ STARSHIP STATUS: USS ODYSSEY [NCC-74656-J]")
+        ship_id.setStyleSheet(f"color: {self.colors['button_colors'][2]}; {get_lcars_font_style(24, 'normal')}")
+        status_row.addWidget(ship_id)
+        status_row.addStretch()
+        
+        stardate = QLabel("STARDATE 2401.05")
+        stardate.setStyleSheet(f"color: {self.colors['button_colors'][1]}; {get_lcars_font_style(24, 'normal')}")
+        status_row.addWidget(stardate)
+        layout.addLayout(status_row)
+
+        # 2. Main Hub Grid (Categorized Apps)
+        hub_grid = QGridLayout()
+        hub_grid.setSpacing(25)
+        
+        # Define functional categories
+        categories = [
+            ("OPERATIONS", [
+                ("START MENU", "◢", self.open_start_menu),
+                ("FILE MANAGER", "📁", self.launch_file_manager),
+                ("TASK MANAGER", "⚙", self.launch_task_manager),
+                ("SETTINGS", "⚙", self.launch_settings)
+            ], self.colors['button_colors'][0]),
+            
+            ("SCIENCE & TECH", [
+                ("CORTEX AI", "🧠", self.launch_cortex_ai),
+                ("GEANT4", "⬢", self.launch_geant4_workspace),
+                ("TERMINAL", "▶", self.launch_terminal)
+            ], self.colors['button_colors'][2])
+        ]
+
+        for col, (cat_name, apps, color) in enumerate(categories):
+            cat_v = QVBoxLayout()
+            cat_v.setSpacing(15)
+            
+            cat_label = QLabel(f"◢ {cat_name}")
+            cat_label.setStyleSheet(f"color: {color}; {get_lcars_font_style(18, 'normal')}; padding-bottom: 5px; border-bottom: 2px solid {color};")
+            cat_v.addWidget(cat_label)
+            
+            for name, icon, action in apps:
+                btn = LCARSAppButton(name, icon, self.current_era)
+                btn.setFixedSize(300, 100)
+                btn.clicked.connect(action)
+                cat_v.addWidget(btn)
+            
+            cat_v.addStretch()
+            hub_grid.addLayout(cat_v, 0, col)
+
+        layout.addLayout(hub_grid, 1)
+        
+        # 3. Quick System Alert Area
+        alert_area = QFrame()
+        alert_area.setFixedHeight(100)
+        alert_area.setStyleSheet(f"background: #050505; border: 1px solid {self.colors['button_colors'][3]}; border-radius: 10px;")
+        alert_lay = QHBoxLayout(alert_area)
+        
+        self.alert_text = QLabel("SYSTEM CORE STABLE // ALL SYSTEMS NOMINAL")
+        self.alert_text.setStyleSheet(f"color: {self.colors['button_colors'][3]}; {get_lcars_font_style(16, 'normal')}")
+        alert_lay.addWidget(self.alert_text, alignment=Qt.AlignmentFlag.AlignCenter)
+        
+        layout.addWidget(alert_area)
+        
+        return hub
+
+    def launch_cortex_ai(self):
+        try:
+            from lcars.ui.cortex_ai import CortexAIInterface
+            ai = CortexAIInterface()
+            self.add_workspace_widget("cortex", ai, title="Cortex AI Interface")
+        except Exception as e:
+            print(f"Failed to launch Cortex AI: {e}")
+
+    def create_right_sidebar(self):
+        """Right sidebar with system info"""
+        sidebar = QFrame()
+        sidebar.setFixedWidth(300) # Increased width
+
+        sidebar_layout = QVBoxLayout(sidebar)
+        sidebar_layout.setContentsMargins(0, 0, 0, 0)
+        sidebar_layout.setSpacing(10)
+
+        # Title bar
+        title_bar = QFrame()
+        title_bar.setFixedHeight(60)
+        title_bar.setStyleSheet(f"""
+            background-color: {self.colors['button_colors'][0]};
+            border-radius: 20px;
+        """)
+        title_layout = QHBoxLayout(title_bar)
+        title_layout.setContentsMargins(20, 10, 20, 10)
+        title_label = QLabel("SYSTEM STATUS")
+        title_label.setStyleSheet(f"color: #000; {get_lcars_font_style(22, 'normal')}")
+        title_layout.addWidget(title_label)
+        sidebar_layout.addWidget(title_bar)
+
+        # System metrics panel
+        metrics_panel = QFrame()
+        metrics_panel.setStyleSheet(f"""
+            background-color: rgba(47, 55, 73, 0.3);
+            border: 2px solid {self.colors['button_colors'][1]};
+            border-radius: 20px;
+        """)
+        metrics_layout = QVBoxLayout(metrics_panel)
+        metrics_layout.setContentsMargins(20, 20, 20, 20)
+        metrics_layout.setSpacing(15)
+
+        # Metrics with larger fonts
+        self.cpu_label = QLabel("CPU: 0%")
+        self.cpu_label.setStyleSheet(f"color: #FFF; {get_lcars_font_style(22, 'normal')}")
+        metrics_layout.addWidget(self.cpu_label)
+
+        self.mem_label = QLabel("MEM: 0%")
+        self.mem_label.setStyleSheet(f"color: #FFF; {get_lcars_font_style(22, 'normal')}")
+        metrics_layout.addWidget(self.mem_label)
+
+        self.disk_label = QLabel("DSK: 0%")
+        self.disk_label.setStyleSheet(f"color: #FFF; {get_lcars_font_style(22, 'normal')}")
+        metrics_layout.addWidget(self.disk_label)
+
+        sidebar_layout.addWidget(metrics_panel)
+
+        # Network status
+        network_blocks = [
+            ("NETWORK", "ONLINE", self.colors["button_colors"][2]),
+            ("UPLINK", "ACTIVE", self.colors["button_colors"][0]),
+            ("COMM", "READY", self.colors["button_colors"][3]),
+        ]
+
+        for label, status, color in network_blocks:
+            block = LCARSDataBlock(label, status, color, height=45)
+            sidebar_layout.addWidget(block)
+
+        sidebar_layout.addStretch()
+        return sidebar
+
+    def create_footer(self):
+        """Unified frame footer"""
+        footer = QFrame()
+        footer.setFixedHeight(90) # Higher footer for massive elbows
+        layout = QHBoxLayout(footer)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Bottom-Left Elbow
+        bl_elbow = LCARSElbow(footer, self.colors['button_colors'][3], "bottom-left", (180, 90))
+        layout.addWidget(bl_elbow)
+
+        # Main footer bar
+        bar = QFrame()
+        bar.setStyleSheet(f"background-color: {self.colors['button_colors'][1]};")
+        bar_layout = QHBoxLayout(bar)
+        
+        # System buttons in footer
+        self.start_btn = self.make_footer_btn("SYSTEM START", self.open_start_menu)
+        self.start_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {self.colors['button_colors'][5]};
+                color: #000;
+                border: none;
+                border-radius: 5px;
+                {get_lcars_font_style(20, 'normal')}
+            }}
+            QPushButton:hover {{ background-color: #FFF; }}
+        """)
+        bar_layout.addWidget(self.start_btn)
+
+        self.mod_btn = self.make_footer_btn("MOD", self.toggle_mod_mode)
+        bar_layout.addWidget(self.mod_btn)
+        
+        self.red_alert_btn = self.make_footer_btn("RED ALERT", self.toggle_red_alert)
+        bar_layout.addWidget(self.red_alert_btn)
+        
+        self.lock_btn = self.make_footer_btn("LOCK", self.lock_screen)
+        bar_layout.addWidget(self.lock_btn)
+        
+        bar_layout.addStretch()
+        
+        ver = QLabel("v25.2 PROTOCOL")
+        ver.setStyleSheet(f"color: #000; {get_lcars_font_style(18, 'normal')}")
+        bar_layout.addWidget(ver)
+        
+        layout.addWidget(bar, 1)
+
+        # Bottom-Right Elbow
+        br_elbow = LCARSElbow(footer, self.colors['button_colors'][0], "bottom-right", (180, 80))
+        layout.addWidget(br_elbow)
+        
+        return footer
+
+    def toggle_mod_mode(self):
+        """Toggle LCARS UI Editing Mode and Constructor Toolbox"""
+        self.mod_mode = not self.mod_mode
+        self.edit_controller.enable(self.mod_mode)
+        self.edit_controller.is_test_mode = False # Reset to layout mode on toggle
+        
+        status = "ACTIVE" if self.mod_mode else "INACTIVE"
+        print(f"LCARS: UI Edit Mode (Mod Mode) is now {status}")
+        
+        # Show/Hide Constructor Toolbox
+        if self.mod_mode:
+            self.main_layout.addWidget(self.constructor_toolbox)
+            self.constructor_toolbox.show()
+            self.constructor_toolbox.set_status("READY")
+        else:
+            self.main_layout.removeWidget(self.constructor_toolbox)
+            self.constructor_toolbox.hide()
+        
+        # Update footer button if it exists
+        if hasattr(self, "mod_btn"):
+            color = self.colors['button_colors'][5] if self.mod_mode else self.colors['button_colors'][1]
+            border = "2px solid #FFF" if self.mod_mode else "none"
+            self.mod_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {color};
+                    color: #000;
+                    border: {border};
+                    border-radius: 5px;
+                    {get_lcars_font_style(18, 'normal')}
+                }}
+            """)
+
+    def spawn_constructor_widget(self, w_type):
+        """Fabricate a new widget on the desktop for layout editing"""
+        from lcars.ui.widgets import LCARSAppButton
+        
+        new_w = None
+        if w_type == "Button":
+            new_w = LCARSAppButton("NEW BUTTON", "◢", self.current_era)
+        elif w_type == "Panel":
+            new_w = QFrame(self.root)
+            new_w.setFixedSize(200, 100)
+            new_w.setStyleSheet(f"background-color: {self.colors['button_colors'][2]}; border-radius: 15px;")
+        elif w_type == "Label":
+            new_w = QLabel("AUTHENTIC LCARS LABEL")
+            new_w.setStyleSheet(f"color: #FFF; {get_lcars_font_style(24, 'normal')}")
+        elif w_type == "Elbow":
+            new_w = LCARSElbow(self.root, self.colors['button_colors'][0], "top-left", (120, 40))
+        elif w_type == "DataBlock":
+            new_w = self.create_numeric_block(random.randint(100, 999), self.colors['button_colors'][5])
+            
+        if new_w:
+            new_w.setParent(self.root)
+            new_w.move(self.rect().center() - new_w.rect().center())
+            new_w.show()
+            new_w.raise_()
+            # Select it in edit mode
+            self.edit_controller.select(new_w)
+            self.constructor_toolbox.set_status(f"Fabricated {w_type}")
+
+    def clear_constructor_widgets(self):
+        """Wipe specifically created widgets or clear selection"""
+        if self.edit_controller.selected:
+            for w in self.edit_controller.selected:
+                if w not in [self.root, self.centralWidget(), self.constructor_toolbox]:
+                    w.deleteLater()
+            self.edit_controller.clear_selection()
+            self.constructor_toolbox.set_status("SELECTION DELETED")
+        else:
+            self.constructor_toolbox.set_status("SELECT WIDGETS TO DELETE")
+
+    def handle_ai_command(self, cmd):
+        """Basic AI Command Processor for Constructor"""
+        cmd = cmd.lower()
+        if "add" in cmd or "spawn" in cmd or "create" in cmd:
+            t = "Button"
+            if "panel" in cmd: t = "Panel"
+            elif "elbow" in cmd: t = "Elbow"
+            elif "label" in cmd: t = "Label"
+            self.spawn_constructor_widget(t)
+            self.constructor_toolbox.add_ai_response(f"FABRICATING {t.upper()}...")
+        elif "clear" in cmd or "wipe" in cmd:
+            self.clear_constructor_widgets()
+            self.constructor_toolbox.add_ai_response("WORKSPACE WIPED.")
+        elif "red alert" in cmd:
+            self.toggle_red_alert()
+            self.constructor_toolbox.add_ai_response("RED ALERT INITIALIZED.")
+        else:
+            self.constructor_toolbox.add_ai_response("COMMAND NOT RECOGNIZED. WAITING INPUT.")
+
+    def toggle_red_alert(self):
+        """Перемкнути режим RED ALERT - всі елементи використовують alert_colors"""
+        self.red_alert = not self.red_alert
+        
+        if self.red_alert:
+            # Запускаємо миготіння всіх елементів
+            if not self.red_alert_timer:
+                self.red_alert_timer = QTimer(self)
+                self.red_alert_timer.timeout.connect(self._flash_red_alert)
+            self.red_alert_timer.start(500)
+            self.red_alert_btn.setStyleSheet(f"background-color: #FF0000; color: #FFF; {get_lcars_font_style(18, 'normal')}")
+        else:
+            # Зупиняємо миготіння і відновлюємо оригінальні кольори
+            if self.red_alert_timer:
+                self.red_alert_timer.stop()
+            
+            # Відновлюємо оригінальні кольори всіх елементів
+            if hasattr(self, '_original_colors'):
+                for element_name, original_style in self._original_colors.items():
+                    if hasattr(self, element_name):
+                        element = getattr(self, element_name)
+                        element.setStyleSheet(original_style)
+            
+            # Відновлюємо кольори кнопок в робочому просторі
+            if hasattr(self, 'center_workspace'):
+                for btn in self.center_workspace.findChildren(QPushButton):
+                    btn.setStyleSheet(f"""
+                        QPushButton {{
+                            background-color: {get_random_button_color(self.current_era)};
+                            color: #000;
+                            border: none;
+                            border-radius: 15px;
+                            {get_lcars_font_style(14, 'bold')}
+                        }}
+                    """)
+            
+            # Відновлюємо кольори декоративних елементів
+            if hasattr(self, 'left_sidebar'):
+                self.left_sidebar.setStyleSheet(f"background-color: {self.colors['button_colors'][1]};")
+            if hasattr(self, 'right_sidebar'):
+                self.right_sidebar.setStyleSheet(f"background-color: {self.colors['button_colors'][2]};")
+            
+            # Фон завжди чорний
+            self.setStyleSheet("QMainWindow { background-color: #000000; }")
+            self.red_alert_btn.setStyleSheet(f"background-color: {self.colors['button_colors'][1]}; color: #000; {get_lcars_font_style(18, 'normal')}")
+
+    def make_footer_btn(self, text, cb):
+        btn = QPushButton(text)
+        btn.setFixedSize(140, 40)
+        btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {get_random_button_color(self.current_era)};
+                color: #000;
+                border: none;
+                border-radius: 5px;
+                {get_lcars_font_style(18, 'normal')}
+            }}
+        """)
+        btn.clicked.connect(cb)
+        return btn
+
+    def toggle_lock_screen(self):
+        """Перемкнути екран блокування"""
+        if not hasattr(self, 'lock_screen_widget') or not self.lock_screen_widget:
+            self.lock_screen_widget = self.LockScreen(self)
+            self.lock_screen_widget.show()
+        else:
+            self.lock_screen_widget.close()
+            self.lock_screen_widget = None
+
+    class LockScreen(QWidget):
+        """Simple in-app lock screen overlay."""
+
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.parent_desktop = parent
+            self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+            self.setWindowModality(Qt.WindowModality.ApplicationModal)
+            self.setStyleSheet("background-color: #000000;")
+            layout = QVBoxLayout(self)
+            layout.setContentsMargins(50, 50, 50, 50)
+            layout.setSpacing(20)
+            label = QLabel("SCREEN LOCKED")
+            label.setStyleSheet(f'color: #FF6666; {get_lcars_font_style(48, "normal")}')
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(label)
+            unlock_btn = QPushButton("UNLOCK")
+            unlock_btn.setFixedSize(220, 80)
+            unlock_btn.clicked.connect(self._unlock)
+            unlock_btn.setStyleSheet(f"{get_lcars_font_style(18, 'normal')}")
+            btn_wrap = QWidget()
+            btn_layout = QHBoxLayout(btn_wrap)
+            btn_layout.addStretch()
+            btn_layout.addWidget(unlock_btn)
+            btn_layout.addStretch()
+            layout.addWidget(btn_wrap)
+
+        def _unlock(self):
+            print("Unlock requested...")
+            if self.parent():
+                self.parent().unlock_screen()
+            self.hide()
+
+        def keyPressEvent(self, ev):
+            # allow Esc to unlock for convenience
+            if ev.key() == Qt.Key.Key_Escape:
+                self._unlock()
+
+    def update_metrics(self, metrics):
+        """Update system metrics in the new frame labels"""
+        try:
+            if hasattr(self, "metric_labels"):
+                self.metric_labels["cpu"].setText(f"{metrics['cpu']:.0f}%")
+                self.metric_labels["memory"].setText(f"{metrics['memory']:.0f}%")
+                self.metric_labels["disk"].setText(f"{metrics['disk']:.0f}%")
+            if hasattr(self, "net_label"):
+                # Since net isn't in MetricsWorker yet, we show status
+                self.net_label.setText("NET: ACTIVE")
+        except Exception as e:
+            print(f"Metrics display error: {e}")
+
+    # ---- Workspace helpers ----
+    def open_start_menu(self):
+        """Open the Start Menu embedded and listen for launch requests"""
+        try:
+            # Try new location then fall back to legacy
+            try:
+                from lcars.ui.systems.start_menu import StartMenu
+            except Exception:
+                from lcars.ui.start_menu import StartMenu
+            # Reuse existing menu if present
+            if hasattr(self, 'start_menu_instance') and self.start_menu_instance:
+                self.add_workspace_widget("start_menu", self.start_menu_instance, title="Start Menu")
+                QTimer.singleShot(150, self._focus_start_search)
+                try:
+                    self.play_sound('menu_open')
+                except Exception:
+                    pass
+                return
+
+            menu = StartMenu(parent=self)
+            # keep a reference so shortcuts can focus its search box
+            self.start_menu_instance = menu
+            # `launchRequested` emits (display_name, command). Pass the command
+            # to the unified handler which expects a single key string.
+            menu.launchRequested.connect(lambda _name, cmd: self.handle_launch_request(cmd))
+            self.add_workspace_widget("start_menu", menu, title="Start Menu")
+            QTimer.singleShot(150, self._focus_start_search)
+            try:
+                self.play_sound('menu_open')
+            except Exception:
+                pass
+        except Exception as e:
+            LCARSDialog.show_message(self, "Start Menu", f"Failed to open start menu: {e}")
+
+    def _setup_shortcuts(self):
+        """Install application shortcuts for Start Menu toggling and search focus."""
+        # Toggle Start Menu: Ctrl+Space and F1
+        try:
+            self.shortcut_toggle = QShortcut(QKeySequence("Ctrl+Space"), self)
+            self.shortcut_toggle.activated.connect(self._on_toggle_start_menu)
+        except Exception:
+            pass
+        try:
+            self.shortcut_f1 = QShortcut(QKeySequence("F1"), self)
+            self.shortcut_f1.activated.connect(self._on_toggle_start_menu)
+        except Exception:
+            pass
+        # Focus search inside Start Menu when visible: Ctrl+F
+        try:
+            self.shortcut_focus = QShortcut(QKeySequence("Ctrl+F"), self)
+            self.shortcut_focus.activated.connect(self._focus_start_search)
+        except Exception:
+            pass
+        # Live reload (F5)
+        try:
+            self.shortcut_reload = QShortcut(QKeySequence("F5"), self)
+            self.shortcut_reload.activated.connect(self._live_reload_ui)
+        except Exception:
+            pass
+
+    def _live_reload_ui(self):
+        """Reload key UI modules and refresh live widgets (Start Menu etc.)."""
+        try:
+            modules_to_reload = [
+                'lcars.ui.start_menu',
+                'lcars.system.start_menu',
+                'lcars.ui.widgets',
+                'lcars.themes.lcars_palette',
+            ]
+            for mod in modules_to_reload:
+                if mod in sys.modules:
+                    try:
+                        importlib.reload(sys.modules[mod])
+                        print(f"Reloaded {mod}")
+                    except Exception as e:
+                        print(f"Failed reloading {mod}: {e}")
+
+            # Recreate Start Menu instance to pick up changes
+            try:
+                if hasattr(self, 'start_menu_instance') and self.start_menu_instance:
+                    # remove old page widget if present
+                    if 'start_menu' in self.workspace_pages:
+                        old = self.workspace_pages.pop('start_menu')
+                        try:
+                            self.workspace.removeWidget(old)
+                        except Exception:
+                            pass
+                        try:
+                            old.deleteLater()
+                        except Exception:
+                            pass
+                    from lcars.ui.start_menu import StartMenu
+                    self.start_menu_instance = StartMenu(parent=self)
+                    self.start_menu_instance.launchRequested.connect(lambda _n, c: self.handle_launch_request(c))
+                    self.add_workspace_widget('start_menu', self.start_menu_instance, title='Start Menu')
+                    QTimer.singleShot(100, self._focus_start_search)
+            except Exception as e:
+                print(f"Start Menu rebuild failed: {e}")
+
+            # Re-apply theme
+            try:
+                self.colors = get_era_palette(self.current_era)
+                self.apply_theme()
+            except Exception:
+                pass
+
+            try:
+                self.play_sound('reload')
+            except Exception:
+                pass
+            self._show_notification('UI reloaded (F5)')
+        except Exception as e:
+            print(f"Live reload error: {e}")
+
+    # ---- Sound helpers ----
+    def _find_sound_file(self, name: str):
+        """Search for a sound file by name in `self.sound_dir` (wav/ogg/mp3)."""
+        try:
+            if not getattr(self, 'sound_dir', None):
+                return None
+            for ext in ('.wav', '.ogg', '.mp3'):
+                p = Path(self.sound_dir) / f"{name}{ext}"
+                if p.exists():
+                    return p
+        except Exception:
+            return None
+        return None
+
+    def play_sound(self, name: str):
+        """Play a short UI sound. Non-blocking when possible."""
+        if not getattr(self, 'sounds_enabled', False):
+            return
+        try:
+            p = self._find_sound_file(name)
+            if not p:
+                return
+            # Use QSoundEffect if available
+            if QMUSIC_AVAILABLE and QSoundEffect is not None:
+                try:
+                    se = QSoundEffect()
+                    se.setSource(QUrl.fromLocalFile(str(p)))
+                    se.setLoopCount(1)
+                    se.setVolume(0.9)
+                    se.play()
+                    self._sounds[name] = se
+                    QTimer.singleShot(2000, lambda: self._sounds.pop(name, None))
+                    return
+                except Exception:
+                    pass
+
+            # Fallback: on Windows try winsound
+            if sys.platform == 'win32':
+                try:
+                    import winsound
+                    winsound.PlaySound(str(p), winsound.SND_FILENAME | winsound.SND_ASYNC)
+                    return
+                except Exception:
+                    pass
+            # Last-resort: subprocess to call system player (may block)
+            try:
+                subprocess.Popen([str(p)], shell=True)
+            except Exception:
+                pass
+        except Exception as e:
+            print(f"Sound play error: {e}")
+
+    def _on_toggle_start_menu(self):
+        """Toggle visibility of the Start Menu (open if closed, focus search if opened)."""
+        try:
+            # If start menu already created, bring it to front or toggle away
+            if hasattr(self, 'start_menu_instance') and self.start_menu_instance:
+                # If workspace currently showing menu page, switch back to mission hub
+                try:
+                    current = self.center_stack.currentWidget()
+                    if current is self.workspace:
+                        # show workspace (menu page will be shown inside workspace)
+                        # toggle: if menu is visible in workspace_pages, go back to mission hub
+                        if "start_menu" in self.workspace_pages and self.workspace.currentWidget() is self.workspace_pages.get("start_menu"):
+                            self.center_stack.setCurrentWidget(self.mission_hub)
+                            return
+                except Exception:
+                    pass
+            # otherwise open menu
+            try:
+                self.play_sound('menu_toggle')
+            except Exception:
+                pass
+            self.open_start_menu()
+        except Exception:
+            pass
+
+    def _focus_start_search(self):
+        try:
+            if hasattr(self, 'start_menu_instance') and getattr(self.start_menu_instance, 'search', None):
+                self.start_menu_instance.search.setFocus()
+        except Exception:
+            pass
+
+    def load_desktop_config(self):
+        try:
+            if self.config_path.exists():
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    self.desktop_state = json.load(f)
+        except Exception as e:
+            print(f"Failed to load desktop config: {e}")
+
+    def save_desktop_config(self):
+        try:
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.config_path, "w", encoding="utf-8") as f:
+                json.dump(self.desktop_state, f, indent=2)
+        except Exception as e:
+            print(f"Failed to save desktop config: {e}")
+
+    def handle_launch_request(self, key: str):
+        """Unified launch handler for StartMenu signals"""
+        k = key.lower()
+        if k == "cortex": self.launch_cortex_ai()
+        elif k == "file_manager": self.launch_file_manager()
+        elif k == "terminal": self.launch_terminal()
+        elif k == "task_manager": self.launch_task_manager()
+        elif k == "settings": self.launch_settings()
+        elif k == "geant4": self.launch_geant4_workspace()
+        elif k == "notepad": self.launch_text_editor()
+        elif k == "network": self._show_placeholder("Network Interface")
+        elif k == "shutdown": self.shutdown_system()
+        elif k == "restart": self.restart_system()
+        elif k == "hibernate": self.hibernate_system()
+        else:
+            # Try as file path
+            if os.path.exists(key):
+                self.open_file(Path(key))
+            else:
+                self._show_placeholder(key)
+
+    def hibernate_system(self):
+        import subprocess, sys
+        if sys.platform == "win32": subprocess.Popen(["shutdown", "/h"])
+        else: print("Hibernation not supported via direct call on this OS")
+
+    def _restore_last_launch(self):
+        last = self.desktop_state.get("last_launch")
+        if last:
+            try:
+                self.handle_launch_request(last)
+            except Exception as e:
+                print(f"Failed to restore last launch {last}: {e}")
+
+    def add_workspace_widget(self, key: str, widget: QWidget, title: str = "Untitled"):
+        """Show a widget in the central workspace stack"""
+        # Switch stack to workspace view
+        self.center_stack.setCurrentWidget(self.workspace)
+        
+        if key in self.workspace_pages:
+            self.workspace.setCurrentWidget(self.workspace_pages[key])
+            return
+            
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(10, 10, 10, 10)
+        
+        header = QLabel(f"◢ {title.upper()}")
+        header.setStyleSheet(f"color: #FFFFFF; {get_lcars_font_style(20, 'normal')} margin-bottom: 10px;")
+        layout.addWidget(header)
+        layout.addWidget(widget, 1)
+        
+        # Return button to desktop
+        ret_btn = QPushButton("RETURN TO DESKTOP")
+        ret_btn.setFixedHeight(30)
+        ret_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {self.colors['button_colors'][0]};
+                color: #000;
+                {get_lcars_font_style(18, 'normal')}
+                border-radius: 5px;
+            }}
+        """)
+        ret_btn.clicked.connect(lambda: self.center_stack.setCurrentIndex(0))
+        layout.addWidget(ret_btn)
+
+        self.workspace_pages[key] = page
+        self.workspace.addWidget(page)
+        self.workspace.setCurrentWidget(page)
+
+    def launch_geant4_workspace(self):
+        """Embed Geant4 Workstation into workspace"""
+        try:
+            from lcars.core.geant4_workstation import Geant4Workstation
+
+            # Create in embedded mode so the QMainWindow doesn't show itself
+            workstation = Geant4Workstation(embed=True)
+            # If the workstation is a QMainWindow, embed its central widget
+            try:
+                central_widget = workstation.centralWidget()
+                if central_widget is not None:
+                    self.add_workspace_widget("geant4", central_widget, title="Geant4 Workstation")
+                    return
+            except Exception:
+                pass
+
+            # Fallback: embed the object itself if it behaves like a widget
+            self.add_workspace_widget("geant4", workstation, title="Geant4 Workstation")
+        except Exception as e:
+            print(f"Failed to launch Geant4 workspace: {e}")
+
+    def launch_central_system(self):
+        """Launch the compatible LCARS Central System"""
+        from lcars.ui.lcars_central import LCARSCentralSystem
+        self.central_win = LCARSCentralSystem()
+        self.central_win.show()
+
+    def _show_placeholder(self, name: str):
+        w = QLabel(f"{name} - Not Implemented")
+        w.setStyleSheet(f"color: #FFFFFF; {get_lcars_font_style(18, 'normal')}")
+        self.add_workspace_widget(name.replace(" ", "_"), w, title=name)
+
+    # --- Terminal widget (simple runner) ---
+    class _TerminalWidget(QWidget):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            lay = QVBoxLayout(self)
+            self.cmd_input = QLineEdit()
+            self.cmd_input.setPlaceholderText("Enter shell command and press Execute")
+            lay.addWidget(self.cmd_input)
+            btn = QPushButton("Execute")
+            btn.clicked.connect(self.execute)
+            lay.addWidget(btn)
+            self.output = QTextEdit()
+            self.output.setReadOnly(True)
+            self.output.setStyleSheet(f"""
+                background-color: #050505;
+                color: #FF9900;
+                border: 1px solid #2F3749;
+                border-radius: 5px;
+                {get_lcars_font_style(18, 'normal')}
+            """)
+            lay.addWidget(self.output)
+
+        def execute(self):
+            cmd = self.cmd_input.text().strip()
+            if not cmd:
+                return
+            self.output.append(f"◢ LCARS_SHELL: {cmd}")
+            try:
+                # Use subprocess to run the command and capture output
+                proc = subprocess.Popen(
+                    cmd,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    cwd=str(project_root)
+                )
+                
+                # We append output line by line for a "real" feel
+                def read_output():
+                    for line in iter(proc.stdout.readline, ""):
+                        self.output.append(line.strip())
+                    proc.stdout.close()
+                    proc.wait()
+                
+                import threading
+                threading.Thread(target=read_output, daemon=True).start()
+                self.cmd_input.clear()
+            except Exception as e:
+                self.output.append(f"◢ ERROR: {e}")
+
+    def launch_terminal(self):
+        """Open internal Terminal widget (no external windows)."""
+        try:
+            from lcars.ui.multi_terminal import MultiTerminalConsole
+
+            page = MultiTerminalConsole()
+            self.add_workspace_widget(
+                "multi_terminal", page, title="Multi-Terminal Console"
+            )
+        except Exception:
+            try:
+                term = self._TerminalWidget()
+                self.add_workspace_widget("terminal", term, title="Terminal")
+            except Exception as e:
+                print(f"Failed to open terminal widget: {e}")
+
+    def launch_settings(self):
+        """Open internal Settings/HQ widget (no external windows)."""
+        try:
+            from lcars.ui.headquarters_node import HeadquartersNode
+
+            widget = HeadquartersNode()
+            self.add_workspace_widget("settings", widget, title="Settings / HQ")
+        except Exception as e:
+            print(f"Failed to open Settings/HQ: {e}")
+            self._show_placeholder("Settings / HQ")
+
+    def launch_database(self):
+        """Launch database interface"""
+        try:
+            from lcars.ui.database_interface import DatabaseInterface
+
+            widget = DatabaseInterface()
+            self.add_workspace_widget("database", widget, title="LCARS Database")
+        except Exception as e:
+            self._show_placeholder("Database Interface")
+            print(f"Database interface not available: {e}")
+
+    def launch_task_manager(self):
+        """Embed the internal Task Manager / System Monitor widget."""
+        try:
+            from lcars.ui.lcars_central import get_central
+            central = get_central()
+            if central:
+                central.launch_system_monitor()
+                return
+        except Exception:
+            pass
+
+        # fallback: previous local behavior
+        try:
+            from lcars.ui.system_monitor import SystemMonitorWidget
+
+            widget = SystemMonitorWidget()
+            self.add_workspace_widget("task_manager", widget, title="Task Manager")
+        except Exception as e:
+            print(f"Failed to launch Task Manager: {e}")
+            self._show_placeholder("Task Manager")
+
+    def launch_file_manager(self):
+        """Embed the internal File Manager widget instead of external Explorer."""
+        try:
+            page = FileManagerWidget(start_path=project_root)
+            self.add_workspace_widget("file_manager", page, title="File Manager")
+        except Exception as e:
+            print(f"Failed to open File Manager: {e}")
+            self._show_placeholder("File Manager")
+
+    def toggle_system_monitoring(self, event=None):
+        """Toggle in-app system monitoring state and update UI."""
+        try:
+            from lcars.ui.lcars_central import get_central
+            central = get_central()
+            if central:
+                central.toggle_monitoring()
+                status = "ON" if getattr(central, "monitoring_active", False) else "OFF"
+                self._show_notification(f"System monitoring {status} (central)")
+                return
+        except Exception:
+            pass
+
+        # fallback to previous local behavior
+        self.monitor_active = not self.monitor_active
+        status = "ON" if self.monitor_active else "OFF"
+        self._show_notification(f"System monitoring {status}")
+        print(f"LCARS: Real system monitoring {status}")
+
+    def _flash_red_alert(self):
+        """Повний RED ALERT - всі елементи використовують alert_colors, фон чорний"""
+        self._red_state = not getattr(self, "_red_state", False)
+        
+        # Отримуємо alert_colors з поточної палітри
+        alert_colors = self.colors['alert_colors']
+        
+        if self._red_state:
+            # Яскравий червоний (перші кольори з alert_colors)
+            primary_alert = alert_colors[0] if len(alert_colors) > 0 else "#FF0000"
+            secondary_alert = alert_colors[1] if len(alert_colors) > 1 else "#AA0000"
+        else:
+            # Темніший червоний (середні кольори з alert_colors)
+            primary_alert = alert_colors[3] if len(alert_colors) > 3 else "#AA0000"
+            secondary_alert = alert_colors[4] if len(alert_colors) > 4 else "#880000"
+        
+        # Зберігаємо оригінальні кольори якщо ще не зберігали
+        if not hasattr(self, '_original_colors'):
+            self._original_colors = {}
+            for btn_name in ['mod_btn', 'red_alert_btn', 'lock_btn']:
+                if hasattr(self, btn_name):
+                    btn = getattr(self, btn_name)
+                    self._original_colors[btn_name] = btn.styleSheet()
+        
+        # Оновлюємо ВСІ кнопки і елементи
+        elements_to_update = []
+        
+        # Кнопки в footer
+    def _flash_red_alert(self):
+        """Unified Red Alert: All frame elements and active widgets shift color."""
+        self._red_state = not getattr(self, "_red_state", False)
+        
+        # Get alert colors from palette
+        alert_colors = self.colors['alert_colors']
+        
+        if self._red_state:
+            primary = alert_colors[0] if len(alert_colors) > 0 else "#FF0000"
+            secondary = alert_colors[1] if len(alert_colors) > 1 else "#AA0000"
+        else:
+            primary = alert_colors[2] if len(alert_colors) > 2 else "#AA0000"
+            secondary = alert_colors[3] if len(alert_colors) > 3 else "#880000"
+        
+        # Elements to update (Peripheral frame + Sidebar components)
+        frame_elements = [
+            'tl_elbow', 'tr_elbow', 'bl_elbow', 'br_elbow',
+            'header_frame', 'footer_frame',
+            'left_frame_seg', 'right_frame_seg'
+        ]
+        
+        # Store original styles once for restoration
+        if not hasattr(self, '_original_styles'):
+            self._original_styles = {}
+            for name in frame_elements:
+                if hasattr(self, name):
+                    self._original_styles[name] = getattr(self, name).styleSheet()
+        
+        # Apply alert colors to frame
+        alert_style = f"background-color: {primary}; border: none;"
+        for name in frame_elements:
+            if hasattr(self, name):
+                getattr(self, name).setStyleSheet(alert_style)
+                # If it's an elbow, we update its internal color attribute
+                element = getattr(self, name)
+                if isinstance(element, LCARSElbow):
+                    element.color = primary
+                    element.update()
+
+        # Update interactive buttons and data blocks
+        for widget in self.root.findChildren((QPushButton, LCARSDataBlock)):
+            if isinstance(widget, QPushButton):
+                widget.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: {primary};
+                        color: #FFF;
+                        border: 2px solid {secondary};
+                        {get_lcars_font_style(14, 'normal')}
+                    }}
+                """)
+            elif isinstance(widget, LCARSDataBlock):
+                widget.setStyleSheet(f"background-color: {primary}; border-radius: 5px;")
+        
+        # Ensure title and time are readable
+        if hasattr(self, 'header_time'):
+            self.header_time.setStyleSheet(f"color: #000; {get_lcars_font_style(22, 'normal')}")
+        
+        self.setStyleSheet("QMainWindow { background-color: #000000; }")
+
+    def lock_screen(self):
+        """Show lock screen using the dedicated lock_screen.py file"""
+        if hasattr(self, '_locking') and self._locking:
+            return
+        
+        self._locking = True
+        print("Activating Lock Screen...")
+        
+        try:
+            from lcars.ui.lock_screen import LCARSLockScreen
+            
+            if not hasattr(self, 'lock_screen_window') or self.lock_screen_window is None:
+                self.lock_screen_window = LCARSLockScreen()
+                self.lock_screen_window.unlocked.connect(self.unlock_screen)
+            
+            self.lock_screen_window.show()
+            self.lock_screen_window.raise_()
+            self.lock_screen_window.activateWindow()
+        except Exception as e:
+            print(f"Failed to show lock screen: {e}")
+        finally:
+            self._locking = False
+
+    def unlock_screen(self):
+        try:
+            print("Screen Unlocked")
+            if self.lock_screen_widget:
+                self.lock_screen_widget.hide()
+        except Exception as e:
+            print(f"Failed to unlock screen: {e}")
+
+    def refresh_system(self, event):
+        """Force refresh system metrics (connected to Refresh button)"""
+        try:
+            # Prefer the available updater
+            if hasattr(self, "update_system_metrics"):
+                self.update_system_metrics()
+            elif hasattr(self, "update_system_data"):
+                self.update_system_data()
+            self._show_notification("System refreshed")
+        except Exception as e:
+            print(f"Refresh error: {e}")
+
+    def update_clock_and_status(self):
+        """Update the header clock and optionally trigger status updates."""
+        try:
+            now = datetime.now()
+            if hasattr(self, "header_time"):
+                self.header_time.setText(now.strftime("%H:%M:%S"))
+            # If monitoring is active, refresh metrics
+            if getattr(self, "monitoring_active", False):
+                if hasattr(self, "update_system_metrics"):
+                    self.update_system_metrics()
+                elif hasattr(self, "update_system_data"):
+                    self.update_system_data()
+        except Exception as e:
+            print(f"Clock/status update error: {e}")
+
+    def _show_notification(self, message):
+        """Show system notification"""
+        print(f"LCARS NOTIFICATION: {message}")
+        try:
+            from lcars.ui.communications import CommunicationsPanel
+
+            widget = CommunicationsPanel()
+            self.add_workspace_widget("communications", widget, title="Communications")
+        except Exception as e:
+            self._show_placeholder("Communications System")
+            print(f"Communications system not available: {e}")
+
+    def launch_monitor_toggle(self):
+        """Toggle system monitor as overlay"""
+        if hasattr(self, "monitor_active") and self.monitor_active:
+            # Remove from workspace
+            if "system_monitor" in self.workspace_pages:
+                self.workspace.removeWidget(self.workspace_pages["system_monitor"])
+                del self.workspace_pages["system_monitor"]
+            self.monitor_active = False
+        else:
+            # Add to workspace
+            self.launch_task_manager()
+            self.monitor_active = True
+        # monitor toggled
+
+    # --- Application Launchers (Functional) ---
+    def launch_cmd(self):
+        import subprocess
+        subprocess.Popen(["cmd.exe", "/k", "echo LCARS SHELL"])
+    def launch_cmd(self):
+        import subprocess
+        subprocess.Popen(["cmd.exe"])
+
+    def launch_powershell(self):
+        import subprocess
+        subprocess.Popen(["powershell.exe"])
+
+    def launch_web_browser(self):
+        import webbrowser
+        webbrowser.open("https://www.google.com")
+
+    def launch_text_editor(self):
+        import subprocess
+        subprocess.Popen(["notepad.exe"])
+
+    def launch_calculator(self):
+        import subprocess
+        subprocess.Popen(["calc.exe"])
+
+    def launch_control_panel(self):
+        import subprocess
+        subprocess.Popen(["control.exe"])
+
+    def shutdown_system(self):
+        import subprocess, sys
+        if sys.platform == "win32":
+            subprocess.Popen(["shutdown", "/s", "/t", "0"])
+        else:
+            subprocess.Popen(["shutdown", "-h", "now"])
+
+    def restart_system(self):
+        import subprocess, sys
+        if sys.platform == "win32":
+            subprocess.Popen(["shutdown", "/r", "/t", "0"])
+        else:
+            subprocess.Popen(["reboot"])
+
+    def create_desktop_icon(self, file_path):
+        from PyQt6.QtWidgets import QPushButton
+        btn = QPushButton(f"📄\n{file_path.name[:10]}")
+        btn.setFixedSize(100, 100)
+        btn.setStyleSheet(f"background: {get_random_button_color(self.current_era)}; color: #000; {get_lcars_font_style(12)}")
+        btn.clicked.connect(lambda: os.startfile(file_path) if sys.platform == "win32" else subprocess.Popen(["open", str(file_path)]))
+        return btn
+
+    def brighten_color(self, color):
+        c = QColor(color)
+        return c.lighter(120).name()
+
+    def darken_color(self, color):
+        c = QColor(color)
+        return c.darker(120).name()
+
+
+# --- LCARS IDE (Mod Mode Component) ---
+class LCARS_IDE(QWidget):
+    """Integrated Development Environment for LCARS Framework"""
+    def __init__(self, start_path=None, parent=None):
+        super().__init__(parent)
+        self.project_root = Path(start_path) if start_path else Path.cwd()
+        self.setup_ui()
+
+    def setup_ui(self):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+
+        # 1. Left Sidebar: File Explorer
+        self.explorer = FileManagerWidget(start_path=self.project_root, embed_mode=True)
+        self.explorer.setFixedWidth(300)
+        layout.addWidget(self.explorer)
+
+        # 2. Center: Code Editor & Terminal
+        center_v = QVBoxLayout()
+        center_v.setSpacing(10)
+
+        # Editor
+        self.editor = QTextEdit()
+        self.editor.setPlaceholderText("SYSTEM CODE EDITOR - READY")
+        self.editor.setStyleSheet(f"""
+            QTextEdit {{
+                background-color: #050505;
+                color: #37A6D1;
+                border: 2px solid #2F3749;
+                border-radius: 10px;
+                padding: 10px;
+                {get_lcars_font_style(28, 'normal')}
+            }}
+        """)
+        center_v.addWidget(self.editor, 3)
+
+        # Actions Line
+        actions = QHBoxLayout()
+        self.save_btn = QPushButton("SAVE SOURCE")
+        self.save_btn.setFixedHeight(40)
+        self.save_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {get_random_button_color(LCARSEra.LCARS_25TH)};
+                color: #000;
+                border-radius: 10px;
+                {get_lcars_font_style(18, 'normal')}
+            }}
+        """)
+        self.save_btn.clicked.connect(self.save_file)
+        actions.addWidget(self.save_btn)
+        actions.addStretch()
+        center_v.addLayout(actions)
+
+        # Terminal
+        self.terminal = LCARSDesktop._TerminalWidget()
+        center_v.addWidget(self.terminal, 1)
+
+        layout.addLayout(center_v)
+        
+        # Connect explorer to editor
+        self.explorer.file_selected.connect(self.load_file_to_editor)
+
+    def load_file_to_editor(self, path):
+        self.current_file = Path(path)
+        try:
+            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                self.editor.setPlainText(f.read())
+        except Exception as e:
+            self.editor.setPlainText(f"ERROR_LOADING_FILE: {e}")
+
+    def save_file(self):
+        if not hasattr(self, 'current_file') or not self.current_file:
+            return
+        try:
+            with open(self.current_file, 'w', encoding='utf-8') as f:
+                f.write(self.editor.toPlainText())
+            self.save_btn.setText("SAVED ✓")
+            QTimer.singleShot(2000, lambda: self.save_btn.setText("SAVE SOURCE"))
+        except Exception as e:
+            LCARSDialog.show_message(self, "Save Error", f"Failed to save file: {e}")
+
+class FileManagerWidget(QWidget):
+    """Global LCARS File Manager with Drive Navigation and Internal Launching"""
+    file_selected = pyqtSignal(str)
+
+    def __init__(self, start_path=None, parent=None, embed_mode=False):
+        super().__init__(parent)
+        self.current_path = Path(start_path) if start_path else Path.cwd()
+        self.colors = get_era_palette(LCARSEra.LCARS_25TH)
+        self.setup_ui()
+        self.load_path(self.current_path)
+
+    def setup_ui(self):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(20)
+
+        # 1. Drive/Quick Access Sidebar
+        sidebar = QVBoxLayout()
+        sidebar.setSpacing(10)
+        
+        # Drive Buttons
+        import string
+        from ctypes import windll
+        if sys.platform == "win32":
+            drives = []
+            bitmask = windll.kernel32.GetLogicalDrives()
+            for letter in string.ascii_uppercase:
+                if bitmask & 1: drives.append(letter + ":\\")
+                bitmask >>= 1
+            for d in drives:
+                btn = self.create_nav_btn(d, self.colors['button_colors'][0])
+                btn.clicked.connect(lambda checked, p=d: self.load_path(Path(p)))
+                sidebar.addWidget(btn)
+        
+        home_btn = self.create_nav_btn("HOME", self.colors['button_colors'][2])
+        home_btn.clicked.connect(lambda: self.load_path(Path.home()))
+        sidebar.addWidget(home_btn)
+        
+        sidebar.addStretch()
+        layout.addLayout(sidebar)
+
+        # 2. Main Area (Path + List)
+        main_v = QVBoxLayout()
+        
+        # Path Bar
+        path_row = QHBoxLayout()
+        self.path_edit = QLineEdit(str(self.current_path))
+        self.path_edit.setStyleSheet(f"background: #0A0E1A; color: #FFFFFF; border-radius: 10px; padding: 10px; {get_lcars_font_style(20)}")
+        path_row.addWidget(self.path_edit, 1)
+        
+        up_btn = QPushButton("UP")
+        up_btn.setFixedSize(80, 45)
+        up_btn.setStyleSheet(f"background: {self.colors['button_colors'][1]}; color: #000; border-radius: 5px; {get_lcars_font_style(18)}")
+        up_btn.clicked.connect(self.go_up)
+        path_row.addWidget(up_btn)
+        
+        main_v.addLayout(path_row)
+
+        # List
+        self.listw = QListWidget()
+        self.listw.setStyleSheet(f"""
+            QListWidget {{
+                background-color: #050505;
+                color: #FFFFFF;
+                border: 2px solid #2F3749;
+                border-radius: 15px;
+                padding: 10px;
+                {get_lcars_font_style(18, 'normal')}
+            }}
+            QListWidget::item {{ padding: 8px; }}
+            QListWidget::item:selected {{ background-color: {self.colors['button_colors'][1]}; color: #000; }}
+        """)
+        self.listw.itemDoubleClicked.connect(self.on_item_activated)
+        main_v.addWidget(self.listw)
+        
+        layout.addLayout(main_v, 1)
+
+    def create_nav_btn(self, text, color):
+        btn = QPushButton(text)
+        btn.setFixedSize(100, 50)
+        btn.setStyleSheet(f"background: {color}; color: #000; border-radius: 5px; {get_lcars_font_style(18, 'normal')}")
+        return btn
+
+    def load_path(self, path: Path):
+        try:
+            self.current_path = Path(path)
+            self.path_edit.setText(str(self.current_path))
+            self.listw.clear()
+            for e in sorted(self.current_path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
+                prefix = "◢ " if e.is_dir() else "  "
+                item = QListWidgetItem(f"{prefix}{e.name.upper()}")
+                item.setData(Qt.ItemDataRole.UserRole, str(e))
+                self.listw.addItem(item)
+        except Exception as e:
+            print(f"Path access error: {e}")
+
+    def go_up(self): self.load_path(self.current_path.parent)
+
+    def on_item_activated(self, item):
+        path = Path(item.data(Qt.ItemDataRole.UserRole))
+        if path.is_dir():
+            self.load_path(path)
+        else:
+            self.launch_file(path)
+
+    def launch_file(self, path):
+        """Internal file launch logic"""
+        ext = path.suffix.lower()
+        if ext in ('.py', '.txt', '.log', '.json', '.md'):
+            try:
+                # Open with notepad or similar via subprocess
+                subprocess.Popen(["notepad.exe", str(path)])
+            except:
+                os.startfile(str(path))
+        else:
+            try:
+                os.startfile(str(path))
+            except Exception as e:
+                print(f"Failed to launch file: {e}")
+
+def main():
+    app = QApplication(sys.argv)
+    # Завантаження шрифтів
+    setup_lcars_font()
+    
+    desktop = LCARSDesktop()
+    desktop.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

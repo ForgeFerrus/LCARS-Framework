@@ -1,0 +1,83 @@
+Metadata:
+  Id: 06-0002
+  Name: LCARS Communication Subsystem
+  Version: 44.20.0
+  Faction: Federation
+  Type: communication
+  Category: '06'
+  Number: 0002
+
+Specs:
+  Capacity: 2000
+  ColorCode: '#99CCFF'
+  SecurityLevel: 7
+  Priority: 3
+  Bus: ODN-06
+
+Entrypoints:
+  Main: lcars.modules.comm:InitializeCommSubsystem
+  Contacts: lcars.modules.comm:InitializeContacts
+  Messages: lcars.modules.comm:InitializeMessages
+  Calls: lcars.modules.comm:InitializeCalls
+
+Paths:
+  DatabaseFile: lcars/data/06/06-0002-comm.db
+  Tables:
+    - contacts
+    - messages
+    - calls
+
+Config:
+  Communication:
+    TcpPort: 7777
+    TcpHost: 0.0.0.0
+    MaxConnections: 64
+    MessageRetention: 2592000
+  Contacts:
+    MaxContacts: 10000
+    AutoSync: true
+  Calls:
+    LogDuration: true
+    AutoRecord: false
+  ExternalApis:
+    Telegram: enabled
+    Whatsapp: enabled
+    Viber: enabled
+    Meta: enabled
+    Twitter: enabled
+    EmailSmtp: enabled
+    SmsTwilio: enabled
+  Presence:
+    TrackStatus: true
+    BroadcastInterval: 60
+  Encryption:
+    Algorithm: AES256
+    Enabled: true
+    KeyRotation: 86400
+Dependencies:
+  - core.alpha
+  - engineering.isolinear
+  - system.control
+
+Interfaces:
+  - CommunicationAPI
+  - ContactAPI
+  - MessageAPI
+  - CallAPI
+
+Boot:
+  Sequence:
+    - InitCore
+    - InitIsolinear
+    - InitCommunication
+  DefaultState: inserted
+  AutoActivate: true
+
+Tags:
+  - communication
+  - contacts
+  - messages
+  - calls
+  - tcp
+  - network
+  - federation

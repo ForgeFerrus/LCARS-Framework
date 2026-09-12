@@ -1,0 +1,35 @@
+LCARS Architecture Scan Report
+Root: C:\Users\Forge\MyProject\LCARS-Framework
+Timestamp: 2026-01-31T00:28:43.382716Z
+Problems: 4
+
+Problems detail:
+ - missing_file: C:\Users\Forge\MyProject\LCARS-Framework\start.py
+ - missing_file: C:\Users\Forge\MyProject\LCARS-Framework\launcher.py
+ - missing_initialize: C:\Users\Forge\MyProject\LCARS-Framework\lcars\__init__.py
+ - missing_central_command: C:\Users\Forge\MyProject\LCARS-Framework\lcars\ui\lcars_central.py
+
+Present directories:
+ - C:\Users\Forge\MyProject\LCARS-Framework\lcars
+ - C:\Users\Forge\MyProject\LCARS-Framework\lcars\ui
+ - C:\Users\Forge\MyProject\LCARS-Framework\lcars\core
+ - C:\Users\Forge\MyProject\LCARS-Framework\plugins
+ - C:\Users\Forge\MyProject\LCARS-Framework\config
+ - C:\Users\Forge\MyProject\LCARS-Framework\docs
+ - C:\Users\Forge\MyProject\LCARS-Framework\tests
+
+Present files:
+ - C:\Users\Forge\MyProject\LCARS-Framework\requirements.txt
+ - C:\Users\Forge\MyProject\LCARS-Framework\lcars\__init__.py
+ - C:\Users\Forge\MyProject\LCARS-Framework\lcars\ui\lcars_central.py
+
+# Офіційна палітра серії Titan (v25.0)
+    BLUE_DARK  = "#336699"
+    BLUE_MED   = "#6699CC"
+    BLUE_LIGHT = "#99CCFF"
+    ORANGE_STD = "#D37445"
+    GREY_STD   = "#606060"
+    YELLOW_STD = "#F0B942"
+    TAN_STD    = "#BA985D"
+    GREEN_STD  = "#7D8736"
+    RED_ALERT  = "#CC0000"

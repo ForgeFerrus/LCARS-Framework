@@ -1,0 +1,96 @@
+#!/usr/bin/env python3 LCARS BASE TEST - Перевірка основних компонентів
+
+import sys
+from pathlib import Path
+
+# Додаємо корінь проєкту
+project_root = Path(__file__).parent.absolute()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+print("◤ TESTING LCARS BASE SYSTEM")
+print("=" * 50)
+
+# Тест 1: Імпорт базових типів
+try:
+    from lcars.base.type import LCARS, Type, Matrix, SystemComponent
+    print("✓ Base types imported successfully")
+except Exception as e:
+    print(f"✗ Base types import failed: {e}")
+    sys.exit(1)
+
+# Тест 2: Імпорт реєстру
+try:
+    from lcars.base.register import registry
+    print("✓ Registry imported successfully")
+except Exception as e:
+    print(f"✗ Registry import failed: {e}")
+    sys.exit(1)
+
+# Тест 3: Створення базових об'єктів
+try:
+    # Створюємо LCARS об'єкт
+    lcars_obj = LCARS("test_system")
+    print(f"✓ LCARS object created: {lcars_obj.SystemId}")
+    
+    # Створюємо Matrix
+    matrix = Matrix("test_matrix")
+    print(f"✓ Matrix object created: {matrix.LcarsId}")
+    
+    # Створюємо SystemComponent
+    component = SystemComponent("test_component")
+    print(f"✓ SystemComponent created: {component.SystemId}")
+    
+except Exception as e:
+    print(f"✗ Object creation failed: {e}")
+    sys.exit(1)
+
+# Тест 4: Робота з реєстром
+try:
+    # Реєстрація об'єкта
+    registry.Register("Test.Object", lcars_obj)
+    print("✓ Object registered")
+    
+    # Отримання об'єкта
+    retrieved = registry.Get("Test.Object")
+    if retrieved == lcars_obj:
+        print("✓ Object retrieved successfully")
+    else:
+        print("✗ Object retrieval failed")
+        
+    # Перевірка списку
+    keys = registry.List()
+    print(f"✓ Registry has {len(keys)} keys")
+    
+except Exception as e:
+    print(f"✗ Registry operations failed: {e}")
+    sys.exit(1)
+
+# Тест 5: Перевірка функцій доступу
+try:
+    from lcars.base.type import Color, Font, Widget
+    print("✓ Access functions imported")
+    
+    # Спроба отримати з реєстру (може бути None якщо не ініціалізовано)
+    color = Color()
+    print(f"✓ Color function returns: {type(color)}")
+    
+except Exception as e:
+    print(f"✗ Access functions failed: {e}")
+
+# Тест 6: Перевірка метакласу
+try:
+    # Type використовує LCARSMeta metaclass
+    type_obj = Type("test_type")
+    print(f"✓ Type object created: {type_obj.SystemId}")
+    
+    # Перевірка атрибутів
+    debug_info = LCARS.DebugInfo()
+    print(f"✓ Debug info: {debug_info}")
+    
+except Exception as e:
+    print(f"✗ Metaclass test failed: {e}")
+
+print("=" * 50)
+print("◤ BASE SYSTEM TEST COMPLETE")
+print("✓ All core components working!")

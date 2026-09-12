@@ -1,0 +1,18 @@
+Metadata:
+  Id: 07-0702
+  Name: LCARS Acoustic Feedback & Sound Effects
+  Category: '07'
+  Version: 5.0.0
+  Faction: Federation
+  Type: interface
+  Status: nominal
+Specs:
+  Capacity: 4096
+  ColorCode: '#FF9900'
+  SecurityLevel: 3
+  Bus: ODN-07
+Paths:
+  DatabaseFile: lcars/data/07/07-0002-audio.db
+Entrypoints:
+  Main: lcars.ui.audio:SoundManager
+Description: Акустичні ефекти кнопок, тривог та підтвердження команд комп'ютера.

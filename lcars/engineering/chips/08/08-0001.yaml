@@ -1,0 +1,19 @@
+Metadata:
+  Id: 08-0001
+  Name: Compiled Applications & Isolinear Program Registry
+  Category: 08
+  Version: 5.0.0
+  Faction: Federation
+  Type: storage
+  Status: nominal
+Specs:
+  Capacity: 16384
+  ColorCode: '#9999CC'
+  SecurityLevel: 5
+  Bus: ODN-08
+Paths:
+  DatabaseFile: lcars/data/08/08-0001-programs.db
+Entrypoints:
+  Main: lcars.system.compiler:UniversalCompiler
+Description: Реєстр усіх скомпільованих скриптів, додатків (.pyz, .lcars) та виконуваних
+  модулів.

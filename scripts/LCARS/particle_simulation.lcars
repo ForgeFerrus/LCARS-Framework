@@ -1,0 +1,262 @@
+// Симуляція частинок з LCARS Script
+// ==================================
+
+// Параметри симуляції
+beam_energy: 2.5 GeV
+particle_count: 50000
+detector_type: "CMS"
+magnetic_field: 3.8 T
+
+// Функції розрахунку
+FUNCTION calculate_cross_section(energy) -> float {
+    // Проста модель перерізу
+    return 100.0 / (1.0 + energy / 10.0)
+}
+
+FUNCTION generate_momentum(energy) -> float {
+    // p = sqrt(E^2 - m^2) для релятивістських частинок
+    mass = 0.938  // GeV/c^2 (протон)
+    return sqrt(energy * energy - mass * mass)
+}
+
+FUNCTION calculate_efficiency(detected, total) -> float {
+    if total == 0 return 0.0
+    return detected / total * 100.0
+}
+
+// Детектор
+DETECTOR cms_detector {
+    LAYERS [
+        {
+            type: "pixel_silicon",
+            thickness: 300 μm,
+            position: [0, 0, 0],
+            material: "silicon"
+        },
+        {
+            type: "tracker",
+            thickness: 5 mm,
+            position: [0, 0, 0.5m],
+            material: "silicon"
+        },
+        {
+            type: "ecal",
+            thickness: 25 cm,
+            position: [0, 0, 1.2m],
+            material: "lead_tungstate"
+        },
+        {
+            type: "hcal",
+            thickness: 1.2m,
+            position: [0, 0, 2.5m],
+            material: "brass"
+        }
+    ]
+    
+    MAGNETIC_FIELD magnetic_field
+    TEMPERATURE -20°C
+    READOUT "digital"
+    
+    ON HIT(particle) {
+        record_hit(particle.position, particle.energy, particle.time)
+        emit("detector:hit", {
+            particle_type: particle.type,
+            energy: particle.energy,
+            position: particle.position
+        })
+    }
+    
+    ON TRACK(track) {
+        analyze_track(track)
+        emit("detector:track", track)
+    }
+}
+
+// Аналізатор даних
+ANALYZER particle_analyzer {
+    INPUT "simulation_output.root"
+    
+    PROCESS {
+        // Завантаження даних
+        events = load_data("simulation_output.root")
+        
+        // Створення гістограм
+        energy_spectrum = create_histogram("energy_spectrum", 200, 0, 5 GeV)
+        momentum_spectrum = create_histogram("momentum_spectrum", 200, 0, 5 GeV/c)
+        vertex_distribution = create_histogram("vertex_distribution", 100, -10 cm, 10 cm)
+        
+        // Заповнення гістограм
+        detected_count = 0
+        FOREACH event IN events {
+            energy_spectrum.fill(event.particle.energy)
+            momentum = generate_momentum(event.particle.energy)
+            momentum_spectrum.fill(momentum)
+            vertex_distribution.fill(event.vertex.z)
+            
+            detected_count = detected_count + 1
+        }
+        
+        // Розрахунок ефективності
+        efficiency = calculate_efficiency(detected_count, particle_count)
+        
+        // Підгонка кривих
+        energy_fit = fit_gaussian(energy_spectrum)
+        momentum_fit = fit_landau(momentum_spectrum)
+        
+        // Результати
+        results = {
+            total_events: particle_count,
+            detected_events: detected_count,
+            efficiency: efficiency,
+            energy_peak: energy_fit.mean,
+            energy_resolution: energy_fit.sigma / energy_fit.mean,
+            momentum_peak: momentum_fit.most_probable,
+            cross_section: calculate_cross_section(beam_energy)
+        }
+        
+        // Експорт результатів
+        export("particle_simulation_results.json", results)
+        export_plot(energy_spectrum, "energy_spectrum.png")
+        export_plot(momentum_spectrum, "momentum_spectrum.png")
+        export_plot(vertex_distribution, "vertex_distribution.png")
+        
+        // Логування
+        log("Analysis completed:")
+        log("  Total events: " + particle_count)
+        log("  Detected events: " + detected_count)
+        log("  Efficiency: " + efficiency + "%")
+        log("  Energy peak: " + energy_fit.mean + " GeV")
+        log("  Cross section: " + results.cross_section + " mb")
+    }
+}
+
+// Візуалізація
+VISUALIZE detector_3d {
+    TYPE "3d_model"
+    SOURCE cms_detector
+    STYLE "lcars_tng"
+    
+    OPTIONS {
+        rotation: true,
+        transparency: 0.7,
+        color_scheme: "enterprise_blue",
+        show_tracks: true,
+        show_hits: true
+    }
+    
+    EXPORT "cms_detector_3d.glb"
+    
+    ON READY {
+        show_in_ui("3d_viewer")
+        emit("visualization:ready", {
+            model: "cms_detector_3d.glb",
+            viewer: "3d_viewer"
+        })
+    }
+}
+
+// Основна симуляція
+SIMULATION particle_collision {
+    ENERGY beam_energy
+    PARTICLES particle_count
+    GEOMETRY cms_detector
+    
+    ON START {
+        log("Starting particle collision simulation...")
+        log("Beam energy: " + beam_energy + " GeV")
+        log("Particle count: " + particle_count)
+        log("Magnetic field: " + magnetic_field + " T")
+        
+        configure_detector(cms_detector)
+        initialize_readout()
+        
+        emit("simulation:started", {
+            energy: beam_energy,
+            particles: particle_count,
+            detector: detector_type
+        })
+    }
+    
+    ON PROGRESS(percent) {
+        update_ui("progress_bar", percent)
+        log("Simulation progress: " + percent + "%")
+        
+        IF percent % 10 == 0 {
+            // Кожні 10% зберігати проміжні результати
+            save_checkpoint("checkpoint_" + percent + ".json")
+        }
+    }
+    
+    ON COMPLETE {
+        log("Simulation completed successfully!")
+        
+        // Запустити аналіз
+        particle_analyzer.analyze()
+        
+        // Показати візуалізацію
+        detector_3d.show()
+        
+        // Генерувати звіт
+        generate_report()
+        
+        emit("simulation:complete", {
+            duration: elapsed_time,
+            events_processed: particle_count,
+            efficiency: calculate_efficiency(detected_count, particle_count)
+        })
+    }
+    
+    ON ERROR {
+        log("Simulation failed: " + error.message)
+        emit("simulation:error", {
+            error: error.message,
+            stage: error.stage
+        })
+    }
+}
+
+// Допоміжні функції
+FUNCTION generate_report() {
+    report = {
+        simulation: "particle_collision",
+        timestamp: current_time(),
+        parameters: {
+            beam_energy: beam_energy,
+            particle_count: particle_count,
+            detector: detector_type
+        },
+        results: load_results("particle_simulation_results.json")
+    }
+    
+    export("simulation_report.html", report)
+    log("Report generated: simulation_report.html")
+}
+
+FUNCTION save_checkpoint(filename) {
+    checkpoint = {
+        progress: current_progress,
+        timestamp: current_time(),
+        events_processed: processed_events
+    }
+    
+    export("checkpoints/" + filename, checkpoint)
+}
+
+// Запуск симуляції
+log("=== LCARS Particle Simulation ===")
+log("Initializing simulation environment...")
+
+// Перевірка параметрів
+IF beam_energy < 0.5 OR beam_energy > 10 {
+    log("Warning: Beam energy outside typical range (0.5-10 GeV)")
+}
+
+IF particle_count < 1000 {
+    log("Warning: Low particle count may affect statistics")
+}
+
+// Запуск
+particle_collision.run()
+
+log("Simulation setup completed. Ready to start.")
+log("Use particle_collision.run() to begin simulation.")

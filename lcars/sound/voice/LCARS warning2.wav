@@ -1,0 +1,1034 @@
+#include <origin.h>
+#include <GetNBox.h>
+#include <xfutils.h>
+enum{
+	filter_low,
+	filter_high,
+	filter_bandpass,
+	filter_bandblock,
+	filter_threshold,
+};
+enum{
+	window_butterworth,
+	window_ideal,
+	window_gaussian,
+	window_blackman,
+};
+enum{
+	type_fraction,
+	type_pixel,
+	type_wavelength,
+	type_hertz,
+};
+//put additional include files here
+
+#include <..\OriginLab\pro_mat_utils.h>
+#include <fft_utils.h>
+
+#include <image_utils.h>
+
+///////////////////////////////////////////////////////////////////////
+//////// modification log
+///jasmine 08/09/10 ORG-389 ADD_MATRIX_IMAGE_PREVIEW
+///Jasmine 08/26/10 ORG-389-P8 CHECK_ERROR_AT_THE_BEGINNING
+///Jasmine 08/30/10 ORG-389-P9 ONLY_SHOW_ZEROCUT_IF_BLACKMAN_WINDOW
+///Jasmine 08/31/10 ORG-950-P1 CUTOFF_SHOULD_ONLY_IN_FRACTION_IF_WINTYPE_IS_BLACKMAN
+///Jasmine 08/31/10 ORG-950-P1 ZEROCUT_ONLY_FOR_BLACKMAN_WINTYPE
+///Jasmine 08/31/10 ORG-389-P4 FIX_WRONG_RELATION_BETWEEN_PIXEL_AND_WAVELENGTH_ETC
+///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+///Jasmine 09/10/10 ORG-950-P3 GIVE_BETTER_ERROR_MESSAGE
+///Jasmine 04/20/20011 ORG-389-S7 SHOW_SLIDER_FOR_CUTOFF
+///Mori 10/29/2013 ORG-7535 UNAVAILABLE_BAND_PASS_AND_BLOCK_WHEN_BLACKMAN
+///////////////////////////////////////////////////////////////////////
+
+//put your own support static functions here
+static string s_strErrMsg = "";	///Jasmine 08/26/10 ORG-389-P8 CHECK_ERROR_AT_THE_BEGINNING
+
+///Jasmine 04/20/20011 ORG-389-S7 SHOW_SLIDER_FOR_CUTOFF
+static void _set_slider(TreeNode& trNode, LPCSTR lpczSlider)
+{
+	trNode.ID = TRGP_SLIDEREDIT;
+	trNode.SetAttribute(STR_COMBO_ATTRIB, lpczSlider);
+}
+
+#define	_CHECK_SET_CUTOFF_NODE_RANGE(_TN, _SLIDER, LABEL)				\
+		if(_TN.Show != false)											\
+		{																\
+			_set_slider(_TN, _SLIDER);									\
+			if( !_cutoff_check_in_range(_TN.dVal, LABEL, strErrMsg) )	\
+			return false;												\
+		}	
+		
+#define	_CHECK_SET_CUTOFF_NODE_MINIMUN(_TN, _SLIDER, LABEL)				\
+		if(_TN.Show != false)											\
+		{																\
+			_set_slider(_TN, _SLIDER);									\
+			if( !_check_larger_than(_TN, LABEL, 0, strErrMsg) )			\
+				return false;											\
+		}
+///End SHOW_SLIDER_FOR_CUTOFF
+
+///Jasmine 09/10/10 ORG-950-P3 GIVE_BETTER_ERROR_MESSAGE
+static  bool _check_input(TreeNode& trGetN, string& strErrMsg)
+{
+	// No input matrix
+	MatrixObject im;
+	if(!okxf_resolve_string_get_origin_object(trGetN.im.strVal, &im)||!im.HasData(false))
+	{
+	
+		if ( !im.IsValid() )
+			strErrMsg = XFERR_NO_INPUT_DATA_MATRIX;
+		else
+		{
+			strErrMsg = CER_NEED_CVT_TO_DATA;
+		}
+	}
+	
+	// cutoff, lower cutoff and upper cutoff must be in range (0,0.5) if specified in fraction
+	if(trGetN.type.nVal == type_fraction)
+	{
+		///Jasmine 04/20/20011 ORG-389-S7 SHOW_SLIDER_FOR_CUTOFF
+		/*
+		if( trGetN.cutoff.Show != false && !_cutoff_check_in_range(trGetN.cutoff.dVal, _L("Cutoff"), strErrMsg) )
+			return false;
+		
+		if( trGetN.lowercut.Show != false && !_cutoff_check_in_range(trGetN.lowercut.dVal, _L("Lower cutoff"), strErrMsg) )
+			return false;
+		
+		if( trGetN.uppercut.Show != false && !_cutoff_check_in_range(trGetN.uppercut.dVal, _L("Upper cutoff"), strErrMsg) )
+			return false;
+		*/
+		string strSlider = "0|0.5|10";
+		_CHECK_SET_CUTOFF_NODE_RANGE( trGetN.cutoff, strSlider, _L("Cutoff") )	
+		_CHECK_SET_CUTOFF_NODE_RANGE( trGetN.lowercut, strSlider, _L("Lower cutoff") )
+		_CHECK_SET_CUTOFF_NODE_RANGE( trGetN.uppercut, strSlider, _L("Upper cutoff") )
+		///End SHOW_SLIDER_FOR_CUTOFF
+	}
+	else// cutoff, lower cutoff and upper cutoff must > 0
+	{
+		///Jasmine 04/20/20011 ORG-389-S7 SHOW_SLIDER_FOR_CUTOFF
+		/*
+		if( trGetN.cutoff.Show != false && !_check_larger_than(trGetN.cutoff, _L("Cutoff"), 0, strErrMsg) )
+			return false;
+		
+		if( trGetN.lowercut.Show != false && !_check_larger_than(trGetN.lowercut, _L("Lower cutoff"), 0, strErrMsg) )
+			return false;
+		
+		if( trGetN.uppercut.Show != false && !_check_larger_than(trGetN.uppercut, _L("Upper cutoff"), 0, strErrMsg) )
+			return false;
+		*/
+		string strSlider = "0|100|100";
+		_CHECK_SET_CUTOFF_NODE_MINIMUN(trGetN.cutoff, strSlider, _L("Cutoff"))
+		_CHECK_SET_CUTOFF_NODE_MINIMUN(trGetN.lowercut, strSlider, _L("Lower cutoff"))
+		_CHECK_SET_CUTOFF_NODE_MINIMUN(trGetN.uppercut, strSlider, _L("Upper cutoff"))
+		///End SHOW_SLIDER_FOR_CUTOFF
+	}
+	
+	// If present, lower cutoff must be smaller than upper cutoff  
+	if( trGetN.lowercut.Show && trGetN.uppercut.Show )
+	{
+		if(trGetN.type.nVal != type_wavelength && trGetN.lowercut.dVal >= trGetN.uppercut.dVal)
+		{
+			strErrMsg = XFERR_FFT_FILTER2_INVALID_CUTOFF;
+			return false;		
+		}
+		//lower cutoff must be larger than upper cutoff for wavelength 
+		if(trGetN.type.nVal == type_wavelength && trGetN.lowercut.dVal <= trGetN.uppercut.dVal)
+		{
+			strErrMsg = XFERR_FFT_FILTER2_INVALID_WAVELENGTH;
+			return false;		
+		}
+	}
+	
+	// If present, thresh must be in range [0,1], and thresh2 < thresh1
+	if( trGetN.filter.nVal == filter_threshold )
+	{
+		if( trGetN.lowerthre.Show != false && !_threshold_check_in_range(trGetN.lowerthre.dVal, _L("Lower threshold"), strErrMsg) )
+			return false;
+		
+		if( trGetN.upperthre.Show != false && !_threshold_check_in_range(trGetN.upperthre.dVal, _L("Upper threshold"), strErrMsg) )
+			return false;
+		
+		if( trGetN.lowerthre.Show != false && trGetN.upperthre.Show != false && trGetN.lowerthre.dVal >= trGetN.upperthre.dVal )
+		{
+			strErrMsg = XFERR_FFT_FILTER2_INVALID_THRESHOLD;
+			return false;
+		}		
+	}
+	
+	//order must > 0
+	if( trGetN.order.Show && !_check_larger_than(trGetN.order, _L("Order"), 0, strErrMsg) )
+	{
+		return false;
+	}		
+	///Mori 10/29/2013 ORG-7535 UNAVAILABLE_BAND_PASS_AND_BLOCK_WHEN_BLACKMAN
+	if( trGetN.window.nVal == window_blackman )
+	{
+		if( trGetN.filter.nVal == filter_bandpass || trGetN.filter.nVal == filter_bandblock )
+		{
+			strErrMsg = _L("Band pass/block filter type is not applicable to Blackman window type.");
+			return false;
+		}
+	}
+	///End UNAVAILABLE_BAND_PASS_AND_BLOCK_WHEN_BLACKMAN
+	return strErrMsg.IsEmpty();
+}
+
+//check if in (0, 0.5]
+static bool _cutoff_check_in_range(double dValue, LPCSTR lpczName, string& strErrMsg)
+{
+	if( dValue <= 0 || dValue > 0.5 )
+	{
+		strErrMsg.Format("%d:%s|0|0.5", XFERR_VALUE_OUT_OF_RANGE, lpczName);
+		return false;
+	}
+	
+	return true;
+}
+
+//check if in [0, 1]
+static bool _threshold_check_in_range(double dValue, LPCSTR lpczName, string& strErrMsg)
+{
+	if( dValue < 0 || dValue > 1 )
+	{
+		strErrMsg.Format("%d:%s|0|1", XFERR_VALUE_OUT_OF_RANGE, lpczName);
+		return false;
+	}
+	
+	return true;
+}
+
+//check if > dValue
+static bool _check_larger_than(const TreeNode& trNode, LPCSTR lpczName, double dValue, string& strErrMsg)
+{
+	if( trNode.dVal <= dValue )
+	{
+		strErrMsg.Format("%d:%s|%g", XFERR_VALUE_LARGER_THAN_A_NUMBER, lpczName, dValue);
+		return false;
+	}
+	
+	return true;
+}
+///End GIVE_BETTER_ERROR_MESSAGE
+static void _update_method_show(TreeNode& trGetN)
+{
+	
+	trGetN.filter.Show = true;
+	
+	switch(trGetN.filter.nVal)
+	{		
+	case filter_low:
+		trGetN.window.Show		= true;
+		trGetN.cutoff.Show		= true;
+		trGetN.lowercut.Show	= false;
+		trGetN.uppercut.Show	= false;
+		trGetN.lowerthre.Show	= false;
+		trGetN.upperthre.Show	= false;
+		trGetN.type.Show 		= true;
+		break;		
+	case filter_high:
+		trGetN.window.Show		= true;
+		trGetN.cutoff.Show		= true;
+		trGetN.lowercut.Show	= false;
+		trGetN.uppercut.Show	= false;
+		trGetN.lowerthre.Show	= false;
+		trGetN.upperthre.Show	= false;		
+		trGetN.type.Show		= true;
+		break;
+	case filter_bandpass:
+		trGetN.window.Show		= true;
+		trGetN.cutoff.Show		= false;
+		trGetN.lowercut.Show	= true;
+		trGetN.uppercut.Show	= true;
+		trGetN.lowerthre.Show	= false;
+		trGetN.upperthre.Show	= false;		
+		trGetN.type.Show 		= true;
+		break;
+	case filter_bandblock:
+		trGetN.window.Show		= true;
+		trGetN.cutoff.Show		= false;
+		trGetN.lowercut.Show 	= true;
+		trGetN.uppercut.Show 	= true;
+		trGetN.lowerthre.Show	= false;
+		trGetN.upperthre.Show	= false;			
+		trGetN.type.Show 		= true;
+		break;
+	case filter_threshold:
+		trGetN.window.Show		= false;
+		trGetN.cutoff.Show		= false;
+		trGetN.lowercut.Show 	= false;
+		trGetN.uppercut.Show 	= false;
+		trGetN.lowerthre.Show	= true;
+		trGetN.upperthre.Show	= true;	
+		trGetN.type.Show 		= false;
+		break;
+	default:
+		break;
+	}
+	
+	trGetN.order.Show = ( trGetN.window.Show && trGetN.window.nVal == window_butterworth );
+	
+	trGetN.zerocut.Show = false;		///Jasmine 08/30/10 ORG-389-P9 ONLY_SHOW_ZEROCUT_IF_BLACKMAN_WINDOW
+	if( trGetN.window.Show && trGetN.window.nVal == window_blackman )
+	{
+		trGetN.cutoff.Show 	= 
+		trGetN.lowercut.Show= 
+		trGetN.uppercut.Show= 
+		trGetN.type.Show 	= false;	
+		
+		trGetN.zerocut.Show = true;///Jasmine 08/30/10 ORG-389-P9 ONLY_SHOW_ZEROCUT_IF_BLACKMAN_WINDOW
+	}
+	
+	
+	bool bPixel = trGetN.type.nVal == type_pixel;
+	bool bFraction = trGetN.type.nVal == type_fraction;	
+	bool bWavelength = trGetN.type.nVal == type_wavelength;
+	bool bHertz = trGetN.type.nVal == type_hertz;
+	bool bShow = trGetN.cutoff.Show;
+	trGetN.cutoffhint1.Show = bShow && !bPixel;
+	//trGetN.cutoffhint2.Show = bShow && !bFraction;	///Jasminie 09/02/10 ORG-950-P2 HIDE_FRACTION_HINTS	
+	trGetN.cutoffhint3.Show = bShow && !bWavelength && !bFraction;
+	trGetN.cutoffhint4.Show = bShow && !bHertz && !bFraction;
+	
+	bShow = trGetN.lowercut.Show;
+	trGetN.lowercuthint1.Show = bShow && !bPixel;
+	//trGetN.lowercuthint2.Show = bShow && !bFraction;	///Jasminie 09/02/10 ORG-950-P2 HIDE_FRACTION_HINTS
+	trGetN.lowercuthint3.Show = bShow && !bWavelength && !bFraction;
+	trGetN.lowercuthint4.Show = bShow && !bHertz && !bFraction;
+	
+	bShow = trGetN.uppercut.Show;
+	trGetN.uppercuthint1.Show = bShow && !bPixel;
+	//trGetN.uppercuthint2.Show = bShow && !bFraction;	///Jasminie 09/02/10 ORG-950-P2 HIDE_FRACTION_HINTS
+	trGetN.uppercuthint3.Show = bShow && !bWavelength && !bFraction;
+	trGetN.uppercuthint4.Show = bShow && !bHertz && !bFraction;  
+
+}
+
+static void _cutoff_conversion(double cutoff, int nSpeicifyCutoffBy, int nRows, int nCols, double& pixel, double& fraction, double& wavelength, double& hertz)
+{	
+
+	switch( nSpeicifyCutoffBy )
+	{
+	case type_fraction:
+		fraction  = cutoff;
+		pixel     = sqrt((nRows/2.0)^2+(nCols/2.0)^2) * fraction;
+		///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+		wavelength	= (nCols - 1.0) / pixel;  
+		hertz 		= pixel / nCols;  
+		///End GET_COVERTED_VALUE_ON_TYPE_CHANGE
+		break;
+	
+	case type_pixel:
+		pixel		= cutoff;
+		//fraction	= pixel / (nCols >>1 );	///Jasminie 09/02/10 ORG-950-P2 HIDE_FRACTION_HINTS
+		fraction	= pixel/sqrt((nRows/2.0)^2+(nCols/2.0)^2);///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+		///Jasmine 08/31/10 ORG-389-P4 FIX_WRONG_RELATION_BETWEEN_PIXEL_AND_WAVELENGTH_ETC
+		//wavelength = 1.0 / (nCols - 1) * pixel;  
+        //hertz      = 1.0 / wavelength; 
+        wavelength	= (nCols - 1.0) / pixel;  
+		hertz 		= pixel / nCols;  
+		break;
+	
+	case type_wavelength:
+		wavelength= cutoff;
+		//fraction  = pixel / (nCols >>1 );	///Jasminie 09/02/10 ORG-950-P2 HIDE_FRACTION_HINTS
+		//pixel     = wavelength * (nCols - 1);
+		//hertz     = 1.0 / wavelength;
+		pixel     = (nCols - 1.0) / wavelength;
+		fraction	= pixel/sqrt((nRows/2.0)^2+(nCols/2.0)^2);///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+		
+		hertz     = pixel / nCols;
+		break;
+	
+	case type_hertz:
+		hertz      = cutoff;
+		//fraction   = pixel / (nCols >>1 );	///Jasminie 09/02/10 ORG-950-P2 HIDE_FRACTION_HINTS
+		//wavelength = 1.0 / hertz; 
+		//pixel      =  wavelength * (nCols - 1);
+		pixel      = hertz * nCols;	
+		fraction	= pixel/sqrt((nRows/2.0)^2+(nCols/2.0)^2);///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+		
+		wavelength = (nCols - 1.0) / pixel;  
+		///End FIX_WRONG_RELATION_BETWEEN_PIXEL_AND_WAVELENGTH_ETC
+		break;
+	default:
+		break;
+	}	
+}
+
+static int _option_conversion(int nFilterType, int nWinType, int nCutoffForm, int bZeroCut)
+{
+	int nFilterType_bits, nWinType_bits, nCutoffForm_bits, nZeroCut_bits;
+	
+	switch( nFilterType )
+	{
+	case filter_low:
+		nFilterType_bits = FILTER2D_LOW_PASS;
+		break;
+	case filter_high:
+		nFilterType_bits = FILTER2D_HIGH_PASS;
+		break;
+	case filter_bandpass:
+		nFilterType_bits = FILTER2D_BAND_PASS;
+		break;
+	case filter_bandblock:
+		nFilterType_bits = FILTER2D_BAND_BLOCK;
+		break;
+	default:
+		return 0;
+		break;		
+	}
+	
+	switch( nWinType )
+	{
+	case window_butterworth:
+		nWinType_bits = FILTER2D_BUTTERWORTH;
+		break;
+	case window_ideal:
+		nWinType_bits = FILTER2D_IDEAL;
+		break;
+	case window_gaussian:
+		nWinType_bits = FILTER2D_GAUSSIAN;
+		break;
+	case window_blackman:
+		nWinType_bits = FILTER2D_BLACKMAN;
+		break;
+	default:
+		return 0;
+		break;		
+	}
+	
+	///Jasmine 08/31/10 ORG-950-P1 CUTOFF_SHOULD_ONLY_IN_FRACTION_IF_WINTYPE_IS_BLACKMAN
+	if(FILTER2D_BLACKMAN == nWinType)
+	{
+		nCutoffForm_bits = FILTER2D_CUTOFF_IN_FRACTION;
+	}
+	else
+	///End CUTOFF_SHOULD_ONLY_IN_FRACTION_IF_WINTYPE_IS_BLACKMAN
+	{
+		switch( nCutoffForm )
+		{
+		case type_pixel:
+			nCutoffForm_bits = FILTER2D_CUTOFF_IN_FOURIER_PIXELS;
+			break;
+		case type_fraction:
+			nCutoffForm_bits = FILTER2D_CUTOFF_IN_FRACTION;
+			break;
+		case type_wavelength:
+			nCutoffForm_bits = FILTER2D_CUTOFF_IN_FOURIER_PIXELS;
+			break;
+		case type_hertz:
+			nCutoffForm_bits = FILTER2D_CUTOFF_IN_FOURIER_PIXELS;
+			break;
+		default:
+			return 0;
+			break;		
+		}
+	}
+
+	///Jasmine 08/31/10 ORG-950-P1 ZEROCUT_ONLY_FOR_BLACKMAN_WINTYPE
+	//switch( bZeroCut )
+	//{
+	//case 0:
+		//nZeroCut_bits = 0;
+		//break;
+	//case 1:
+		//nZeroCut_bits = FILTER2D_ZERO_OUTSIDE_CIRCLE;
+		//break;
+	//default:
+		//return 0;
+		//break;		
+	//}	
+	nZeroCut_bits = 0;
+	if(FILTER2D_BLACKMAN == nWinType && bZeroCut)
+		nZeroCut_bits = FILTER2D_ZERO_OUTSIDE_CIRCLE;
+	///End ZEROCUT_ONLY_FOR_BLACKMAN_WINTYPE
+	
+	int option = nFilterType_bits | nWinType_bits | nCutoffForm_bits | nZeroCut_bits;
+	
+	return option;
+}
+
+///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+struct CUTOFFVALUES
+{
+	double pixel;
+	double fraction;
+	double wavelength;
+	double hertz;
+};
+
+static CUTOFFVALUES s_cutoff;
+static CUTOFFVALUES s_lowercut;
+static CUTOFFVALUES s_uppercut;
+
+enum{
+	CALULATE_CUTOFFVALUE		= 0x0001, 
+	CALULATE_LOWER_CUTOFFVALUE	= 0x0002,
+	CALULATE_UPPER_CUTOFFVALUE	= 0x0004,
+};
+///End GET_COVERTED_VALUE_ON_TYPE_CHANGE
+
+#define _VALUE_STR		": %g"
+static void _set_hints(TreeNode& trNode, LPCSTR lpczHints, double dValue)
+{
+	//if(trNode.Show)///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+ 	{
+ 		string strHint = lpczHints;
+ 		
+ 		string strValue = ": --"; 		
+		if( !is_missing_value(dValue) )
+			strValue.Format(_VALUE_STR, dValue);		
+			
+		trNode.SetAttribute(STR_LABEL_ATTRIB, strHint+strValue);
+	}
+}
+static void _update_cutoff_hint_label(TreeNode& trGetN, DWORD dwCalculate = CALULATE_CUTOFFVALUE|CALULATE_LOWER_CUTOFFVALUE|CALULATE_UPPER_CUTOFFVALUE)
+{	
+    int nSpeicifyCutoffBy = trGetN.type.nVal;
+        
+    MatrixObject im;
+    okxf_resolve_string_get_origin_object(trGetN.im.strVal, &im);	
+    int nRows = im? im.GetNumRows() : 0;
+    int nCols = im? im.GetNumCols() : 0;
+    
+	double cutoff, pixel,fraction, wavelength,hertz;
+    string strHint;
+	string strValue = ": --";
+	
+	///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+	//if(trGetN.cutoff.Show)
+	if(dwCalculate & CALULATE_CUTOFFVALUE)
+	///End GET_COVERTED_VALUE_ON_TYPE_CHANGE
+	{
+		cutoff = trGetN.cutoff.dVal;
+		_cutoff_conversion(cutoff, nSpeicifyCutoffBy, nRows, nCols, pixel, fraction, wavelength, hertz);
+		///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+		s_cutoff.pixel 		= pixel;
+		s_cutoff.fraction	= fraction;
+		s_cutoff.wavelength	= wavelength;
+		s_cutoff.hertz		= hertz;
+		///End GET_COVERTED_VALUE_ON_TYPE_CHANGE
+		
+		_set_hints(trGetN.cutoffhint1, _L("Cutoff in Pixel"), pixel);
+		
+		//_set_hints(trGetN.cutoffhint2, _L("Cutoff in Fraction"), fraction);			///Jasminie 09/02/10 ORG-950-P2 HIDE_FRACTION_HINTS
+		
+		_set_hints(trGetN.cutoffhint3, _L("Cutoff in Wavelength"), wavelength);
+		
+		_set_hints(trGetN.cutoffhint4, _L("Cutoff in Hertz"), hertz);
+	}		
+    
+	///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+	//if( trGetN.lowercut.Show && trGetN.uppercut.Show)
+	if(dwCalculate & CALULATE_LOWER_CUTOFFVALUE)
+	///End GET_COVERTED_VALUE_ON_TYPE_CHANGE
+	{
+		cutoff = trGetN.lowercut.dVal;
+		_cutoff_conversion(cutoff, nSpeicifyCutoffBy,nRows, nCols, pixel,fraction, wavelength,hertz);	
+		///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+		s_lowercut.pixel 		= pixel;
+		s_lowercut.fraction		= fraction;
+		s_lowercut.wavelength	= wavelength;
+		s_lowercut.hertz		= hertz;
+		///End GET_COVERTED_VALUE_ON_TYPE_CHANGE
+		
+		_set_hints(trGetN.lowercuthint1, _L("Lower Cutoff in Pixels"), pixel);
+		
+		//_set_hints(trGetN.lowercuthint2, _L("Lower Cutoff in Fraction"), fraction);	///Jasminie 09/02/10 ORG-950-P2 HIDE_FRACTION_HINTS	
+		
+		_set_hints(trGetN.lowercuthint3, _L("Lower Cutoff in Wavelength"), wavelength);
+	
+		_set_hints(trGetN.lowercuthint4, _L("Lower Cutoff in Hertz"), hertz);			
+	///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+	}
+	if(dwCalculate & CALULATE_UPPER_CUTOFFVALUE)
+	{
+	///End GET_COVERTED_VALUE_ON_TYPE_CHANGE
+		cutoff = trGetN.uppercut.dVal;
+		_cutoff_conversion(cutoff, nSpeicifyCutoffBy,nRows, nCols, pixel,fraction, wavelength,hertz);	
+		///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+		s_uppercut.pixel 		= pixel;
+		s_uppercut.fraction		= fraction;
+		s_uppercut.wavelength	= wavelength;
+		s_uppercut.hertz		= hertz;
+		///End GET_COVERTED_VALUE_ON_TYPE_CHANGE
+		
+		_set_hints(trGetN.uppercuthint1, _L("Upper Cutoff in Pixels"), pixel);
+				
+		//_set_hints(trGetN.uppercuthint2, _L("Upper Cutoff in Fraction"), fraction);	///Jasminie 09/02/10 ORG-950-P2 HIDE_FRACTION_HINTS
+
+		_set_hints(trGetN.uppercuthint3, _L("Upper Cutoff in Wavelength"), wavelength);	
+
+		_set_hints(trGetN.uppercuthint4, _L("Upper Cutoff in Hertz"), hertz);
+	}
+
+}
+
+///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+static void _update_cutoff_value_on_type_change(TreeNode& trGetN)
+{
+	int nSpeicifyCutoffBy = trGetN.type.nVal;
+	switch(nSpeicifyCutoffBy)
+	{
+	case type_fraction:
+		trGetN.cutoff.dVal 	= s_cutoff.fraction;
+		trGetN.lowercut.dVal= s_lowercut.fraction;
+		trGetN.uppercut.dVal=s_uppercut.fraction;
+		break;
+	case type_pixel:
+		trGetN.cutoff.dVal	= s_cutoff.pixel;
+		trGetN.lowercut.dVal= s_lowercut.pixel;
+		trGetN.uppercut.dVal=s_uppercut.pixel;
+		break;
+	case type_wavelength:
+		trGetN.cutoff.dVal 	= s_cutoff.wavelength;
+		trGetN.lowercut.dVal= s_lowercut.wavelength;
+		trGetN.uppercut.dVal=s_uppercut.wavelength;
+		break;
+	case type_hertz:
+		trGetN.cutoff.dVal	= s_cutoff.hertz;
+		trGetN.lowercut.dVal= s_lowercut.hertz;
+		trGetN.uppercut.dVal=s_uppercut.hertz;
+		break;
+	default:
+		ASSERT(0);
+		break;
+	}			
+}
+///End GET_COVERTED_VALUE_ON_TYPE_CHANGE
+
+///jasmine 08/09/10 ORG-389 ADD_MATRIX_IMAGE_PREVIEW
+static int _fft_filter2(const MatrixObject& im, const int& nFilterType, const int& nWinType, 
+				const int& nCutoffForm, const int& bZeroCut, const double& fCutoff, const int& nOrder, 
+				const double& fLowerCutoff, const double& fUpperCutoff, 
+				const double& fThresh1, const double& fThresh2, 
+				MatrixObject& om)
+{
+	waitCursor junk;
+	
+	if( !im.IsValid() )
+	{
+		return XFERR_FFT_FILTER2_NO_INPUT_MATRIX;
+	}
+	
+	int nRows = im.GetNumRows();
+	int nCols = im.GetNumCols();	
+		
+	// Derek 7/26/2010 ORG-389-P1 RUNTIME_ERROR_WHEN_INPUT_MATRIX_DATA_TYPE_IS_NOT_DOUBLE_8
+	//matrix &matIn = im.GetDataObject();
+	matrix matIn = im.GetDataObject();
+	// End RUNTIME_ERROR_WHEN_INPUT_MATRIX_DATA_TYPE_IS_NOT_DOUBLE_8
+	
+	om.SetInternalData(FSI_DOUBLE, false,false);
+	om.SetSize(nRows,nCols,0);
+	matrix &matOut = om.GetDataObject();
+	
+	int nRet;
+	///Mori 10/29/2013 ORG-7535 UNAVAILABLE_BAND_PASS_AND_BLOCK_WHEN_BLACKMAN
+	if(nWinType == window_blackman && (nFilterType == filter_bandpass || nFilterType == filter_bandblock))
+		return XFERR_FFT_FILTER2_FAILED_TO_MAKE_FILTER;
+	///End UNAVAILABLE_BAND_PASS_AND_BLOCK_WHEN_BLACKMAN
+	if( nFilterType != filter_threshold )
+	{
+		matrix matFilter;
+		double fCutoff1, fCutoff2;
+		double pixel, fraction, wavelength, hertz;
+		
+		if( nFilterType == filter_low || nFilterType == filter_high )			
+		{  
+		    if( nCutoffForm == type_wavelength || nCutoffForm == type_hertz )
+		    {
+		    	_cutoff_conversion(fCutoff, nCutoffForm, nRows, nCols, pixel, fraction, wavelength, hertz);
+		    	fCutoff1 = pixel;
+		    }
+		    else
+		    {
+		    	fCutoff1 = fCutoff;
+		    }
+			fCutoff2 = 0;    
+
+		}
+		
+		if( nFilterType == filter_bandpass || nFilterType == filter_bandblock )
+		{
+	    
+		    if( nCutoffForm == type_wavelength || nCutoffForm == type_hertz )
+		    {
+		    	_cutoff_conversion(fLowerCutoff, nCutoffForm, nRows, nCols, pixel, fraction, wavelength, hertz);
+		    	fCutoff1 = pixel;
+		    	
+		    	_cutoff_conversion(fUpperCutoff, nCutoffForm, nRows, nCols, pixel, fraction, wavelength, hertz);
+		    	fCutoff2 = pixel;
+		    }	
+		    else
+		    {
+		    	fCutoff1 = fLowerCutoff;
+		    	fCutoff2 = fUpperCutoff;
+		    }
+
+		}
+		int option = _option_conversion(nFilterType, nWinType, nCutoffForm, bZeroCut);		
+		nRet = matFilter.FreqFilter(nRows, nCols, option, fCutoff1, nOrder, fCutoff2);
+		if ( nRet < 0 )
+			return XFERR_FFT_FILTER2_FAILED_TO_MAKE_FILTER;
+	
+		nRet = fft_band_filter_2D(matIn, matFilter, matOut);
+		if ( nRet < 0 )
+			return XFERR_FFT_FILTER2_FAILED_TO_DO_FILTERING;
+	}
+	else
+	{
+		nRet = fft_threshold_filter_2D(matIn, fThresh1, fThresh2, matOut);
+		if ( nRet < 0 )
+			return XFERR_FFT_FILTER2_FAILED_TO_DO_FILTERING;			
+	}
+	
+	double xmin, ymin, xmax,ymax;
+	im.GetXY(xmin, ymin, xmax, ymax);
+	om.SetXY(xmin, ymin, xmax, ymax);
+	
+	return CER_NO_ERROR;
+}
+///End ADD_MATRIX_IMAGE_PREVIEW
+
+void fft_filter2(const MatrixObject& im, const int& filter, const int& window, const int& zerocut, const int& order, const int& type, const double& cutoff, const string& cutoffhint1, const string& cutoffhint2, const string& cutoffhint3, const string& cutoffhint4, const double& lowercut, const string& lowercuthint1, const string& lowercuthint2, const string& lowercuthint3, const string& lowercuthint4, const double& uppercut, const string& uppercuthint1, const string& uppercuthint2, const string& uppercuthint3, const string& uppercuthint4, const double& lowerthre, const double& upperthre, MatrixObject& om)
+{
+	 	int nRet = _fft_filter2(	im, filter, window, type, zerocut, cutoff, order, 
+								lowercut, uppercut, lowerthre, upperthre, om);
+	
+	if(nRet != CER_NO_ERROR)
+		XF_THROW(nRet);
+}
+
+//nEventID < 0 on event, like GETNE_ON_INIT, GETNE_ON_OK etc, >0 on change from control
+//return 0 to do nothing, return PEVENT_GETN_RET_TO_CLOSE to close dialog
+//dwEnables = bOKEnable, bBTN1Enable, bBTN2Enable, bBTN3Enable, , can set to false to disable OK/Apply buttons
+//lpcszNodeName = the trGetN TreeNode tag name that generates the event, or is  if GETNE_ON_OK etc
+//strAux = optional string for XF Wizard Bar, like DLG_NEED_CHANGE_GRID etc, it will be invalid if from internal node value change event
+//strErrMsg = allowing messages to be shown
+int fft_filter2_event1(TreeNode& trGetN, int nRow, int nEventID, DWORD& dwEnables, LPCSTR lpcszNodeName, WndContainer& DynaCntrlContainer, string& strAux, string& strErrMsg)
+{
+	if( xf_is_extended_event(nEventID) )
+		return fft_filter2_event1_ex(trGetN, nRow, nEventID, dwEnables, lpcszNodeName, DynaCntrlContainer, strAux, strErrMsg);
+	DECLARE_BUTTON_ENABLES
+	return false;
+
+}
+
+int fft_filter2_make_tree(TreeNode& tr, LPCSTR lpcszVarName)
+{
+	return false;
+}
+//nGetNDialog = 0,1,2, corresponding to the XF GetN dropdown, 0 = dialog is not used
+//you can change nRet to be one of XFEVT_PROCEED (defualt), XFEVT_ABORT, XFEVT_PROCEED_NO_DLG or XFEVT_PROCEED_WITH_DLG(when nGetNDialog = 0)
+//nGetNDialog = -1 when Ok on GetN dialog to allow handler to preocess <auto> etc variables
+//dwCntrl is combination of bits
+//LTXF_FROM_GUI_MENU, LTXF_FROM_GUI_PROMPT, LTXF_FROM_AUTO_UPDATE, LTXF_FROM_FUNCTION, LTXF_THEME_USED, LTXF_CHANGE_PARAM
+void fft_filter2_before_execute(TreeNode& trGetN, int nGetNDialog, int& nRet, int dwCntrl)
+{
+	if(is_xf_startup(nGetNDialog, dwCntrl))
+	{
+		
+		_update_method_show(trGetN); 
+	
+		if ( (dwCntrl&LTXF_THEME_USED) && nGetNDialog <= 0 )
+		{
+			string strErrMsg;
+			if( !_check_input(trGetN, strErrMsg) )
+			{
+				nRet = XFEVT_PROCEED_WITH_DLG;
+			}
+		}
+		
+		_update_cutoff_hint_label(trGetN);	
+	}
+	
+}
+//nEventID < 0 on event, like GETNE_ON_INIT, GETNE_ON_OK etc, >0 on change from control
+//return 0 to do nothing, return PEVENT_GETN_RET_TO_CLOSE to close dialog
+//dwEnables = bOKEnable, bBTN1Enable, bBTN2Enable, bBTN3Enable, , can set to false to disable OK/Apply buttons
+//lpcszNodeName = the trGetN TreeNode tag name that generates the event, or is  if GETNE_ON_OK etc
+//strAux = optional string for XF Wizard Bar, like DLG_NEED_CHANGE_GRID etc, it will be invalid if from internal node value change event
+//strErrMsg = allowing messages to be shown
+int fft_filter2_event1_ex(TreeNode& trGetN, int nRow, int nEventID, DWORD& dwEnables, LPCSTR lpcszNodeName, WndContainer& DynaCntrlContainer, string& strAux, string& strErrMsg)
+{
+	return false;
+}
+
+
+// put your grid initialization here
+// you may also initialize wksTemp here
+static void GetNGraphPreview_OnInitGrid(TreeNode& trGetN, PageBase& pgTemp, Datasheet& wksTemp,
+PictureControl& pict, // optional tab for showing an image or EMF, as requested in OnDialogSetup 
+DWORD& dwUpdateGraph,  // default to 0, UPDATE_GRAPH_CHANGED to cause graphs to be updated, UPDATE_GRAPH_INVALID to disable preview button
+DWORD& dwUpdateGrid, // default to 0, set to UPDATE_GRID_SIMPLE to update the DynaControl grid, UPDATE_GRID_RESET to reset DynaControl grid
+DWORD& dwEnables,// bOKEnable, bBTN1Enable, bBTN2Enable and bBTN3Enable :default to true, can set to false to disable buttons
+string& strErrMsg) // optional err msg to be shown on dialog
+{
+	DECLARE_BUTTON_ENABLES
+	DECLARE_UPDATE_GRAPH
+	DECLARE_UPDATE_GRID
+	///Jasmine 08/26/10 ORG-389-P8 CHECK_ERROR_AT_THE_BEGINNING
+	bUpdateGraph = bOKEnable = _check_input(trGetN, strErrMsg);
+	s_strErrMsg = strErrMsg;
+	///End CHECK_ERROR_AT_THE_BEGINNING
+}
+
+///////////////////////////////////////////////////////
+
+// pgTemp is the graph for preview or control
+// wksTemp is the the temp wks created to hold data to plot into pgTemp
+static void GetNGraphPreview_OnInitGraph(TreeNode& trGetN, PageBase& pgTemp, Datasheet& wksTemp,
+PictureControl& pict, // optional tab for showing an image or EMF, as requested in OnDialogSetup  
+DWORD& dwUpdateGrid, // default to 0, set to UPDATE_GRID_SIMPLE to update the DynaControl grid, UPDATE_GRID_RESET to reset DynaControl grid
+DWORD& dwEnables,// bOKEnable, bBTN1Enable, bBTN2Enable and bBTN3Enable :default to true, can set to false to disable buttons
+string& strErrMsg) // optional err msg to be shown on dialog
+{
+	DECLARE_BUTTON_ENABLES
+	DECLARE_UPDATE_GRID
+	///jasmine 08/09/10 ORG-389 ADD_MATRIX_IMAGE_PREVIEW
+	MatrixLayer mlTemp(wksTemp);
+	if(mlTemp)
+	{
+		string strNoPreview = "No Preview.emf";
+		string strPath;
+		okutil_find_sys_path_with_file(&strPath, strNoPreview, GLOBAL_LOCALIZED_PATH, TRUE);
+		
+		MatrixObject mo = mlTemp.MatrixObjects();
+		image_import_to_matrix(mo, strPath+strNoPreview);
+	}
+	///End ADD_MATRIX_IMAGE_PREVIEW
+	
+	strErrMsg = s_strErrMsg;	///Jasmine 08/26/10 ORG-389-P8 CHECK_ERROR_AT_THE_BEGINNING
+}
+
+///////////////////////////////////////////////////////
+
+static void GetNGraphPreview_OnUpdateGraph(TreeNode& trGetN, PageBase& pgTemp, Datasheet& wksTemp, PictureControl& pict)
+{
+	///jasmine 08/09/10 ORG-389 ADD_MATRIX_IMAGE_PREVIEW
+	MatrixObject im;
+	if(!okxf_resolve_string_get_origin_object(trGetN.im.strVal, &im) )
+		return; 
+		
+	MatrixObject om;
+	MatrixLayer mlTemp(wksTemp);
+	if(mlTemp)
+		om = mlTemp.MatrixObjects();
+	if(!om)
+		return;
+	
+	int 	nFilterType	= trGetN.filter.nVal;
+	int 	nWinType 	= trGetN.window.nVal;
+	int 	nCutoffForm	= trGetN.type.nVal;
+	int 	bZeroCut	= trGetN.zerocut.nVal;
+	double 	fCutoff		= trGetN.cutoff.dVal;
+	int 	nOrder 		= trGetN.order.nVal;
+	double 	fLowerCutoff= trGetN.lowercut.dVal;
+	double 	fUpperCutoff= trGetN.uppercut.dVal; 
+	double 	fThresh1	= trGetN.lowerthre.dVal; 
+	double 	fThresh2	= trGetN.upperthre.dVal; 
+	
+	
+	int nRet = _fft_filter2(im, nFilterType, nWinType, nCutoffForm, bZeroCut, fCutoff, nOrder, 
+					fLowerCutoff, fUpperCutoff, fThresh1, fThresh2, om);
+	///End ADD_MATRIX_IMAGE_PREVIEW
+}
+
+///////////////////////////////////////////////////////
+
+static void GetNGraphPreview_OnChange(TreeNode& trGetN, TreeNode& trNode, PageBase& pgTemp, Datasheet& wksTemp,
+PictureControl& pict, // optional tab for showing an image or EMF that might be present, as requested in OnDialogSetup  
+bool bChangedByGraph, // called when graph has been modified by user, like dragging a vertical line
+DWORD& dwUpdateGraph,  // default to 0, UPDATE_GRAPH_CHANGED to cause graphs to be updated, UPDATE_GRAPH_INVALID to disable preview button
+DWORD& dwUpdateGrid,  // default to 0, set to UPDATE_GRID_SIMPLE to update the DynaControl grid, UPDATE_GRID_RESET to reset DynaControl grid
+DWORD& dwEnables,	// bOKEnable, bBTN1Enable, bBTN2Enable and bBTN3Enable :default to true, can set to false to disable buttons
+string& strErrMsg) // optional err msg to be shown on dialog
+{
+	DECLARE_BUTTON_ENABLES
+	DECLARE_UPDATE_GRAPH
+	DECLARE_UPDATE_GRID
+	_update_method_show(trGetN);
+	
+	///Jasmine 09/08/10 ORG-1004 GET_COVERTED_VALUE_ON_TYPE_CHANGE
+	if(!trNode || ( trNode && lstrcmp(trNode.tagName, "im") == 0 ))
+		_update_cutoff_hint_label(trGetN);	
+	else if(trNode && lstrcmp(trNode.tagName, "cutoff") == 0)
+		_update_cutoff_hint_label(trGetN, CALULATE_CUTOFFVALUE);	
+	else if(trNode && lstrcmp(trNode.tagName, "lowercut") == 0)
+		_update_cutoff_hint_label(trGetN, CALULATE_LOWER_CUTOFFVALUE);	
+	else if(trNode && lstrcmp(trNode.tagName, "uppercut") == 0)
+		_update_cutoff_hint_label(trGetN, CALULATE_UPPER_CUTOFFVALUE);
+	else if(trNode && lstrcmp(trNode.tagName, "type") == 0)
+		_update_cutoff_value_on_type_change(trGetN);
+	
+	bOKEnable = _check_input(trGetN, strErrMsg);
+	///End GET_COVERTED_VALUE_ON_TYPE_CHANGE
+	
+	bUpdateGraph = bOKEnable;
+}
+
+// called from OnInitDialog to allow options on setting up of dialog
+// dwOptions = 0 (default) will create a line graph with data in a temp worksheet
+// dwOptions = XFGSETUP_IMAGEGRAPH_CNTRL to create an image graph with data in a temp matrix book
+// dwOptions = XFGSETUP_MATRIX_CNTRL to have a MatrixControl with data in a temp matrix book
+// dwOptions = XFGSETUP_2_TABS | XFGSETUP_EMF_1ST to have a PictureControl on 1st tab and a GraphControl on 2nd tab
+// vsTabTitles is empty on entering the event, but you can put tab title strings in this array.
+static void GetNGraphPreview_OnDialogSetup(TreeNode& trGetN, WndContainer& theDlg, DWORD& dwOptions, vector<string>& vsTabTitles)
+{
+	///jasmine 08/09/10 ORG-389 ADD_MATRIX_IMAGE_PREVIEW
+	dwOptions = XFGSETUP_MATRIX_CNTRL;//XFGSETUP_IMAGEGRAPH_CNTRL
+	///End ADD_MATRIX_IMAGE_PREVIEW
+}
+
+// called when dialog is being destroyed, either as OK button or as Cancel button being pressed
+static void GetNGraphPreview_OnDestroy(TreeNode& trGetN, PageBase& pgTemp, Datasheet& wksTemp, PictureControl& pict)
+{
+   
+}
+//------------
+//
+static void GetNGraphPreview_OnCustomButton(TreeNode& trGetN, int nButton, PageBase& pgTemp, Datasheet& wksTemp,
+PictureControl& pict, // optional tab for showing an image or EMF that might be present, as requested in OnDialogSetup  
+bool bChangedByGraph, // called when graph has been modified by user, like dragging a vertical line
+DWORD& dwUpdateGraph,  // default to 0, UPDATE_GRAPH_CHANGED to cause graphs to be updated, UPDATE_GRAPH_INVALID to disable preview button
+DWORD& dwUpdateGrid,  // default to 0, set to UPDATE_GRID_SIMPLE to update the DynaControl grid, UPDATE_GRID_RESET to reset DynaControl grid
+DWORD& dwEnables,	// bOKEnable, bBTN1Enable, bBTN2Enable and bBTN3Enable :default to true, can set to false to disable buttons
+string& strErrMsg) // optional err msg to be shown on dialog
+{
+	DECLARE_BUTTON_ENABLES
+	DECLARE_UPDATE_GRAPH
+	DECLARE_UPDATE_GRID
+
+}
+//
+
+static void GetNGraphPreview_OnOK(bool& bOKEnable, TreeNode& trGetN, WndContainer& theDlg, PageBase& pgTemp, Datasheet& wksTemp, PictureControl& pict)
+{
+
+}
+
+
+///////////////////////////////////////////////////////
+	
+int GetNGraphBox_fft_filter2(TreeNode& trGetN, int nRow, int nCol, TreeNode& trNode, DWORD dwCntrl, int nType, WndContainer& theDlg, PageBase& pgTemp, Datasheet& wksTemp, PictureControl& pict)
+{
+	return xf_GetNPreviewDlg_event_handler(trGetN, nRow, nCol, trNode, dwCntrl, nType, theDlg, pgTemp, wksTemp, pict,
+	GetNGraphPreview_OnInitGrid, GetNGraphPreview_OnInitGraph,
+	GetNGraphPreview_OnChange, GetNGraphPreview_OnUpdateGraph, GetNGraphPreview_OnDialogSetup, GetNGraphPreview_OnDestroy,
+	GetNGraphPreview_OnCustomButton,
+	GetNGraphPreview_OnOK);
+}
+
+
+//This file is the template for GetNEvent4
+
+///////////////////////////////////////////////////////
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   ~dd‚g†kŠoŒsŒvŠv†t…q‡nŠnŠpŠpŠp‰oŠn‹noo’q–ršuœyœ{œ|} ~£¤ƒ¤…£…¢„ „‚š—|–z—z˜|™~˜˜™™ƒ—‚“€‘~{Œy‹x‰v†s‡r‰r‰r…rƒp„k‰ko•u“zŠy…p‡ijœq¢~„“‡v„hŒc—i¡v¢›…”€“x˜uy¡‚Ÿ‡™†ŒvŒsr“w”{“~…zr}kh…j‹ry‰}†}ƒz‚yƒxƒy‚{„|‚|€}~|{}…‡‡ƒŠz‰ppw}v™„³¢¶Â¢Í„»g–[tbctjŠ•›“ª†«tœj†jyqxy€yŠqŒi„hyow}ˆ‘Š ƒ£rœ_‹QtPc]aqn‚†‡›€£qœfŒf~k{s€{‰}‘{“x‘uvˆ|‡‹‚‘y‘k…`s^fe`rf}r~~ƒv€jv[gTVVMaMjWmaig`bZYYS[P^R`UdYg[kaneth{n€v€|z}qwlmnevem‰yŠƒˆ…„ƒ~}yuxp}n„sˆz†~ƒ{€xxx{xutqlpgqfuhym}t}xyyuwtrxq}t|‚„…€„‚…„‡‡‡‹‡…‚Š‚‰†Š”——Ÿ‘£ˆ {–m‰k{yv …Í­Ùà·ø{ŞCŸ7_QEzY™†¯“¾‡µv©f—]„]yiut€un“lz‹–¬š¿…Áq®b–^ƒiz|‚™–°µ±Ğ×}Æg¤i‡}ƒ“•¨“³´¯‹®…©£|œx—p“e‰\{bptrˆ„š†¥vhŠax^k`ejezm†{ˆŠq…munkrirlrmym‡q•™–™—ˆƒ…|~ww{rˆt•€—šˆ–|‡swqktfyfkŠs~Šƒƒ€}x{pykugrcv`~`‡hsŠz‡zu|nxgybbh™u…š’‹Œƒˆ{‰wŠwy’}–„˜‰”Œ‹‡‰ƒ‰…~…{‡yŠ|ŒŠ‚†…}€{tv^j[R~I·hã¤ĞÛŒÛLš0KK!z,•]‡š–“•Šrƒ[l\PnHˆY’vŠˆƒ…Š|š¥‘£Ÿ– …“y€vo}i–n¯†¹¥¬µ®tnnw`…f‘v•‡™˜”•w}vq{l}qvtmomfzdˆnŒ€†‰y…nxljqf{jˆt‚‘Š’‚|ƒyyzu{uvƒ{ˆ€Š††‹‰~„~€…~‡|…y‚yz‚yƒuƒoj|eteognlqpuozn|m{jzhvislrpsuxx}vv~u{vyzz||}}}~|}|‚}„ˆƒ‰‡†ˆ†~|}}z‚{………ƒ‡}†xu{vwyw|z~€€„…|…{‚x€w~w{y{}|{q€fvmh’jÂ‹Ø½ºß{ÑH@Oa5‰Jœvœ””›‰’z†bvS_WIoFˆ\’yŒ‹ƒŠƒŒ~‘†„y†uz}ty Œ¤¢œ­‰§t“l{pm{mŠx—‰˜š¢£}•r‚qsvn{s|yzzwxxtzt{vxwrvkokhre~iˆw‹„‡Œ~‰wsxqrsrysx€„z„u~uyvvxxy{y}yxxy€{€{‚vƒpjxhqlmrqwxw}tq}nymuotuuz{~‡|‰y†uƒv~y||~€…ˆ~‡}…}„~ƒ}„|ƒ{‚{ƒ}‚ƒ€†ˆ|ˆw†q‚p{rvvyz}|‚z„w‚u€s}tzuy{{€„……‰‚‹€ˆ~ƒ~€‚€„‚‚}{z‚v y½”Ç¶²Ç‚º\ŠWXmEŠU˜u•ŒŒ†tzdkZZ_MuN‹c‘Œ‚†…‹†Œ‡“ˆˆ›“¢¤ ±”³‡§}—{‹€†Š‰—•¡¤¢±–¶†­z›vŠ}ƒƒ‡‡‡•„—~“{wˆv„t‚tw€{ƒ‚ˆˆŠ˜‡œ‚œ{—wuˆv„~…†‹Š”‡™™|“{Œ~‰Š…‡Š“‹–‰—…•€‰€…………ƒ„ƒ†……†…y€wxzs‚u‡{‹‚Œ‡ˆ‡†…„‚}y…yŠz€…†‰…†€†{ˆzŠ{‹|‹}Š}Š|‹|ˆ{…xƒs‚pƒm„m…m†m†n…m‚li}e`†a‹ejon‰kˆgˆc‹cdgihgecc‹bŠ_…\€XTƒRV´m¼Š©™~ŒZeM8\"w)ŠDa†kvhdYVEL4S*g-{@…Y„k|ptjub{agm~qq‰s’|˜‡”‘‹€ˆz}xu}r…u’”‚”tŠiyhmnksptxq}j}bx]qYmYj\k]o^taxd}gh‡fŒb‹]‰\†_…dˆkq–qŸm¢g cše•l•wœ€¨‚´}¹w·q°o¨r¥u¦x©z®x°u¯s«o¨o¤p¡q¢s£t¥t¦w¦y§yªx«t¨t¦w£{¤§‚«ƒ¯ƒ±‚°€®€«„©‰«®³µŒ´‰°‰«Š©‹¨‹¦Œ¥Š¤‰¢‰‡›‡—ˆ•‰“ˆ‘ˆ‰Š‹Š‰‹ˆ‹‡‹…Œ‚‚ƒƒŒ}{“}”€“‚€}ywŠuŠr‹po‹p…o‚hc‰aŸg®|°š–v„_^^<r1ˆ@’Zk„jx`oPjDi<p7>O•bl‰j‡bŒ\“_˜h–o•p˜nŸp¥w¤€œ‚‘{Šn‡f‰bd“k–r”wxƒrvgrZvR}V_~gwgoajXhQgNjNmQrVu[vawdyexhvjvjuhvhyinƒt‚y|xytttovm{q}v€{|w~szrvqurwsxs{r|p{mziwgufriqmtqws~sƒrƒn‚nr€uƒyˆzwxyzyw‘x‘wxy‘{’}”–˜}˜z—w”vxz‘{’z”x“uss‹sŠsŠvŠwxv‘ttvxx’v“v‘x‘|’•~š|šz˜{•|•}˜}š|š|™|–|–x—v”vyŒ€–„™š•¤•­‚®ma‚eovo†‹”†œ|—skgvmo{sƒ—––¦©…¢„–‰‘‘–™Ÿœ¨¯Ÿ°Ÿ±±˜®”¨’¡’’œ–šš›¡š¢–¡›‡”…Š‡„†’Š‘†Š‚|y|tsˆv}„†‹…Šƒ‰€‰‹ƒ‘…“‡’‰‡…‹ƒŠŠ}Œ|‘~”“…’…ƒ€}{z’z“{“|‘{xŠtŠoŒmmnnonllll’m”o–p–r–s”r’p’p”q•s”u‘tsŒpŒmŒmŒoŒpŠqˆo†n…m‚lƒkƒk‚l‚kk~k}izg{f{g{h{h{iyjyiygxgyhzizjxjuitgtetetesfqfqcrarbsdsfogief_dZeYf\e^a]`Y`X_[X[VVaRt\~sv„^‚Ej=LF<XBfWhkdsZpOeGXFNNK]Rmbuws…j…d|cqinrtxzˆz{{xsŒn†m€n}p~u‚x‡xuqŒk‡ff|kzq~u†tŒof‰``wdulxs€w‰yx‘v‘uwŒ{‚•…š‡ˆŸˆ ‡Ÿ†„œ„›‰œ¡‘¦‘©ªŠ¨‡£†ŸˆŒ¢¤‰¥…¢€}—}“~’“…–†™„š‚™€—€”‚”†–‰˜œŸ‘¡’£‘¤£¡‘ •¡™£›§œª›«—©”¥’Ÿ’›•™˜šš™•˜ŒŠ‹Œˆˆ‘Š‘‹‹‰Š†‰ƒŠ‹‚ƒ„†Œ…‹„Š‚‰€Š€Š‹‚‹‚‰‚ˆ€†~…|†z‡z‡z‡z†z…x„u„tƒs€r~o{kzgzd|d€eh€jxiqbrY€Wa•u‰~sva_\Hf=sC}RaygncbY\L`CmD~P‡cˆquvqshta}b†j‰u‰}„~{~u}r|r{ryryp|nqu}wyuvrtoqkrhsgwizmvqopgidag[m]qdtksorqrqqpqpsqutxxz{z€xw€x€y€z‚z„{„~…€ˆ‚‹ƒƒ‚€€Š‰…Šˆˆ…~Š~…}„ƒƒ……ˆ‰‹‰ˆ„„‹‡‰‹Š“•“›œ›™˜‘š•œ˜Ÿ˜¤–¦”¦”¤”£”¤—§˜©˜¬—­”¬‘ª¦¥Œ¢¡£¤¥¤Œ¢‰¡‰Š’Ÿ’¤”§“¨¦£’¢”¢–¤˜¦—¨”¨‘§£ ŒŸ ‹ ˆœ‡™†—‡•ˆ•ˆ—‡—…—ƒ–‚’‚‘~‘{y‹yˆ|ˆ‹{xsŠn„p|z{…„Šƒ™s–d‡[s^dibslyywm€bwYiY]bYo^xk|xw}o{hrfikdpfvm{tzytznvmokjkhmhniqjrlqnolljjghcg_h]l]o`qbocjaf[cTeNjMqQtVu[t\rYrUuSxT|VX€\‚]€^\YY„Y†\‰_‹a‹d#include <origin.h>
+#include <GetNBox.h>
+#include <xfutils.h>
+
+
+//put additional include files here
+
+//put your own support static functions here
+
+static void init(MarkerInfo& mi)
+{
+	vector vx, vy;
+
+	// example with 5 markers
+	#define	MARKER_COUNT	5
+	
+	vx.SetSize(MARKER_COUNT);
+	vy.SetSize(MARKER_COUNT);
+	
+	for(int ii=0; ii<MARKER_COUNT; ii++)
+	{
+		// if marker follows parent:
+		//    vx is 1st dimension index (data point index for plot)
+		//    vy is 2nd dimension index (maybe used for surface later)
+		vx[ii] = ii;
+		vy[ii] = 0;
+	}
+	
+	mi.SetWidth(0);
+	mi.SetFollowsParent();
+	
+	TreeNode tr = mi;
+	tr.Data.X.dVals = vx;
+	tr.Data.Y.dVals = vy;
+}
+
+
+
+int dm(MarkerInfo& mi, EventInfo& ei)
+{
+	int iRet = 0;
+	
+	switch( ei.GetEvent() )
+	{
+	case OE_INIT_ANCHORS:
+		init(mi);
+		iRet = OCD_MODIFY|OCD_REPAINT;
+		break;
+		
+	case OE_GRAPHOBJ_EDIT:
+		if( ei.GetSenderId() == mi.GetID() )
+		{
+			out_int("edit: param = ", ei.GetSenderParam());
+		}
+		break;
+		
+	case OE_GRAPHOBJ_EDITING:
+		if( ei.GetSenderId() == mi.GetID() )
+		{
+			out_int("editing: param = ", ei.GetSenderParam());
+		}
+		break;
+	
+	case OE_MOVE:
+		if( ei.GetSenderId() == mi.GetID() )
+		{
+			out_int("move: param = ", ei.GetSenderParam());
+		}
+		break;
+		
+	case OE_MOVING:
+		if( ei.GetSenderId() == mi.GetID() )
+		{
+			out_int("moving: param = ", ei.GetSenderParam());
+		}
+		break;
+		
+	case OE_KEYDOWN:
+		printf("key down: anchorID=%d, senderparam=%d, wparam=%d, lparam=%d\n", ei.GetSenderId(), ei.GetSenderParam(), ei.wParam.nVal, ei.lParam.nVal);
+		break;
+		
+	case OE_KEYUP:
+		printf("key up: anchorID=%d, senderparam=%d, wparam=%d, lparam=%d\n", ei.GetSenderId(), ei.GetSenderParam(), ei.wParam.nVal, ei.lParam.nVal);
+		break;
+	}
+	
+	return iRet;	
+}
+
+//nEventID < 0 on event, like GETNE_ON_INIT, GETNE_ON_OK etc, >0 on change from control
+//return 0 to do nothing, return PEVENT_GETN_RET_TO_CLOSE to close dialog
+//dwEnables = bOKEnable, bBTN1Enable, bBTN2Enable, bBTN3Enable, , can set to false to disable OK/Apply buttons
+//lpcszNodeName = the trGetN TreeNode tag name that generates the event, or is  if GETNE_ON_OK etc
+//strAux = optional string for XF Wizard Bar, like DLG_NEED_CHANGE_GRID etc, it will be invalid if from internal node value change event
+//strErrMsg = allowing messages to be shown
+int dm_event1(TreeNode& trGetN, int nRow, int nEventID, DWORD& dwEnables, LPCSTR lpcszNodeName, WndContainer& DynaCntrlContainer, string& strAux, string& strErrMsg)
+{
+	if( xf_is_extended_event(nEventID) )
+		return dm_event1_ex(trGetN, nRow, nEventID, dwEnables, lpcszNodeName, DynaCntrlContainer, strAux, strErrMsg);
+	DECLARE_BUTTON_ENABLES
+	return false;
+
+}
+
+int dm_make_tree(TreeNode& tr, LPCSTR lpcszVarName)
+{

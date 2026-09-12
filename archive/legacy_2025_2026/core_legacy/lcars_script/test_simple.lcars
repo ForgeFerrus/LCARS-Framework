@@ -1,0 +1,10 @@
+// Простий тест
+energy: 1.5
+particles: 1000
+
+FUNCTION test_func(x) -> float {
+    return x * 2
+}
+
+result = test_func(5)
+log("Result: " + result)

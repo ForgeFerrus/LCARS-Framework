@@ -1,0 +1,344 @@
+// Енергетичний скан з LCARS Script
+// =================================
+
+// Параметри сканування
+scan_name: "energy_efficiency_scan"
+energy_points: [0.5 GeV, 1.0 GeV, 2.0 GeV, 5.0 GeV, 10.0 GeV]
+particles_per_point: 10000
+detector_config: "standard_detector"
+
+// Функції сканування
+FUNCTION run_single_energy_scan(energy) -> object {
+    log("Running scan at energy: " + energy)
+    
+    // Симуляція вимірювань
+    detected_particles = 0
+    total_energy_deposited = 0.0
+    
+    FOR i FROM 1 TO particles_per_point {
+        // Симуляція проходження частинки через детектор
+        IF random() < detection_probability(energy) {
+            detected_particles = detected_particles + 1
+            total_energy_deposited = total_energy_deposited + energy * random_uniform(0.8, 1.0)
+        }
+    }
+    
+    efficiency = detected_particles / particles_per_point * 100.0
+    mean_energy_deposit = total_energy_deposited / detected_particles IF detected_particles > 0 ELSE 0.0
+    
+    result = {
+        energy: energy,
+        detected: detected_particles,
+        efficiency: efficiency,
+        mean_energy_deposit: mean_energy_deposit,
+        timestamp: current_time()
+    }
+    
+    log("Energy " + energy + " GeV: Efficiency = " + efficiency + "%")
+    return result
+}
+
+FUNCTION detection_probability(energy) -> float {
+    // Модель ймовірності детектування залежно від енергії
+    IF energy < 0.1 return 0.0
+    IF energy > 15.0 return 0.95
+    
+    // Пікова ефективність біля 2-5 GeV
+    peak_energy = 3.0
+    width = 2.0
+    
+    probability = 0.95 * exp(-((energy - peak_energy) / width)^2)
+    return max(0.1, probability)
+}
+
+FUNCTION fit_efficiency_curve(results) -> object {
+    // Підгонка кривої ефективності
+    energies = [result.energy for result in results]
+    efficiencies = [result.efficiency for result in results]
+    
+    // Проста модель: E(x) = a * x^b / (c + x^d)
+    fit_result = fit_function(energies, efficiencies, "efficiency_model")
+    
+    return {
+        parameters: fit_result.parameters,
+        r_squared: fit_result.r_squared,
+        peak_efficiency: max(efficiencies),
+        peak_energy: energies[index_of_max(efficiencies)]
+    }
+}
+
+FUNCTION calculate_resolution_curve(results) -> object {
+    // Розрахунок роздільної здатності залежно від енергії
+    resolutions = []
+    
+    FOREACH result IN results {
+        // Симуляція роздільної здатності: σ/E = a/√E ⊕ b
+        stochastic_term = 0.02 / sqrt(result.energy)
+        constant_term = 0.01
+        resolution = sqrt(stochastic_term^2 + constant_term^2)
+        
+        resolutions.append(resolution * 100)  // в процентах
+    }
+    
+    return {
+        energies: [result.energy for result in results],
+        resolutions: resolutions,
+        fit_parameters: fit_resolution_model([result.energy for result in results], resolutions)
+    }
+}
+
+// Детектор для сканування
+DETECTOR scan_detector {
+    NAME detector_config
+    TYPE "calorimeter"
+    
+    LAYERS [
+        {
+            name: "EM_calorimeter",
+            thickness: 25 cm,
+            material: "lead_glass",
+            sampling_fraction: 0.03
+        },
+        {
+            name: "HAD_calorimeter", 
+            thickness: 1.2m,
+            material: "iron_scintillator",
+            sampling_fraction: 0.04
+        }
+    ]
+    
+    MAGNETIC_FIELD 0.0 T  // Калориметр без магнітного поля
+    
+    ON HIT(particle) {
+        energy_deposit = calculate_energy_deposit(particle)
+        record_deposit(energy_deposit, particle.position)
+        
+        emit("calorimeter:hit", {
+            energy: energy_deposit,
+            position: particle.position,
+            particle_energy: particle.energy
+        })
+    }
+}
+
+// Аналізатор сканування
+ANALYZER energy_scan_analyzer {
+    SCAN_TYPE "energy_efficiency"
+    
+    PROCESS {
+        log("Starting energy scan analysis...")
+        
+        scan_results = []
+        
+        // Виконати сканування для кожної енергії
+        FOREACH energy IN energy_points {
+            result = run_single_energy_scan(energy)
+            scan_results.append(result)
+            
+            // Зберегти проміжні результати
+            export("scan_results/energy_" + energy + "_GeV.json", result)
+        }
+        
+        // Аналіз результатів
+        efficiency_fit = fit_efficiency_curve(scan_results)
+        resolution_curve = calculate_resolution_curve(scan_results)
+        
+        // Створити графіки
+        efficiency_plot = create_scatter_plot(
+            [result.energy for result in scan_results],
+            [result.efficiency for result in scan_results],
+            "Energy (GeV)",
+            "Efficiency (%)",
+            "Detection Efficiency vs Energy"
+        )
+        
+        resolution_plot = create_line_plot(
+            resolution_curve.energies,
+            resolution_curve.resolutions,
+            "Energy (GeV)", 
+            "Resolution (%)",
+            "Energy Resolution vs Energy"
+        )
+        
+        // Знайти оптимальну енергію
+        optimal_energy = efficiency_fit.peak_energy
+        optimal_efficiency = efficiency_fit.peak_efficiency
+        
+        // Статистичний аналіз
+        efficiency_stats = calculate_statistics([result.efficiency for result in scan_results])
+        
+        // Фінальні результати
+        final_results = {
+            scan_name: scan_name,
+            energy_points: energy_points,
+            particles_per_point: particles_per_point,
+            scan_results: scan_results,
+            efficiency_fit: efficiency_fit,
+            resolution_curve: resolution_curve,
+            optimal_energy: optimal_energy,
+            optimal_efficiency: optimal_efficiency,
+            efficiency_statistics: efficiency_stats,
+            scan_duration: elapsed_time(),
+            timestamp: current_time()
+        }
+        
+        // Експорт результатів
+        export("energy_scan_results.json", final_results)
+        export_plot(efficiency_plot, "efficiency_vs_energy.png")
+        export_plot(resolution_plot, "resolution_vs_energy.png")
+        
+        // Генерувати звіт
+        generate_scan_report(final_results)
+        
+        log("Energy scan completed!")
+        log("Optimal energy: " + optimal_energy + " GeV")
+        log("Peak efficiency: " + optimal_efficiency + "%")
+        
+        emit("scan:complete", final_results)
+    }
+}
+
+// Візуалізація сканування
+VISUALIZE scan_visualization {
+    TYPE "interactive_dashboard"
+    DATA "energy_scan_results.json"
+    
+    OPTIONS {
+        layout: "main_sidebar",
+        main_plot: "efficiency_curve",
+        sidebar_plots: ["resolution_curve", "statistics"],
+        style: "lcars_tng",
+        interactive: true
+    }
+    
+    EXPORT "energy_scan_dashboard.html"
+    
+    ON READY {
+        show_in_ui("scan_dashboard")
+        emit("visualization:ready", {
+            type: "energy_scan_dashboard",
+            file: "energy_scan_dashboard.html"
+        })
+    }
+}
+
+// Порівняльний аналіз
+ANALYZER comparative_analysis {
+    REFERENCE_DATA "historical_scans.json"
+    
+    PROCESS {
+        log("Starting comparative analysis...")
+        
+        current_data = load_json("energy_scan_results.json")
+        historical_data = load_json("historical_scans.json")
+        
+        // Порівняння з історичними даними
+        comparisons = []
+        
+        FOREACH historical_scan IN historical_data.scans {
+            comparison = compare_scans(current_data, historical_scan)
+            comparisons.append(comparison)
+        }
+        
+        // Тренди
+        efficiency_trend = calculate_efficiency_trend(historical_data)
+        
+        comparison_results = {
+            current_scan: current_data,
+            historical_comparisons: comparisons,
+            efficiency_trend: efficiency_trend,
+            improvement_percentage: calculate_improvement(current_data, historical_data)
+        }
+        
+        export("comparative_analysis.json", comparison_results)
+        generate_comparison_report(comparison_results)
+        
+        log("Comparative analysis completed!")
+    }
+}
+
+// Допоміжні функції
+FUNCTION compare_scans(current, historical) -> object {
+    return {
+        scan_name: historical.scan_name,
+        date: historical.timestamp,
+        efficiency_difference: current.optimal_efficiency - historical.optimal_efficiency,
+        energy_difference: current.optimal_energy - historical.optimal_energy,
+        performance_rating: rate_performance(current, historical)
+    }
+}
+
+FUNCTION rate_performance(current, historical) -> string {
+    improvement = current.optimal_efficiency - historical.optimal_efficiency
+    
+    IF improvement > 5 return "Excellent"
+    IF improvement > 2 return "Good" 
+    IF improvement > 0 return "Slight Improvement"
+    IF improvement > -2 return "Comparable"
+    return "Needs Improvement"
+}
+
+FUNCTION generate_scan_report(results) {
+    report = {
+        title: "Energy Scan Report: " + results.scan_name,
+        executive_summary: {
+            optimal_energy: results.optimal_energy,
+            peak_efficiency: results.optimal_efficiency,
+            total_particles: len(results.energy_points) * results.particles_per_point,
+            scan_duration: results.scan_duration
+        },
+        detailed_results: results,
+        recommendations: generate_recommendations(results)
+    }
+    
+    export("energy_scan_report.html", report)
+    log("Scan report generated: energy_scan_report.html")
+}
+
+FUNCTION generate_recommendations(results) -> array {
+    recommendations = []
+    
+    IF results.optimal_efficiency < 80 {
+        recommendations.append("Consider detector optimization - efficiency below 80%")
+    }
+    
+    IF results.optimal_energy < 1.0 {
+        recommendations.append("Low optimal energy - verify detector configuration")
+    }
+    
+    resolution_at_peak = get_resolution_at_energy(results.resolution_curve, results.optimal_energy)
+    IF resolution_at_peak > 5.0 {
+        recommendations.append("High resolution at peak energy - check calibration")
+    }
+    
+    recommendations.append("Scan completed successfully - detector performance within expected range")
+    
+    return recommendations
+}
+
+// Основна програма сканування
+log("=== LCARS Energy Scan ===")
+log("Scan name: " + scan_name)
+log("Energy points: " + len(energy_points))
+log("Particles per point: " + particles_per_point)
+
+// Створення директорій
+create_directory("scan_results")
+create_directory("plots")
+
+// Запуск сканування
+energy_scan_analyzer.analyze()
+
+// Показати візуалізацію
+scan_visualization.show()
+
+// Порівняльний аналіз (якщо є історичні дані)
+IF file_exists("historical_scans.json") {
+    log("Running comparative analysis...")
+    comparative_analysis.analyze()
+} ELSE {
+    log("No historical data found for comparison")
+}
+
+log("Energy scan completed successfully!")
+log("Results available in scan_results/ directory")

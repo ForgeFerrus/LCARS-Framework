@@ -1,0 +1,274 @@
+# ◤ LCARS SYSTEM MONITOR UTILITY
+# Самостійний застосунок для моніторингу системних ресурсів
+# ───────────────────────────────────────────────────────────────
+from __future__ import annotations
+from typing import Any, Optional, Dict
+import importlib
+from pathlib import Path
+
+# LCARS Core Imports
+from lcars.base.type import Matrix, Directive, Type, LCARS
+from lcars.core.signal import ODN
+from lcars.engineering.telemetry import EmitTelemetry
+from lcars.base.version import getVersion
+
+# УКР: Делегування версії згідно стандарту Titanium
+__version__ = getVersion()
+
+# Самостійний системний монітор з інтеграцією телеметрії
+class SystemMonitorUtility(Matrix):    
+    # Конструктор утиліти моніторингу системи
+    def __init__(self, ParentNode=None):
+        super().__init__(ParentNode)
+        
+        # УКР: Збереження посилання на батьківський вузол
+        self.ParentNodeRef = ParentNode
+        
+        # УКР: Стан моніторингу
+        self.ActiveMonitoring = False
+        self.PreviousNetworkIoCounters = None
+        self.MonitoringIntervalMilliseconds = 2000
+        
+        # УКР: UI Компоненти
+        self.CpuUsageDisplay = None
+        self.MemoryUsageDisplay = None
+        self.NetworkUsageDisplay = None
+        self.UpdateIntervalControl = None
+        
+        # УКР: Таймер оновлення даних
+        self.MonitoringTimer = None
+        
+        # УКР: Ініціалізація інтерфейсу
+        self.InitializeInterface()
+        
+        # УКР: Підключення до системи телеметрії
+        self.ConnectTelemetryStream()
+    
+    # Ініціалізація графічного інтерфейсу
+    def InitializeInterface(self):
+        # УКР: Створення базової структури UI
+        WidgetClass = LCARS.Interface.Widget
+        VBoxClass = LCARS.Interface.Layout.VBox
+        LabelClass = LCARS.Interface.Label
+        ButtonClass = LCARS.Interface.Button
+        
+        # УКР: Головний контейнер - створюємо нове вікно якщо немає батька
+        if self.ParentNodeRef is None:
+            self.Native = WidgetClass()
+        else:
+            self.Native = self
+        
+        MainLayout = VBoxClass(self.Native)
+        
+        # УКР: Заголовок вікна
+        TitleLabel = LabelClass("◤ SYSTEM RESOURCE MONITOR")
+        TitleLabel.setStyleSheet("font-size: 18pt; color: #FFAA00;")
+        MainLayout.addWidget(TitleLabel)
+        
+        # УКР: Індикатор CPU
+        self.CpuUsageDisplay = LabelClass("CPU: --%")
+        self.CpuUsageDisplay.setStyleSheet("font-size: 14pt; color: #6699CC;")
+        MainLayout.addWidget(self.CpuUsageDisplay)
+        
+        # УКР: Індикатор памяті
+        self.MemoryUsageDisplay = LabelClass("MEMORY: --%")
+        self.MemoryUsageDisplay.setStyleSheet("font-size: 14pt; color: #CC6699;")
+        MainLayout.addWidget(self.MemoryUsageDisplay)
+        
+        # УКР: Індикатор мережі
+        self.NetworkUsageDisplay = LabelClass("NETWORK: -- KB/s")
+        self.NetworkUsageDisplay.setStyleSheet("font-size: 14pt; color: #99CC66;")
+        MainLayout.addWidget(self.NetworkUsageDisplay)
+        
+        # УКР: Кнопка ручного оновлення
+        RefreshButton = ButtonClass("MANUAL REFRESH")
+        RefreshButton.setStyleSheet("background: #FFAA00; color: #000; padding: 10px;")
+        RefreshButton.clicked.Connect(self.ExecuteMetricsScan)
+        MainLayout.addWidget(RefreshButton)
+        
+        # УКР: Кнопка автоматичного режиму
+        self.AutoModeButton = ButtonClass("START AUTO MONITOR")
+        self.AutoModeButton.setStyleSheet("background: #6699CC; color: #000; padding: 10px;")
+        self.AutoModeButton.clicked.Connect(self.ToggleAutoMonitoring)
+        MainLayout.addWidget(self.AutoModeButton)
+        
+        self.Native.setLayout(MainLayout)
+        
+        # УКР: Перший збір даних
+        self.ExecuteMetricsScan()
+    
+    # Підключення до потоку телеметрії
+    def ConnectTelemetryStream(self):
+        # УКР: Підписка на події системи
+        ODN.Listen("Telemetry.Update", self.ProcessTelemetryEvent)
+    
+    # Обробка вхідних телеметричних даних
+    def ProcessTelemetryEvent(self, EventData: Dict[str, Any]):
+        # УКР: Обробка вхідних телеметричних даних
+        if "CpuLoad" in EventData:
+            self.CpuUsageDisplay.setText(f"CPU: {EventData['CpuLoad']}%")
+        if "MemoryPercent" in EventData:
+            self.MemoryUsageDisplay.setText(f"MEMORY: {EventData['MemoryPercent']}%")
+    
+    # Перемикання автоматичного режиму моніторингу
+    def ToggleAutoMonitoring(self):
+        # УКР: Перемикання автоматичного режиму моніторингу
+        if self.ActiveMonitoring:
+            self.StopAutoMonitoring()
+        else:
+            self.StartAutoMonitoring()
+    
+    # Запуск автоматичного збору метрик
+    def StartAutoMonitoring(self):
+        # УКР: Запуск автоматичного збору метрик
+        self.ActiveMonitoring = True
+        self.AutoModeButton.setText("STOP AUTO MONITOR")
+        
+        TimerClass = LCARS.Timer
+        self.MonitoringTimer = TimerClass(self.Native)
+        self.MonitoringTimer.timeout.connect(self.ExecuteMetricsScan)
+        self.MonitoringTimer.start(self.MonitoringIntervalMilliseconds)
+        
+        EmitTelemetry("Monitor", "AUTO_MONITORING_ENABLED")
+    
+    # Зупинка автоматичного збору
+    def StopAutoMonitoring(self):
+        # УКР: Зупинка автоматичного збору метрик
+        self.ActiveMonitoring = False
+        self.AutoModeButton.setText("START AUTO MONITOR")
+        
+        if self.MonitoringTimer:
+            self.MonitoringTimer.stop()
+            self.MonitoringTimer = None
+        
+        EmitTelemetry("Monitor", "AUTO_MONITORING_DISABLED")
+    
+    # Виконання сканування системних метрик
+    def ExecuteMetricsScan(self):
+        # УКР: Виконання сканування системних метрик
+        self.UpdateCpuMetrics()
+        self.UpdateMemoryMetrics()
+        self.UpdateNetworkMetrics()
+        
+        # УКР: Відправка агрегованих даних у телеметрію
+        ODN.Emit("System.Metrics", {
+            "Timestamp": LCARS.System.Time.time(),
+            "Source": "SystemMonitorUtility"
+        })
+
+    # Повертає модуль psutil, якщо він доступний
+    def GetPsutilModule(self):
+        try:
+            return importlib.import_module("psutil")
+        except Exception:
+            return None
+    
+    # Оновлення показників CPU
+    def UpdateCpuMetrics(self):
+        # УКР: Оновлення показників CPU через psutil
+        psutilModule = self.GetPsutilModule()
+        if psutilModule is None:
+            self.CpuUsageDisplay.setText("CPU: N/A")
+            return
+        
+        CpuLoad = psutilModule.cpu_percent(interval=None)
+        self.CpuUsageDisplay.setText(f"CPU: {CpuLoad}%")
+        
+        # УКР: Телеметрія CPU
+        EmitTelemetry("Cpu", {"Load": CpuLoad})
+    
+    # Оновлення показників памяті
+    def UpdateMemoryMetrics(self):
+        # УКР: Оновлення показників памяті
+        psutilModule = self.GetPsutilModule()
+        if psutilModule is None:
+            self.MemoryUsageDisplay.setText("MEMORY: N/A")
+            return
+        
+        MemoryData = psutilModule.virtual_memory()
+        MemoryPercent = MemoryData.percent
+        self.MemoryUsageDisplay.setText(f"MEMORY: {MemoryPercent}%")
+        
+        # УКР: Телеметрія памяті
+        EmitTelemetry("Memory", {"Percent": MemoryPercent})
+    
+    # Оновлення мережевих показників
+    def UpdateNetworkMetrics(self):
+        # УКР: Оновлення мережевих показників з розрахунком дельти
+        psutilModule = self.GetPsutilModule()
+        if psutilModule is None:
+            self.NetworkUsageDisplay.setText("NETWORK: N/A")
+            return
+        
+        CurrentNetworkIo = psutilModule.net_io_counters()
+        if CurrentNetworkIo is None:
+            self.NetworkUsageDisplay.setText("NETWORK: UNAVAILABLE")
+            return
+        
+        if self.PreviousNetworkIoCounters is None:
+            self.NetworkUsageDisplay.setText("NETWORK: INITIALIZING...")
+            self.PreviousNetworkIoCounters = CurrentNetworkIo
+            return
+        
+        # УКР: Розрахунок швидкості передачі даних
+        BytesSentDelta = CurrentNetworkIo.bytes_sent - self.PreviousNetworkIoCounters.bytes_sent
+        BytesRecvDelta = CurrentNetworkIo.bytes_recv - self.PreviousNetworkIoCounters.bytes_recv
+        
+        KiloBytesSent = BytesSentDelta / 1024
+        KiloBytesRecv = BytesRecvDelta / 1024
+        
+        self.NetworkUsageDisplay.setText(
+            f"NETWORK: ↑{KiloBytesSent:.1f} KB/s ↓{KiloBytesRecv:.1f} KB/s"
+        )
+        
+        # УКР: Збереження поточного стану для наступного розрахунку
+        self.PreviousNetworkIoCounters = CurrentNetworkIo
+        
+        # УКР: Телеметрія мережі
+        EmitTelemetry("Network", {
+            "SentKbps": KiloBytesSent,
+            "RecvKbps": KiloBytesRecv
+        })
+    
+    # Відображення вікна монітору
+    def Show(self):
+        # УКР: Відображення вікна монітору
+        if hasattr(self.Native, 'show'):
+            self.Native.show()
+        
+        EmitTelemetry("Monitor", "UTILITY_DISPLAY_ACTIVATED")
+
+# СТАТИЧНИЙ ЕКЗЕМПЛЯР (Singleton Pattern)
+UtilityInstance = None
+
+# Глобальний доступ до монітору
+def SystemMonitor() -> SystemMonitorUtility:
+    # Глобальний доступ до монітору (синглтон)
+    global UtilityInstance
+    if UtilityInstance is None:
+        UtilityInstance = SystemMonitorUtility()
+    return UtilityInstance
+
+# Запуск як самостійного застосунку
+def LaunchAsStandalone():
+    # Запуск як самостійного застосунку
+    Application = Directive.Application
+    App = Application([])
+    
+    Monitor = SystemMonitorUtility()
+    Monitor.Show()
+    
+    EmitTelemetry("System", "STANDALONE_MONITOR_LAUNCHED")
+    return App.exec()
+
+# ───────────────────────────────────────────────────────────────
+# Експорт функціональних вузлів Titanium
+__all__ = [
+    "SystemMonitorUtility",
+    "SystemMonitor", 
+    "LaunchAsStandalone"
+]
+
+# Точка входу для самостійного запуску
+if __name__ == "__main__":
+    LaunchAsStandalone()

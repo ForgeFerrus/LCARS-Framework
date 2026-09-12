@@ -1,0 +1,10 @@
+{
+  "platform": "Android",
+  "has_manifest": false,
+  "local_ip": "127.0.0.1",
+  "gateway_url": "http://127.0.0.1:8047/",
+  "hostname_url": "http://desktop-brge8pp:8047/",
+  "package_id": "org.starfleet.lcars.padd",
+  "version": "1.0-TITANIUM",
+  "stardate": "74659.32"
+}

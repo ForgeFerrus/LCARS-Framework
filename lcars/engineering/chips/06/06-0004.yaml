@@ -1,0 +1,52 @@
+# ◤ LCARS Isolinear Chip 06-0004 — WhatsApp Connector
+# Інтеграція з WhatsApp Business API (Meta)
+# Версія: 44.20
+# Дата: 2025
+
+Metadata:
+  ChipId: "06-0004"
+  Name: "WhatsApp Connector"
+  Category: "communication"
+  Version: "44.20"
+  Status: "active"
+  Description: "WhatsApp Business Cloud API інтеграція для LCARS"
+  Author: "LCARS Development Team"
+  RequiresCore: "06-0002"
+
+EntryPoints:
+  Initialize: "lcars.modules.comm:ExternalAPIManager.enableWhatsapp"
+  Connect: "lcars.modules.comm:WhatsAppConnector.connect"
+  Send: "lcars.modules.comm:WhatsAppConnector.send"
+
+Config:
+  Whatsapp:
+    ApiVersion: "v18.0"
+    ApiBase: "https://graph.facebook.com"
+    WebhookEnabled: true
+    Timeout: 10
+  Storage:
+    CacheMessages: true
+    LogDelivery: true
+    PhoneIdFormat: "e164"
+
+Database:
+  Path: "lcars/data/06-0004-whatsapp.db"
+  Tables:
+    - Credentials: "AccessToken, PhoneNumberId, BusinessAccountId"
+    - MessageLog: "WaMessageId, Recipient, Content, Status, Timestamp"
+    - WebhookQueue: "EventType, Payload, Processed, Timestamp"
+
+Paths:
+  ModulePath: "lcars/modules/comm"
+  DatabasePath: "lcars/database"
+
+Dependencies:
+  - "engineering.isolinear"
+  - "modules.comm"  # 06-0002 Core
+
+Tags:
+  - "communication"
+  - "whatsapp"
+  - "meta"
+  - "external-api"
+  - "messaging"

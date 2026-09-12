@@ -1,0 +1,93 @@
+{
+  "projects": {
+    "ENX01": {
+      "name": "ENX01",
+      "path": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX01",
+      "build_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX01\\build",
+      "executable": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX01\\Release\\ENX01.exe",
+      "data_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX01\\data",
+      "description": "# \ud83e\uddea ENX01 \u2014 Geant4-\u0441\u0438\u043c\u0443\u043b\u044f\u0446\u0456\u044f \u0437 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u0430\u043c\u0438 \u043a\u043e\u043c\u0430\u043d\u0434\u043d\u043e\u0433\u043e \u0440\u044f\u0434\u043a\u0430"
+    },
+    "ENX02": {
+      "name": "ENX02",
+      "path": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX02",
+      "build_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX02\\Release",
+      "executable": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX02\\Release\\ENX02.exe",
+      "data_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX02\\data",
+      "description": ""
+    },
+    "ENX03": {
+      "name": "ENX03",
+      "path": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX03",
+      "build_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX03\\Release",
+      "executable": null,
+      "data_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX03\\Release",
+      "description": ""
+    },
+    "ENX04": {
+      "name": "ENX04",
+      "path": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX04",
+      "build_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX04\\build",
+      "executable": null,
+      "data_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX04\\Release",
+      "description": "MyProject/LCARS-Framework/programs/Trae/resources/app/extensions/icube-devtool-preview/assets/servic"
+    },
+    "ENX05": {
+      "name": "ENX05",
+      "path": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX05",
+      "build_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX05\\build",
+      "executable": null,
+      "data_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX05\\data",
+      "description": "ENX05 \u2014 \u0427\u0438\u0441\u0442\u0438\u0439 \u0441\u043f\u0435\u043a\u0442\u0440 Co-60 \u0443 NaI"
+    },
+    "ENX05 \u2013 \u043a\u043e\u043f\u0456\u044f": {
+      "name": "ENX05 \u2013 \u043a\u043e\u043f\u0456\u044f",
+      "path": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX05 \u2013 \u043a\u043e\u043f\u0456\u044f",
+      "build_dir": null,
+      "executable": null,
+      "data_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX05 \u2013 \u043a\u043e\u043f\u0456\u044f\\data",
+      "description": ""
+    },
+    "ENX06": {
+      "name": "ENX06",
+      "path": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX06",
+      "build_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX06\\build",
+      "executable": null,
+      "data_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX06\\data",
+      "description": "ENX06 \u2014 Co-60 \u0443 NaI: \u043f\u043e\u0432\u043d\u0430 \u0441\u0446\u0435\u043d\u0430, \u0441\u043f\u0435\u043a\u0442\u0440, \u043f\u0440\u043e\u0446\u0435\u0441\u0438, \u0432\u0442\u043e\u0440\u0438\u043d\u043d\u0456 \u0447\u0430\u0441\u0442\u0438\u043d\u043a\u0438"
+    },
+    "ENX07": {
+      "name": "ENX07",
+      "path": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX07",
+      "build_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX07\\Release",
+      "executable": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX07\\Release\\ENX07.exe",
+      "data_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX07\\data",
+      "description": "ENX07 \u2014 Co-60 \u0443 NaI: \u0431\u0430\u0433\u0430\u0442\u043e\u043f\u043e\u0442\u043e\u043a\u043e\u0432\u0430 \u0441\u0438\u043c\u0443\u043b\u044f\u0446\u0456\u044f, \u0441\u043f\u0435\u043a\u0442\u0440 \u0456 \u043f\u0456\u0434\u0440\u0430\u0445\u0443\u043d\u043e\u043a \u043f\u0456\u043a\u0456\u0432"
+    },
+    "ENX08": {
+      "name": "ENX08",
+      "path": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX08",
+      "build_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX08\\build",
+      "executable": null,
+      "data_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX08\\Release",
+      "description": "ENX07_extended \u2014 Co-60 \u0443 NaI: \u0431\u0430\u0433\u0430\u0442\u043e\u043f\u043e\u0442\u043e\u043a\u043e\u0432\u0430 \u0441\u0438\u043c\u0443\u043b\u044f\u0446\u0456\u044f \u0437 \u043e\u0431\u2019\u0454\u0434\u043d\u0430\u043d\u043d\u044f\u043c \u0441\u043f\u0435\u043a\u0442\u0440\u0456\u0432"
+    },
+    "ENX09": {
+      "name": "ENX09",
+      "path": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX09",
+      "build_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\ENX09\\build",
+      "executable": null,
+      "data_dir": null,
+      "description": "ENX09 - Enterprise subprojects ENX09A..ENX09D"
+    },
+    "NCC-project": {
+      "name": "NCC-project",
+      "path": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project",
+      "build_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\Release",
+      "executable": null,
+      "data_dir": "C:\\Users\\Forge\\MyProject\\Geant4\\Enterprise\\NCC-project\\Release",
+      "description": "# NCC Project Suite \u2014 Geant4 Neutron Simulation Experiments"
+    }
+  },
+  "root_path": "C:\\Users\\Forge\\MyProject\\LCARS-Framework"
+}

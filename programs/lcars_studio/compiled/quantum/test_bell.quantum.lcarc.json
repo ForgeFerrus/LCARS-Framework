@@ -1,0 +1,12 @@
+{
+  "Algorithm": "test_bell",
+  "Qubits": 2,
+  "GatesCount": 3,
+  "Gates": [
+    "h q[0];",
+    "cx q[0], q[1];",
+    "measure q -> c;"
+  ],
+  "Backend": "Subspace-Quantum-Matrix",
+  "Stardate": "74659.33"
+}

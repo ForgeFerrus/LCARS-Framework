@@ -1,0 +1,22 @@
+Metadata:
+  Id: 07-0010
+  Name: Main Tactical Bridge Console
+  Category: '07'
+  Version: 0.3.0-alpha
+  Faction: Federation
+  Type: interface
+  Status: nominal
+Specs:
+  Capacity: 2048
+  ColorCode: '#FF9900'
+  SecurityLevel: 2
+  Bus: ODN-07
+  PrimitivesCount: 3
+Paths:
+  DatabaseFile: lcars/data/07/07-0010-snapshot.json
+Entrypoints:
+  Main: lcars.engineering.editor:InterfaceEditor
+Description: "\u041E\u0431\u0440\u0430\u0437 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\
+  \u0439\u0441\u0443 \u0437\u043E\u0440\u0435\u043B\u044C\u043E\u0442\u0430 (Main\
+  \ Tactical Bridge Console), \u0441\u043A\u043E\u043C\u043F\u043E\u043D\u043E\u0432\
+  \u0430\u043D\u0438\u0439 \u0447\u0435\u0440\u0435\u0437 InterfaceEditor."

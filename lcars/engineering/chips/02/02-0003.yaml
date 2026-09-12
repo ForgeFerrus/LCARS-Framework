@@ -1,0 +1,18 @@
+Metadata:
+  Id: 02-0003
+  Name: Navigational Deflector Array Controller
+  Category: '02'
+  Version: 5.0.0
+  Faction: Federation
+  Type: engineering
+  Status: nominal
+Specs:
+  Capacity: 4096
+  ColorCode: '#3399FF'
+  SecurityLevel: 7
+  Bus: ODN-02
+Paths:
+  DatabaseFile: lcars/data/02/02-0003-deflector.db
+Entrypoints:
+  Main: lcars.engineering.deflector:DeflectorController
+Description: Конфігурація гармонік дефлектора та силових щитів зорельота.

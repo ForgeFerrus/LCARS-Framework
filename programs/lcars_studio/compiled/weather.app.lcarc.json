@@ -1,0 +1,7 @@
+{
+  "kind": "python_app",
+  "source": "programs\\weather.py",
+  "bundle": "programs\\lcars_studio\\compiled\\weather.pyz",
+  "stardate": "74659.34",
+  "hash": "51e2dc5d5cab8d246883058a21e928c39efa58b04ade64310a8fd41986985d0d"
+}

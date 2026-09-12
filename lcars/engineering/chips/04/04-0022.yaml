@@ -1,0 +1,56 @@
+# ◤ ISOLINEAR CHIP — AGENT SKILLS & TACTICAL DIRECTIVES BANK
+# Опис: Банк знань, інструкцій та навичок агента LCARS
+# Призначення: Зберігання специфікацій скілів (.md), тригерів та оперативних протоколів
+# Категорія: 04-0022 — Skills & Knowledge
+
+Metadata:
+  Id: 04-0022
+  Name: LCARS Agent Skills & Directives Bank
+  Version: 1.5.0
+  Faction: Federation
+  Type: SkillsCatalog
+  Status: nominal
+
+Specs:
+  Capacity: 2048
+  ColorCode: '#FFCC66'
+  SecurityLevel: 6
+  Priority: 3
+
+Entrypoints:
+  Loader: lcars.service.copilot:SkillLoader
+
+Config:
+  SkillsDirectory: lcars/skills
+  TriggerTypes:
+    - SlashCommands
+    - NaturalLanguageIntents
+    - TacticalDirectives
+
+Paths:
+  SkillsPath: lcars/skills
+  DatabaseFile: lcars/data/04/04-0022-agent-skills.db
+
+Interfaces:
+  - SkillRegistryAPI
+  - PromptTemplateAPI
+
+Boot:
+  Sequence:
+    - ScanMarkdownSkills
+    - IndexTriggers
+    - BuildSkillsCache
+  DefaultState: active
+
+Description: |
+  Банк ізолінійних навичок для LCARS Copilot.
+  Містить готові сценарії дій, інструкції для автоматизації коду,
+  рефакторингу, дизайну інтерфейсів та діагностики компонентів зорельота.
+
+Tags:
+  - ai
+  - skills
+  - directives
+  - templates
+  - PromptEngineering
+

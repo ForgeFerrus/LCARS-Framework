@@ -1,0 +1,105 @@
+QVAC DIAGNOSTIC TEST
+DATE: Fri Jul 24 2026 14:37:55 GMT+0300 (за східноєвропейським літнім часом)
+
+============================================================
+SYSTEM
+============================================================
+
+Node: v24.12.0
+Platform: win32
+Arch: x64
+
+
+============================================================
+SDK IMPORT
+============================================================
+OK
+Loaded @qvac/sdk
+
+============================================================
+SDK API
+============================================================
+OK
+
+Exports: 536
+
+startQVACProvider: true
+stopQVACProvider: true
+loadModel: true
+completion: true
+
+
+============================================================
+QVAC PROVIDER
+============================================================
+OK
+Started
+
+============================================================
+MODEL SELECT
+============================================================
+OK
+
+Name:
+GEMMA4_31B_MULTIMODAL_Q4_K_M
+
+Engine:
+llamacpp-completion
+
+Addon:
+llm
+
+ModelId:
+google_gemma-4-31B-it-Q4_K_M.gguf
+
+Source:
+undefined
+
+
+============================================================
+LOAD MODEL
+============================================================
+GEMMA4_31B_MULTIMODAL_Q4_K_M
+
+============================================================
+MODEL LOAD
+============================================================
+FAILED
+REQUEST_VALIDATION_FAILED: Invalid request:
+✖ Invalid modelId format
+  → at modelId
+✖ Invalid option: expected one of "whisper"|"whispercpp-transcription"
+  → at modelType
+✖ Invalid input: expected object, received undefined
+  → at modelConfig
+    at parseClientInput (file:///C:/Users/Forge/MyProject/LCARS-Framework/qvac-examples/node_modules/@qvac/sdk/dist/client/parse-input.js:10:19)
+    at runLoadModel (file:///C:/Users/Forge/MyProject/LCARS-Framework/qvac-examples/node_modules/@qvac/sdk/dist/client/api/load-model.js:77:11)
+    at Module.loadModel (file:///C:/Users/Forge/MyProject/LCARS-Framework/qvac-examples/node_modules/@qvac/sdk/dist/client/api/load-model.js:29:19)
+    at main (file:///C:/Users/Forge/MyProject/LCARS-Framework/qvac-examples/test.js:160:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+
+============================================================
+COMPLETION TEST
+============================================================
+OK
+{
+  "requestId": "6981b7c2-a967-4a2e-9f6c-4fd0bc7a4f2a",
+  "events": {},
+  "final": {},
+  "tokenStream": {},
+  "toolCallStream": {},
+  "text": {},
+  "stats": {},
+  "toolCalls": {}
+}
+
+============================================================
+STOP QVAC
+============================================================
+OK
+Clean shutdown
+
+============================================================
+FINISHED
+============================================================
+Diagnostic complete

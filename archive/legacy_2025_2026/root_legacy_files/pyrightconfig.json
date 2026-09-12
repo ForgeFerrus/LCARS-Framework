@@ -1,0 +1,8 @@
+{
+  "typeCheckingMode": "basic",
+  "reportMissingImports": false,
+  "reportOptionalMemberAccess": false,
+  "reportUndefinedVariable": false,
+  "reportMissingModuleSource": false,
+  "exclude": ["tools/**", "tests/**", "build/**", "lcars/bin/**"]
+}

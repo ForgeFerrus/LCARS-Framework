@@ -1,0 +1,18 @@
+Metadata:
+  Id: 06-0006
+  Name: Universal Translator English Linguistics Matrix
+  Category: '06'
+  Version: 5.0.0
+  Faction: Federation
+  Type: comm
+  Status: nominal
+Specs:
+  Capacity: 8192
+  ColorCode: '#3399FF'
+  SecurityLevel: 4
+  Bus: ODN-06
+Paths:
+  DatabaseFile: lcars/data/06/06-0006-english.db
+Entrypoints:
+  Main: lcars.modules.language:UniversalTranslator
+Description: Лінгвістична матриця англійської мови універсального перекладача.

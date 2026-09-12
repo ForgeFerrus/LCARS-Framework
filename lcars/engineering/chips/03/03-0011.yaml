@@ -1,0 +1,57 @@
+# ◤ ISOLINEAR CHIP — FEDERATION DIRECTIVES & PLANETARY ALMANAC DB
+# Опис: Енциклопедія Об'єднаної Федерації Планет, Генеральні Директиви та Зоряний Альманах
+# Призначення: Юридична база (Головна Директива, Омега-директива), світи Федерації, астрографічні координати
+# Категорія: 03-0011 — Federation Knowledge Base
+
+Metadata:
+  Id: 03-0011
+  Name: United Federation of Planets Directives & Planetary Almanac
+  Version: 24.1.0
+  Faction: Federation
+  Type: database
+  Status: critical
+
+Specs:
+  Capacity: 4096
+  ColorCode: '#3399CC'
+  SecurityLevel: 9
+  Priority: 1
+
+Entrypoints:
+  Library: lcars.modules.library:IsolinearBank
+
+Config:
+  TableNames:
+    - GeneralOrders
+    - FederationDirectives
+    - MemberWorlds
+    - SubspaceRelays
+  PrimaryLaw: Prime Directive (General Order 1)
+
+Paths:
+  DatabaseFile: lcars/data/03/03-0011-federation-directives.db
+
+Interfaces:
+  - FederationDirectivesAPI
+  - PlanetAlmanacAPI
+
+Boot:
+  Sequence:
+    - LockPrimeDirective
+    - LoadGeneralOrders
+    - CacheMemberWorlds
+  DefaultState: active
+
+Description: |
+  Фундаментальний правовий та енциклопедичний банк даних Федерації.
+  Включає Головну Директиву (General Order 1), Директиву Омега,
+  положення Кодексу Зоряного Флоту та відомості про ключові світи-засновники:
+  Землю, Вулкан, Андорію, Теллар та Баджор.
+
+Tags:
+  - database
+  - federation
+  - PrimeDirective
+  - GeneralOrders
+  - planets
+

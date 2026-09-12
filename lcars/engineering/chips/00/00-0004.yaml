@@ -1,0 +1,19 @@
+Metadata:
+  Id: 00-0004
+  Name: ODN Black Box Flight & Bus Recorder
+  Category: '00'
+  Version: 5.0.0
+  Faction: Federation
+  Type: system
+  Status: nominal
+Specs:
+  Capacity: 8192
+  ColorCode: '#FF9900'
+  SecurityLevel: 9
+  Bus: ODN-00
+Paths:
+  DatabaseFile: lcars/data/00/00-0004-odn-black-box.db
+Entrypoints:
+  Main: lcars.engineering.isolinear:BlackBox
+Description: Чорна скринька та незмінний журнал трансляцій сигналів і подій оптичної
+  шини ODN.

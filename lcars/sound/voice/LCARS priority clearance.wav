@@ -1,0 +1,1851 @@
+
+# define COMPILER_VERSION_MAJOR HEX(__CODEGEARC_VERSION__>>24 & 0x00FF)
+# define COMPILER_VERSION_MINOR HEX(__CODEGEARC_VERSION__>>16 & 0x00FF)
+# define COMPILER_VERSION_PATCH DEC(__CODEGEARC_VERSION__     & 0xFFFF)
+
+#elif defined(__BORLANDC__)
+# define COMPILER_ID "Borland"
+  /* __BORLANDC__ = 0xVRR */
+# define COMPILER_VERSION_MAJOR HEX(__BORLANDC__>>8)
+# define COMPILER_VERSION_MINOR HEX(__BORLANDC__ & 0xFF)
+
+#elif defined(__WATCOMC__) && __WATCOMC__ < 1200
+# define COMPILER_ID "Watcom"
+   /* __WATCOMC__ = VVRR */
+# define COMPILER_VERSION_MAJOR DEC(__WATCOMC__ / 100)
+# define COMPILER_VERSION_MINOR DEC((__WATCOMC__ / 10) % 10)
+# if (__WATCOMC__ % 10) > 0
+#  define COMPILER_VERSION_PATCH DEC(__WATCOMC__ % 10)
+# endif
+
+#elif defined(__WATCOMC__)
+# define COMPILER_ID "OpenWatcom"
+   /* __WATCOMC__ = VVRP + 1100 */
+# define COMPILER_VERSION_MAJOR DEC((__WATCOMC__ - 1100) / 100)
+# define COMPILER_VERSION_MINOR DEC((__WATCOMC__ / 10) % 10)
+# if (__WATCOMC__ % 10) > 0
+#  define COMPILER_VERSION_PATCH DEC(__WATCOMC__ % 10)
+# endif
+
+#elif defined(__SUNPRO_C)
+# define COMPILER_ID "SunPro"
+# if __SUNPRO_C >= 0x5100
+   /* __SUNPRO_C = 0xVRRP */
+#  define COMPILER_VERSION_MAJOR HEX(__SUNPRO_C>>12)
+#  define COMPILER_VERSION_MINOR HEX(__SUNPRO_C>>4 & 0xFF)
+#  define COMPILER_VERSION_PATCH HEX(__SUNPRO_C    & 0xF)
+# else
+   /* __SUNPRO_CC = 0xVRP */
+#  define COMPILER_VERSION_MAJOR HEX(__SUNPRO_C>>8)
+#  define COMPILER_VERSION_MINOR HEX(__SUNPRO_C>>4 & 0xF)
+#  define COMPILER_VERSION_PATCH HEX(__SUNPRO_C    & 0xF)
+# endif
+
+#elif defined(__HP_cc)
+# define COMPILER_ID "HP"
+  /* __HP_cc = VVRRPP */
+# define COMPILER_VERSION_MAJOR DEC(__HP_cc/10000)
+# define COMPILER_VERSION_MINOR DEC(__HP_cc/100 % 100)
+# define COMPILER_VERSION_PATCH DEC(__HP_cc     % 100)
+
+#elif defined(__DECC)
+# define COMPILER_ID "Compaq"
+  /* __DECC_VER = VVRRTPPPP */
+# define COMPILER_VERSION_MAJOR DEC(__DECC_VER/10000000)
+# define COMPILER_VERSION_MINOR DEC(__DECC_VER/100000  % 100)
+# define COMPILER_VERSION_PATCH DEC(__DECC_VER         % 10000)
+
+#elif defined(__IBMC__) && defined(__COMPILER_VER__)
+# define COMPILER_ID "zOS"
+  /* __IBMC__ = VRP */
+# define COMPILER_VERSION_MAJOR DEC(__IBMC__/100)
+# define COMPILER_VERSION_MINOR DEC(__IBMC__/10 % 10)
+# define COMPILER_VERSION_PATCH DEC(__IBMC__    % 10)
+
+#elif defined(__open_xl__) && defined(__clang__)
+# define COMPILER_ID "IBMClang"
+# define COMPILER_VERSION_MAJOR DEC(__open_xl_version__)
+# define COMPILER_VERSION_MINOR DEC(__open_xl_release__)
+# define COMPILER_VERSION_PATCH DEC(__open_xl_modification__)
+# define COMPILER_VERSION_TWEAK DEC(__open_xl_ptf_fix_level__)
+
+
+#elif defined(__ibmxl__) && defined(__clang__)
+# define COMPILER_ID "XLClang"
+# define COMPILER_VERSION_MAJOR DEC(__ibmxl_version__)
+# define COMPILER_VERSION_MINOR DEC(__ibmxl_release__)
+# define COMPILER_VERSION_PATCH DEC(__ibmxl_modification__)
+# define COMPILER_VERSION_TWEAK DEC(__ibmxl_ptf_fix_level__)
+
+
+#elif defined(__IBMC__) && !defined(__COMPILER_VER__) && __IBMC__ >= 800
+# define COMPILER_ID "XL"
+  /* __IBMC__ = VRP */
+# define COMPILER_VERSION_MAJOR DEC(__IBMC__/100)
+# define COMPILER_VERSION_MINOR DEC(__IBMC__/10 % 10)
+# define COMPILER_VERSION_PATCH DEC(__IBMC__    % 10)
+
+#elif defined(__IBMC__) && !defined(__COMPILER_VER__) && __IBMC__ < 800
+# define COMPILER_ID "VisualAge"
+  /* __IBMC__ = VRP */
+# define COMPILER_VERSION_MAJOR DEC(__IBMC__/100)
+# define COMPILER_VERSION_MINOR DEC(__IBMC__/10 % 10)
+# define COMPILER_VERSION_PATCH DEC(__IBMC__    % 10)
+
+#elif defined(__NVCOMPILER)
+# define COMPILER_ID "NVHPC"
+# define COMPILER_VERSION_MAJOR DEC(__NVCOMPILER_MAJOR__)
+# define COMPILER_VERSION_MINOR DEC(__NVCOMPILER_MINOR__)
+# if defined(__NVCOMPILER_PATCHLEVEL__)
+#  define COMPILER_VERSION_PATCH DEC(__NVCOMPILER_PATCHLEVEL__)
+# endif
+
+#elif defined(__PGI)
+# define COMPILER_ID "PGI"
+# define COMPILER_VERSION_MAJOR DEC(__PGIC__)
+# define COMPILER_VERSION_MINOR DEC(__PGIC_MINOR__)
+# if defined(__PGIC_PATCHLEVEL__)
+#  define COMPILER_VERSION_PATCH DEC(__PGIC_PATCHLEVEL__)
+# endif
+
+#elif defined(_CRAYC)
+# define COMPILER_ID "Cray"
+# define COMPILER_VERSION_MAJOR DEC(_RELEASE_MAJOR)
+# define COMPILER_VERSION_MINOR DEC(_RELEASE_MINOR)
+
+#elif defined(__TI_COMPILER_VERSION__)
+# define COMPILER_ID "TI"
+  /* __TI_COMPILER_VERSION__ = VVVRRRPPP */
+# define COMPILER_VERSION_MAJOR DEC(__TI_COMPILER_VERSION__/1000000)
+# define COMPILER_VERSION_MINOR DEC(__TI_COMPILER_VERSION__/1000   % 1000)
+# define COMPILER_VERSION_PATCH DEC(__TI_COMPILER_VERSION__        % 1000)
+
+#elif defined(__CLANG_FUJITSU)
+# define COMPILER_ID "FujitsuClang"
+# define COMPILER_VERSION_MAJOR DEC(__FCC_major__)
+# define COMPILER_VERSION_MINOR DEC(__FCC_minor__)
+# define COMPILER_VERSION_PATCH DEC(__FCC_patchlevel__)
+# define COMPILER_VERSION_INTERNAL_STR __clang_version__
+
+
+#elif defined(__FUJITSU)
+# define COMPILER_ID "Fujitsu"
+# if defined(__FCC_version__)
+#   define COMPILER_VERSION __FCC_version__
+# elif defined(__FCC_major__)
+#   define COMPILER_VERSION_MAJOR DEC(__FCC_major__)
+#   define COMPILER_VERSION_MINOR DEC(__FCC_minor__)
+#   define COMPILER_VERSION_PATCH DEC(__FCC_patchlevel__)
+# endif
+# if defined(__fcc_version)
+#   define COMPILER_VERSION_INTERNAL DEC(__fcc_version)
+# elif defined(__FCC_VERSION)
+#   define COMPILER_VERSION_INTERNAL DEC(__FCC_VERSION)
+# endif
+
+
+#elif defined(__ghs__)
+# define COMPILER_ID "GHS"
+/* __GHS_VERSION_NUMBER = VVVVRP */
+# ifdef __GHS_VERSION_NUMBER
+# define COMPILER_VERSION_MAJOR DEC(__GHS_VERSION_NUMBER / 100)
+# define COMPILER_VERSION_MINOR DEC(__GHS_VERSION_NUMBER / 10 % 10)
+# define COMPILER_VERSION_PATCH DEC(__GHS_VERSION_NUMBER      % 10)
+# endif
+
+#elif defined(__TASKING__)
+# define COMPILER_ID "Tasking"
+  # define COMPILER_VERSION_MAJOR DEC(__VERSION__/1000)
+  # define COMPILER_VERSION_MINOR DEC(__VERSION__ % 100)
+# define COMPILER_VERSION_INTERNAL DEC(__VERSION__)
+
+#elif defined(__TINYC__)
+# define COMPILER_ID "TinyCC"
+
+#elif defined(__BCC__)
+# define COMPILER_ID "Bruce"
+
+#elif defined(__SCO_VERSION__)
+# define COMPILER_ID "SCO"
+
+#elif defined(__ARMCC_VERSION) && !defined(__clang__)
+# define COMPILER_ID "ARMCC"
+#if __ARMCC_VERSION >= 1000000
+  /* __ARMCC_VERSION = VRRPPPP */
+  # define COMPILER_VERSION_MAJOR DEC(__ARMCC_VERSION/1000000)
+  # define COMPILER_VERSION_MINOR DEC(__ARMCC_VERSION/10000 % 100)
+  # define COMPILER_VERSION_PATCH DEC(__ARMCC_VERSION     % 10000)
+#else
+  /* __ARMCC_VERSION = VRPPPP */
+  # define COMPILER_VERSION_MAJOR DEC(__ARMCC_VERSION/100000)
+  # define COMPILER_VERSION_MINOR DEC(__ARMCC_VERSION/10000 % 10)
+  # define COMPILER_VERSION_PATCH DEC(__ARMCC_VERSION    % 10000)
+#endif
+
+
+#elif defined(__clang__) && defined(__apple_build_version__)
+# define COMPILER_ID "AppleClang"
+# if defined(_MSC_VER)
+#  define SIMULATE_ID "MSVC"
+# endif
+# define COMPILER_VERSION_MAJOR DEC(__clang_major__)
+# define COMPILER_VERSION_MINOR DEC(__clang_minor__)
+# define COMPILER_VERSION_PATCH DEC(__clang_patchlevel__)
+# if defined(_MSC_VER)
+   /* _MSC_VER = VVRR */
+#  define SIMULATE_VERSION_MAJOR DEC(_MSC_VER / 100)
+#  define SIMULATE_VERSION_MINOR DEC(_MSC_VER % 100)
+# endif
+# define COMPILER_VERSION_TWEAK DEC(__apple_build_version__)
+
+#elif defined(__clang__) && defined(__ARMCOMPILER_VERSION)
+# define COMPILER_ID "ARMClang"
+  # define COMPILER_VERSION_MAJOR DEC(__ARMCOMPILER_VERSION/1000000)
+  # define COMPILER_VERSION_MINOR DEC(__ARMCOMPILER_VERSION/10000 % 100)
+  # define COMPILER_VERSION_PATCH DEC(__ARMCOMPILER_VERSION/100   % 100)
+# define COMPILER_VERSION_INTERNAL DEC(__ARMCOMPILER_VERSION)
+
+#elif defined(__clang__)
+# define COMPILER_ID "Clang"
+# if defined(_MSC_VER)
+#  define SIMULATE_ID "MSVC"
+# endif
+# define COMPILER_VERSION_MAJOR DEC(__clang_major__)
+# define COMPILER_VERSION_MINOR DEC(__clang_minor__)
+# define COMPILER_VERSION_PATCH DEC(__clang_patchlevel__)
+# if defined(_MSC_VER)
+   /* _MSC_VER = VVRR */
+#  define SIMULATE_VERSION_MAJOR DEC(_MSC_VER / 100)
+#  define SIMULATE_VERSION_MINOR DEC(_MSC_VER % 100)
+# endif
+
+#elif defined(__LCC__) && (defined(__GNUC__) || defined(__GNUG__) || defined(__MCST__))
+# define COMPILER_ID "LCC"
+# define COMPILER_VERSION_MAJOR DEC(__LCC__ / 100)
+# define COMPILER_VERSION_MINOR DEC(__LCC__ % 100)
+# if defined(__LCC_MINOR__)
+#  define COMPILER_VERSION_PATCH DEC(__LCC_MINOR__)
+# endif
+# if defined(__GNUC__) && defined(__GNUC_MINOR__)
+#  define SIMULATE_ID "GNU"
+#  define SIMULATE_VERSION_MAJOR DEC(__GNUC__)
+#  define SIMULATE_VERSION_MINOR DEC(__GNUC_MINOR__)
+#  if defined(__GNUC_PATCHLEVEL__)
+#   define SIMULATE_VERSION_PATCH DEC(__GNUC_PATCHLEVEL__)
+#  endif
+# endif
+
+#elif defined(__GNUC__)
+# define COMPILER_ID "GNU"
+# define COMPILER_VERSION_MAJOR DEC(__GNUC__)
+# if defined(__GNUC_MINOR__)
+#  define COMPILER_VERSION_MINOR DEC(__GNUC_MINOR__)
+# endif
+# if defined(__GNUC_PATCHLEVEL__)
+#  define COMPILER_VERSION_PATCH DEC(__GNUC_PATCHLEVEL__)
+# endif
+
+#elif defined(_MSC_VER)
+# define COMPILER_ID "MSVC"
+  /* _MSC_VER = VVRR */
+# define COMPILER_VERSION_MAJOR DEC(_MSC_VER / 100)
+# define COMPILER_VERSION_MINOR DEC(_MSC_VER % 100)
+# if defined(_MSC_FULL_VER)
+#  if _MSC_VER >= 1400
+    /* _MSC_FULL_VER = VVRRPPPPP */
+#   define COMPILER_VERSION_PATCH DEC(_MSC_FULL_VER % 100000)
+#  else
+    /* _MSC_FULL_VER = VVRRPPPP */
+#   define COMPILER_VERSION_PATCH DEC(_MSC_FULL_VER % 10000)
+#  endif
+# endif
+# if defined(_MSC_BUILD)
+#  define COMPILER_VERSION_TWEAK DEC(_MSC_BUILD)
+# endif
+
+#elif defined(_ADI_COMPILER)
+# define COMPILER_ID "ADSP"
+#if defined(__VERSIONNUM__)
+  /* __VERSIONNUM__ = 0xVVRRPPTT */
+#  define COMPILER_VERSION_MAJOR DEC(__VERSIONNUM__ >> 24 & 0xFF)
+#  define COMPILER_VERSION_MINOR DEC(__VERSIONNUM__ >> 16 & 0xFF)
+#  define COMPILER_VERSION_PATCH DEC(__VERSIONNUM__ >> 8 & 0xFF)
+#  define COMPILER_VERSION_TWEAK DEC(__VERSIONNUM__ & 0xFF)
+#endif
+
+#elif defined(__IAR_SYSTEMS_ICC__) || defined(__IAR_SYSTEMS_ICC)
+# define COMPILER_ID "IAR"
+# if defined(__VER__) && defined(__ICCARM__)
+#  define COMPILER_VERSION_MAJOR DEC((__VER__) / 1000000)
+#  define COMPILER_VERSION_MINOR DEC(((__VER__) / 1000) % 1000)
+#  define COMPILER_VERSION_PATCH DEC((__VER__) % 1000)
+#  define COMPILER_VERSION_INTERNAL DEC(__IAR_SYSTEMS_ICC__)
+# elif defined(__VER__) && (defined(__ICCAVR__) || defined(__ICCRX__) || defined(__ICCRH850__) || defined(__ICCRL78__) || defined(__ICC430__) || defined(__ICCRISCV__) || defined(__ICCV850__) || defined(__ICC8051__) || defined(__ICCSTM8__))
+#  define COMPILER_VERSION_MAJOR DEC((__VER__) / 100)
+#  define COMPILER_VERSION_MINOR DEC((__VER__) - (((__VER__) / 100)*100))
+#  define COMPILER_VERSION_PATCH DEC(__SUBVERSION__)
+#  define COMPILER_VERSION_INTERNAL DEC(__IAR_SYSTEMS_ICC__)
+# endif
+
+#elif defined(__SDCC_VERSION_MAJOR) || defined(SDCC)
+# define COMPILER_ID "SDCC"
+# if defined(__SDCC_VERSION_MAJOR)
+#  define COMPILER_VERSION_MAJOR DEC(__SDCC_VERSION_MAJOR)
+#  define COMPILER_VERSION_MINOR DEC(__SDCC_VERSION_MINOR)
+#  define COMPILER_VERSION_PATCH DEC(__SDCC_VERSION_PATCH)
+# else
+  /* SDCC = VRP */
+#  define COMPILER_VERSION_MAJOR DEC(SDCC/100)
+#  define COMPILER_VERSION_MINOR DEC(SDCC/10 % 10)
+#  define COMPILER_VERSION_PATCH DEC(SDCC    % 10)
+# endif
+
+
+/* These compilers are either not known or too old to define an
+  identification macro.  Try to identify the platform and guess that
+  it is the native compiler.  */
+#elif defined(__hpux) || defined(__hpua)
+# define COMPILER_ID "HP"
+
+#else /* unknown compiler */
+# define COMPILER_ID ""
+#endif
+
+/* Construct the string literal in pieces to prevent the source from
+   getting matched.  Store it in a pointer rather than an array
+   because some compilers will just produce instructions to fill the
+   array rather than assigning a pointer to a static array.  */
+char const* info_compiler = "INFO" ":" "compiler[" COMPILER_ID "]";
+#ifdef SIMULATE_ID
+char const* info_simulate = "INFO" ":" "simulate[" SIMULATE_ID "]";
+#endif
+
+#ifdef __QNXNTO__
+char const* qnxnto = "INFO" ":" "qnxnto[]";
+#endif
+
+#if defined(__CRAYXT_COMPUTE_LINUX_TARGET)
+char const *info_cray = "INFO" ":" "compiler_wrapper[CrayPrgEnv]";
+#endif
+
+#define STRINGIFY_HELPER(X) #X
+#define STRINGIFY(X) STRINGIFY_HELPER(X)
+
+/* Identify known platforms by name.  */
+#if defined(__linux) || defined(__linux__) || defined(linux)
+# define PLATFORM_ID "Linux"
+
+#elif defined(__MSYS__)
+# define PLATFORM_ID "MSYS"
+
+#elif defined(__CYGWIN__)
+# define PLATFORM_ID "Cygwin"
+
+#elif defined(__MINGW32__)
+# define PLATFORM_ID "MinGW"
+
+#elif defined(__APPLE__)
+# define PLATFORM_ID "Darwin"
+
+#elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+# define PLATFORM_ID "Windows"
+
+#elif defined(__FreeBSD__) || defined(__FreeBSD)
+# define PLATFORM_ID "FreeBSD"
+
+#elif defined(__NetBSD__) || defined(__NetBSD)
+# define PLATFORM_ID "NetBSD"
+
+#elif defined(__OpenBSD__) || defined(__OPENBSD)
+# define PLATFORM_ID "OpenBSD"
+
+#elif defined(__sun) || defined(sun)
+# define PLATFORM_ID "SunOS"
+
+#elif defined(_AIX) || defined(__AIX) || defined(__AIX__) || defined(__aix) || defined(__aix__)
+# define PLATFORM_ID "AIX"
+
+#elif defined(__hpux) || defined(__hpux__)
+# define PLATFORM_ID "HP-UX"
+
+#elif defined(__HAIKU__)
+# define PLATFORM_ID "Haiku"
+
+#elif defined(__BeOS) || defined(__BEOS__) || defined(_BEOS)
+# define PLATFORM_ID "BeOS"
+
+#elif defined(__QNX__) || defined(__QNXNTO__)
+# define PLATFORM_ID "QNX"
+
+#elif defined(__tru64) || defined(_tru64) || defined(__TRU64__)
+# define PLATFORM_ID "Tru64"
+
+#elif defined(__riscos) || defined(__riscos__)
+# define PLATFORM_ID "RISCos"
+
+#elif defined(__sinix) || defined(__sinix__) || defined(__SINIX__)
+# define PLATFORM_ID "SINIX"
+
+#elif defined(__UNIX_SV__)
+# define PLATFORM_ID "UNIX_SV"
+
+#elif defined(__bsdos__)
+# define PLATFORM_ID "BSDOS"
+
+#elif defined(_MPRAS) || defined(MPRAS)
+# define PLATFORM_ID "MP-RAS"
+
+#elif defined(__osf) || defined(__osf__)
+# define PLATFORM_ID "OSF1"
+
+#elif defined(_SCO_SV) || defined(SCO_SV) || defined(sco_sv)
+# define PLATFORM_ID "SCO_SV"
+
+#elif defined(__ultrix) || defined(__ultrix__) || defined(_ULTRIX)
+# define PLATFORM_ID "ULTRIX"
+
+#elif defined(__XENIX__) || defined(_XENIX) || defined(XENIX)
+# define PLATFORM_ID "Xenix"
+
+#elif defined(__WATCOMC__)
+# if defined(__LINUX__)
+#  define PLATFORM_ID "Linux"
+
+# elif defined(__DOS__)
+#  define PLATFORM_ID "DOS"
+
+# elif defined(__OS2__)
+#  define PLATFORM_ID "OS2"
+
+# elif defined(__WINDOWS__)
+#  define PLATFORM_ID "Windows3x"
+
+# elif defined(__VXWORKS__)
+#  define PLATFORM_ID "VxWorks"
+
+# else /* unknown platform */
+#  define PLATFORM_ID
+# endif
+
+#elif defined(__INTEGRITY)
+# if defined(INT_178B)
+#  define PLATFORM_ID "Integrity178"
+
+# else /* regular Integrity */
+#  define PLATFORM_ID "Integrity"
+# endif
+
+# elif defined(_ADI_COMPILER)
+#  define PLATFORM_ID "ADSP"
+
+#else /* unknown platform */
+# define PLATFORM_ID
+
+#endif
+
+/* For windows compilers MSVC and Intel we can determine
+   the architecture of the compiler being used.  This is because
+   the compilers do not have flags that can change the architecture,
+   but rather depend on which compiler is being used
+*/
+#if defined(_WIN32) && defined(_MSC_VER)
+# if defined(_M_IA64)
+#  define ARCHITECTURE_ID "IA64"
+
+# elif defined(_M_ARM64EC)
+#  define ARCHITECTURE_ID "ARM64EC"
+
+# elif defined(_M_X64) || defined(_M_AMD64)
+#  define ARCHITECTURE_ID "x64"
+
+# elif defined(_M_IX86)
+#  define ARCHITECTURE_ID "X86"
+
+# elif defined(_M_ARM64)
+#  define ARCHITECTURE_ID "ARM64"
+
+# elif defined(_M_ARM)
+#  if _M_ARM == 4
+#   define ARCHITECTURE_ID "ARMV4I"
+#  elif _M_ARM == 5
+#   define ARCHITECTURE_ID "ARMV5I"
+#  else
+#   define ARCHITECTURE_ID "ARMV" STRINGIFY(_M_ARM)
+#  endif
+
+# elif defined(_M_MIPS)
+#  define ARCHITECTURE_ID "MIPS"
+
+# elif defined(_M_SH)
+#  define ARCHITECTURE_ID "SHx"
+
+# else /* unknown architecture */
+#  define ARCHITECTURE_ID ""
+# endif
+
+#elif defined(__WATCOMC__)
+# if defined(_M_I86)
+#  define ARCHITECTURE_ID "I86"
+
+# elif defined(_M_IX86)
+#  define ARCHITECTURE_ID "X86"
+
+# else /* unknown architecture */
+#  define ARCHITECTURE_ID ""
+# endif
+
+#elif defined(__IAR_SYSTEMS_ICC__) || defined(__IAR_SYSTEMS_ICC)
+# if defined(__ICCARM__)
+#  define ARCHITECTURE_ID "ARM"
+
+# elif defined(__ICCRX__)
+#  define ARCHITECTURE_ID "RX"
+
+# elif defined(__ICCRH850__)
+#  define ARCHITECTURE_ID "RH850"
+
+# elif defined(__ICCRL78__)
+#  define ARCHITECTURE_ID "RL78"
+
+# elif defined(__ICCRISCV__)
+#  define ARCHITECTURE_ID "RISCV"
+
+# elif defined(__ICCAVR__)
+#  define ARCHITECTURE_ID "AVR"
+
+# elif defined(__ICC430__)
+#  define ARCHITECTURE_ID "MSP430"
+
+# elif defined(__ICCV850__)
+#  define ARCHITECTURE_ID "V850"
+
+# elif defined(__ICC8051__)
+#  define ARCHITECTURE_ID "8051"
+
+# elif defined(__ICCSTM8__)
+#  define ARCHITECTURE_ID "STM8"
+
+# else /* unknown architecture */
+#  define ARCHITECTURE_ID ""
+# endif
+
+#elif defined(__ghs__)
+# if defined(__PPC64__)
+#  define ARCHITECTURE_ID "PPC64"
+
+# elif defined(__ppc__)
+#  define ARCHITECTURE_ID "PPC"
+
+# elif defined(__ARM__)
+#  define ARCHITECTURE_ID "ARM"
+
+# elif defined(__x86_64__)
+#  define ARCHITECTURE_ID "x64"
+
+# elif defined(__i386__)
+#  define ARCHITECTURE_ID "X86"
+
+# else /* unknown architecture */
+#  define ARCHITECTURE_ID ""
+# endif
+
+#elif defined(__TI_COMPILER_VERSION__)
+# if defined(__TI_ARM__)
+#  define ARCHITECTURE_ID "ARM"
+
+# elif defined(__MSP430__)
+#  define ARCHITECTURE_ID "MSP430"
+
+# elif defined(__TMS320C28XX__)
+#  define ARCHITECTURE_ID "TMS320C28x"
+
+# elif defined(__TMS320C6X__) || defined(_TMS320C6X)
+#  define ARCHITECTURE_ID "TMS320C6x"
+
+# else /* unknown architecture */
+#  define ARCHITECTURE_ID ""
+# endif
+
+# elif defined(__ADSPSHARC__)
+#  define ARCHITECTURE_ID "SHARC"
+
+# elif defined(__ADSPBLACKFIN__)
+#  define ARCHITECTURE_ID "Blackfin"
+
+#elif defined(__TASKING__)
+
+# if defined(__CTC__) || defined(__CPTC__)
+#  define ARCHITECTURE_ID "TriCore"
+
+# elif defined(__CMCS__)
+#  define ARCHITECTURE_ID "MCS"
+
+# elif defined(__CARM__)
+#  define ARCHITECTURE_ID "ARM"
+
+# elif defined(__CARC__)
+#  define ARCHITECTURE_ID "ARC"
+
+# elif defined(__C51__)
+#  define ARCHITECTURE_ID "8051"
+
+# elif defined(__CPCP__)
+#  define ARCHITECTURE_ID "PCP"
+
+# else
+#  define ARCHITECTURE_ID ""
+# endif
+
+#else
+#  define ARCHITECTURE_ID
+#endif
+
+/* Convert integer to decimal digit literals.  */
+#define DEC(n)                   \
+  ('0' + (((n) / 10000000)%10)), \
+  ('0' + (((n) / 1000000)%10)),  \
+  ('0' + (((n) / 100000)%10)),   \
+  ('0' + (((n) / 10000)%10)),    \
+  ('0' + (((n) / 1000)%10)),     \
+  ('0' + (((n) / 100)%10)),      \
+  ('0' + (((n) / 10)%10)),       \
+  ('0' +  ((n) % 10))
+
+/* Convert integer to hex digit literals.  */
+#define HEX(n)             \
+  ('0' + ((n)>>28 & 0xF)), \
+  ('0' + ((n)>>24 & 0xF)), \
+  ('0' + ((n)>>20 & 0xF)), \
+  ('0' + ((n)>>16 & 0xF)), \
+  ('0' + ((n)>>12 & 0xF)), \
+  ('0' + ((n)>>8  & 0xF)), \
+  ('0' + ((n)>>4  & 0xF)), \
+  ('0' + ((n)     & 0xF))
+
+/* Construct a string literal encoding the version number. */
+#ifdef COMPILER_VERSION
+char const* info_version = "INFO" ":" "compiler_version[" COMPILER_VERSION "]";
+
+/* Construct a string literal encoding the version number components. */
+#elif defined(COMPILER_VERSION_MAJOR)
+char const info_version[] = {
+  'I', 'N', 'F', 'O', ':',
+  'c','o','m','p','i','l','e','r','_','v','e','r','s','i','o','n','[',
+  COMPILER_VERSION_MAJOR,
+# ifdef COMPILER_VERSION_MINOR
+  '.', COMPILER_VERSION_MINOR,
+#  ifdef COMPILER_VERSION_PATCH
+   '.', COMPILER_VERSION_PATCH,
+#   ifdef COMPILER_VERSION_TWEAK
+    '.', COMPILER_VERSION_TWEAK,
+#   endif
+#  endif
+# endif
+  ']','\0'};
+#endif
+
+/* Construct a string literal encoding the internal version number. */
+#ifdef COMPILER_VERSION_INTERNAL
+char const info_version_internal[] = {
+  'I', 'N', 'F', 'O', ':',
+  'c','o','m','p','i','l','e','r','_','v','e','r','s','i','o','n','_',
+  'i','n','t','e','r','n','a','l','[',
+  COMPILER_VERSION_INTERNAL,']','\0'};
+#elif defined(COMPILER_VERSION_INTERNAL_STR)
+char const* info_version_internal = "INFO" ":" "compiler_version_internal[" COMPILER_VERSION_INTERNAL_STR "]";
+#endif
+
+/* Construct a string literal encoding the version number components. */
+#ifdef SIMULATE_VERSION_MAJOR
+char const info_simulate_version[] = {
+  'I', 'N', 'F', 'O', ':',
+  's','i','m','u','l','a','t','e','_','v','e','r','s','i','o','n','[',
+  SIMULATE_VERSION_MAJOR,
+# ifdef SIMULATE_VERSION_MINOR
+  '.', SIMULATE_VERSION_MINOR,
+#  ifdef SIMULATE_VERSION_PATCH
+   '.', SIMULATE_VERSION_PATCH,
+#   ifdef SIMULATE_VERSION_TWEAK
+    '.', SIMULATE_VERSION_TWEAK,
+#   endif
+#  endif
+# endif
+  ']','\0'};
+#endif
+
+/* Construct the string literal in pieces to prevent the so                                                                                                                                                                                                                                                                                                                                                                          itktlwnynxivhvkvkukyjygvhugreqeshvjukwmymwjtgqbqcvkyowlvlyo|q|rzq|q‚t„y‚z€|~}{||~~ƒƒ€‚€}~z~yx}vzwyzzz|{€|‚z€z€zy}x~x€wz|~yxƒy‚zz|z{|}}~}{x~y~y}z~}‚ƒ€††ƒ‚„~ˆ~ˆ}„‚‰„‡‘Œ”Š–‡•„“‚’•™‚„›‚–€•}—|š}™€•“€“~•|–|˜}˜}™~›€ƒ…›‚—~–}—z—z™}›‚›‚™ƒ›…š…™„™€”•~—}š}—}—~˜}˜™€˜}˜~™€—~–|•{—}˜}˜}˜}š|œ›š—~—~–{“y’wx’z’{’}}~‚Œ‰~Š~~’}’~’“˜ƒ—ƒ‘„†‘ƒ‚“•}‘}}’“{’yxŠt…p„q†r…q€p~qq€pr€s|rwrsrttyszqyqyqzszuzwyyuxpwmvmumtotnvl{i~ijhh€g~f}i~j|hk‚kgik~j|h|f{b{a}c}c{czdwcwcyc|b}^`€a€^}^x^v`}dƒh„i„g„c…b†eƒdi„l†l‡oŠoŠp‰p‰o‹qs‹qˆp‹qtŒsprvŒ|}}}|Š€ˆ‰‚‰ƒ‰…‹…Œ‹~Œ‹}‰€ˆ‚„…‡‡„‰‡Šˆ‰‡‡ƒˆ†„‚‡†Šˆ‰‡ˆ…ˆ†Š‰ŠŠŠ‹ŒŒŒŠ‹‰†“†“†’‡–ˆ™†˜ˆ™‰•ˆ‘†‡†ƒ‘…–‡˜†—„˜…˜‰—ˆ•†“„ƒ‚‘}~‚‘‚‘‚‚‹‚‰ˆ€†€…………„„…†‡†ˆƒˆƒˆ‚‡‡€‡‰€‰‰ƒ‰ŠŠŒ‰Š‰‰‰‡‰†ˆ„†…ƒ€„‚„~‚}…}‡y‰wv‹t‰u‡w„yƒv‚u…y†zˆ~Œ‚‡v}pxnzn~r„vˆwˆv…w‚vt}q~no‚t‡y…u€q~p{sywyvzw~vu‚v€u|uvuswuyx|y}|~}zyywttqupuptuuvsvuwtutrtqtrrqutwvvwxwyrvnwozoxpzs{w{yzw{v|sxowlwm}pp|p}s}rzmxlwiuiwmylxlwnypwoxqvotnwozp{tzuxtzs}q|mznyowqusuwwztxqxqwpxw{{„}„y…v‚w‚}…ˆŒ„Šƒ‰…‹ˆ‡„„‡‚Š‚Œ……‚Œ€‹‹}Š~‹}}–~™™€”~”}˜|—z™}ƒŸ†ŸˆŸ‰ …Ÿ‚Ÿ‚ †£ˆ¥‰¥‰£‰£‹¤‹£Š¤Š§†¨„©‡«‰¯‹­Œª¨‘¥’£‘£“¦–§–¥’¤”¢–“›“š’™“˜’˜‘šš—Œ”‹‘Šˆ‘ŠŠ‘Œ“‘Š‡…‰†‰ˆŠŠ‹‹‹‰‰‡‹ƒ€‚…‘…’„’’}“yrŒq’y˜x”qppŒnkfbe’k—m™h•_‘\’]”^“[V‘Z”\’[YRŠMŠN‘N‘MKˆJ‡M‹NMH‡D†EŒFHI‡H„GƒEE‚E…G‡H†J†K…J‡JˆI‡G‚F}F|J~MN{OvQuOrNmOlSnYr^t_q`o`naodqepfofqhqimioimhfifmfperfsisgqbsas_t`ya{b{c}c€b€c€c`€`aƒ`‡bˆd‰eŒeedc”i—k™j™h˜f—f™f™eœc b¤d¥f¦g§i¥m¤o¥l¥j§k«q¬u­t¬pªp¨q¦s§u©v«u­w®w¬vªx¨z§z§y¨zª€ª„¨„¥¡€›‚…Ÿ†¢… †Ÿ‡‡ˆ›‰šŠ›ˆœŠŸ ŸŒœ™–‹“Œ‘’‘Œ‡‡ˆ…‹‡ŒŠ‹ŒŠ‹Š‹‰ˆ…‡…‰†‹††‘ƒzˆx†v‡x‰x‹yŠw…t‚s†p…l‚nƒo„o…p…qƒpolm€on„rˆp„kk€g}d~e€i€knn€k|jxithrjrntrwu{vzvyv{szsytzs}t|t{t~r~q~rq{pyryuyuzvzuwsvsursvuxzz{{{{}{zyxwywyxyy{|~€€€€~~}~|€†ƒ†„…‚†…ƒƒƒƒ‚…„‡‚ˆˆ‚‰ˆ‚†ƒ†ƒˆƒŠ†ˆˆ‰‡„‹…Œ‰‰ŠŠ‰Š‘ˆ†‡Œ‡Œ„Œ…‰†‹‡‹ŠŒ‰Š†‹ˆˆ†’ˆ“‰ˆ‡‘‡‘‰Š‰’‘‘“’‹Š‰ˆ†‘‡‡ˆŒ†‡ƒƒƒƒ…ƒ……‰‡‹‡‹ˆ‹Œ‹‰Š‡‰Š…‡†ˆ‰‹ˆŒ‡Œ„ˆ†|…yƒ{ƒ}„}„€ƒ‚~‚}€|~{€z|~€€„€ƒ}‚zw‚xƒw‚wxƒx…w…v…x…v„t‚uƒt€t|v}vu€t|swtvvuutvvxxyyzyzwywyxwxwzyy{xz{z{yzwvurupspvrzszryoym{oypxrzszryoymxourtrvruqtqwrwsxtzuzuzu|t{u|t~t~x}u}ty~zx€s}l|m}su‚w†z…u‡u‰xˆxŠx‰xˆyŠyyy}Œ}Šy‰y‡~‡~†}ˆ|†{…y†{…|ƒ|ƒ…‚…‚ƒ}„y†|ƒ}‚}„ƒ„‡…‰‰ŠŠ‰ŒˆŠ†‰†ˆ„ˆ…‰†…„‹„‰„Œ„‚‹ƒ‡‡†‡†‰‡ŠŠ‹Œ‰‡ˆ†‰Œ‡‰‘‰”‡”‡’‡‰~|–y—y—z•z”x“tstr‹oˆpr“t’tpjˆiŠhe’gf‹hŠe‰iS|g ‰§v—q‹Vz]xCdc†`qd‡‰•„™§¬„ˆp|fn^o\iVg_mmx€ƒ•¤¡—ˆ†€|hkhkdcchzy†}Œ‹}Šy}o|suirjxgpcr‡t…u‡w€r|l{k|nyisevg|j€j‡qx“{•sn‘sˆm…o†pŠu’v•v›{™|–v…mŠsu‡s‰vu”u”uvzzŒwzu‹s‹u†zˆˆ{ˆy‡wŒ„{xw€u{wƒ‡‡~ŒŒ€‰…‚‚z~…€„ˆ„‹ƒŒŒ}Š€‹€~’|’”„˜„”}w‰n†pŠnˆrŠ|wˆu‡{‹w‹q‰m…h†i‡k†p‡v‹yŒt‰sˆt‹l‡g‡m…i}etevhvixn|r~z‚}„yu|pzjwdpeqjypqsqyu€mxfxm€l|nvsw|}{z~~‚~~yuprtvvy}zynvkxn|uƒ{Œ}|Œw‹vŒyŠt‚lŒr’q’o•uš|z–s™u˜ut”y“s‘o”n’l—w›|›||—s“s•r“r–w™všr™o—sy¤|¢|£{£zŸzœ{—xšzy›xŸx£{§¡~|{z¡|¡ušqŸw wŸ{ª‡¯ˆ£~~ ‚¡…¢…¡„ƒ—…—‡šœ‹—‡“†„Œ††‡€‚|z‡ƒ“Œ’Š„}u~„–™›œ”š’“‚u~ru„r‚fze€š’£ŸŠ›ŒŠ’‹}o„b}n†€”‡–w‹nŒx–si‰r•„¢‰¡€œ{›k‰^aŒh”hd†gu›v–gh‘n•kii‘i‘_…W‡af’e[‰b–oj–bb”h–bŒ[‰e’i‘dŠ`‹l–o“h‘j”q™q“`…R~MW…c‰b†`Šd^‡_ˆki‰c„b~_~g{"metadata":{"apiVersion":"2018-09-05","endpointPrefix":"sms-voice.pinpoint","signingName":"sms-voice","serviceAbbreviation":"Pinpoint SMS Voice","serviceFullName":"Amazon Pinpoint SMS and Voice Service","serviceId":"Pinpoint SMS Voice","protocol":"rest-json","jsonVersion":"1.1","uid":"pinpoint-sms-voice-2018-09-05","signatureVersion":"v4"},"operations":{"CreateConfigurationSet":{"name":"CreateConfigurationSet","http":{"method":"POST","requestUri":"\/v1\/sms-voice\/configuration-sets","responseCode":200},"input":{"shape":"CreateConfigurationSetRequest"},"output":{"shape":"CreateConfigurationSetResponse","documentation":"CreateConfigurationSetResponse"},"errors":[{"shape":"TooManyRequestsException","documentation":"TooManyRequestsException"},{"shape":"BadRequestException","documentation":"BadRequestException"},{"shape":"LimitExceededException","documentation":"LimitExceededException"},{"shape":"InternalServiceErrorException","documentation":"InternalServiceErrorException"},{"shape":"AlreadyExistsException","documentation":"AlreadyExistsException"}],"documentation":"Create a new configuration set. After you create the configuration set, you can add one or more event destinations to it."},"CreateConfigurationSetEventDestination":{"name":"CreateConfigurationSetEventDestination","http":{"method":"POST","requestUri":"\/v1\/sms-voice\/configuration-sets\/{ConfigurationSetName}\/event-destinations","responseCode":200},"input":{"shape":"CreateConfigurationSetEventDestinationRequest"},"output":{"shape":"CreateConfigurationSetEventDestinationResponse","documentation":"CreateConfigurationSetEventDestinationResponse"},"errors":[{"shape":"BadRequestException","documentation":"BadRequestException"},{"shape":"LimitExceededException","documentation":"LimitExceededException"},{"shape":"InternalServiceErrorException","documentation":"InternalServiceErrorException"},{"shape":"NotFoundException","documentation":"NotFoundException"},{"shape":"TooManyRequestsException","documentation":"TooManyRequestsException"},{"shape":"AlreadyExistsException","documentation":"AlreadyExistsException"}],"documentation":"Create a new event destination in a configuration set."},"DeleteConfigurationSet":{"name":"DeleteConfigurationSet","http":{"method":"DELETE","requestUri":"\/v1\/sms-voice\/configuration-sets\/{ConfigurationSetName}","responseCode":200},"input":{"shape":"DeleteConfigurationSetRequest"},"output":{"shape":"DeleteConfigurationSetResponse","documentation":"DeleteConfigurationSetResponse"},"errors":[{"shape":"NotFoundException","documentation":"NotFoundException"},{"shape":"TooManyRequestsException","documentation":"TooManyRequestsException"},{"shape":"BadRequestException","documentation":"BadRequestException"},{"shape":"InternalServiceErrorException","documentation":"InternalServiceErrorException"}],"documentation":"Deletes an existing configuration set."},"DeleteConfigurationSetEventDestination":{"name":"DeleteConfigurationSetEventDestination","http":{"method":"DELETE","requestUri":"\/v1\/sms-voice\/configuration-sets\/{ConfigurationSetName}\/event-destinations\/{EventDestinationName}","responseCode":200},"input":{"shape":"DeleteConfigurationSetEventDestinationRequest"},"output":{"shape":"DeleteConfigurationSetEventDestinationResponse","documentation":"DeleteConfigurationSetEventDestinationResponse"},"errors":[{"shape":"NotFoundException","documentation":"NotFoundException"},{"shape":"TooManyRequestsException","documentation":"TooManyRequestsException"},{"shape":"BadRequestException","documentation":"BadRequestException"},{"shape":"InternalServiceErrorException","documentation":"InternalServiceErrorException"}],"documentation":"Deletes an event destination in a configuration set."},"GetConfigurationSetEventDestinations":{"name":"GetConfigurationSetEventDestinations","http":{"method":"GET","requestUri":"\/v1\/sms-voice\/configuration-sets\/{ConfigurationSetName}\/event-destinations","responseCode":200},"input":{"shape":"GetConfigurationSetEventDestinationsRequest"},"output":{"shape":"GetConfigurationSetEventDestinationsResponse","documentation":"GetConfigurationSetEventDestinationsResponse"},"errors":[{"shape":"NotFoundException","documentation":"NotFoundException"},{"shape":"TooManyRequestsException","documentation":"TooManyRequestsException"},{"shape":"BadRequestException","documentation":"BadRequestException"},{"shape":"InternalServiceErrorException","documentation":"InternalServiceErrorException"}],"documentation":"Obtain information about an event destination, including the types of events it reports, the Amazon Resource Name (ARN) of the destination, and the name of the event destination."},"ListConfigurationSets":{"name":"ListConfigurationSets","http":{"method":"GET","requestUri":"\/v1\/sms-voice\/configuration-sets","responseCode":200},"input":{"shape":"ListConfigurationSetsRequest"},"output":{"shape":"ListConfigurationSetsResponse","documentation":"ListConfigurationSetsResponse"},"errors":[{"shape":"TooManyRequestsException","documentation":"TooManyRequestsException"},{"shape":"BadRequestException","documentation":"BadRequestException"},{"shape":"InternalServiceErrorException","documentation":"InternalServiceErrorException"}],"documentation":"List all of the configuration sets associated with your Amazon Pinpoint account in the current region."},"SendVoiceMessage":{"name":"SendVoiceMessage","http":{"method":"POST","requestUri":"\/v1\/sms-voice\/voice\/message","responseCode":200},"input":{"shape":"SendVoiceMessageRequest"},"output":{"shape":"SendVoiceMessageResponse","documentation":"SendVoiceMessageResponse"},"errors":[{"shape":"TooManyRequestsException","documentation":"TooManyRequestsException"},{"shape":"BadRequestException","documentation":"BadRequestException"},{"shape":"InternalServiceErrorException","documentation":"InternalServiceErrorException"}],"documentation":"Create a new voice message and send it to a recipient's phone number."},"UpdateConfigurationSetEventDestination":{"name":"UpdateConfigurationSetEventDestination","http":{"method":"PUT","requestUri":"\/v1\/sms-voice\/configuration-sets\/{ConfigurationSetName}\/event-destinations\/{EventDestinationName}","responseCode":200},"input":{"shape":"UpdateConfigurationSetEventDestinationRequest"},"output":{"shape":"UpdateConfigurationSetEventDestinationResponse","documentation":"UpdateConfigurationSetEventDestinationResponse"},"errors":[{"shape":"NotFoundException","documentation":"NotFoundException"},{"shape":"TooManyRequestsException","documentation":"TooManyRequestsException"},{"shape":"BadRequestException","documentation":"BadRequestException"},{"shape":"InternalServiceErrorException","documentation":"InternalServiceErrorException"}],"documentation":"Update an event destination in a configuration set. An event destination is a location that you publish information about your voice calls to. For example, you can log an event to an Amazon CloudWatch destination when a call fails."}},"shapes":{"Boolean":{"type":"boolean"},"CallInstructionsMessageType":{"type":"structure","members":{"Text":{"shape":"NonEmptyString","documentation":"The language to use when delivering the message. For a complete list of supported languages, see the Amazon Polly Developer Guide."}},"documentation":"An object that defines a message that contains text formatted using Amazon Pinpoint Voice Instructions markup.","required":[]},"CloudWatchLogsDestination":{"type":"structure","members":{"IamRoleArn":{"shape":"String","documentation":"The Amazon Resource Name (ARN) of an Amazon Identity and Access Management (IAM) role that is able to write event data to an Amazon CloudWatch destination."},"LogGroupArn":{"shape":"String","documentation":"The name of the Amazon CloudWatch Log Group that you want to record events in."}},"documentation":"An object that contains information about an event destination that sends data to Amazon CloudWatch Logs.","required":[]},"ConfigurationSets":{"type":"list","documentation":"An array that contains all of the configuration sets in your Amazon Pinpoint account in the current AWS Region.","member":{"shape":"WordCharactersWithDelimiters"}},"CreateConfigurationSetEventDestinationRequest":{"type":"structure","members":{"ConfigurationSetName":{"shape":"__string","location":"uri","locationName":"ConfigurationSetName","documentation":"ConfigurationSetName"},"EventDestination":{"shape":"EventDestinationDefinition"},"EventDestinationName":{"shape":"NonEmptyString","documentation":"A name that identifies the event destination."}},"documentation":"Create a new event destination in a configuration set.","required":["ConfigurationSetName"]},"CreateConfigurationSetEventDestinationResponse":{"type":"structure","members":{},"documentation":"An empty object that indicates that the event destination was created successfully."},"CreateConfigurationSetRequest":{"type":"structure","members":{"ConfigurationSetName":{"shape":"WordCharactersWithDelimiters","documentation":"The name that you want to give the configuration set."}},"documentation":"A request to create a new configuration set."},"CreateConfigurationSetResponse":{"type":"structure","members":{},"documentation":"An empty object that indicates that the configuration set was successfully created."},"DeleteConfigurationSetEventDestinationRequest":{"type":"structure","members":{"ConfigurationSetName":{"shape":"__string","location":"uri","locationName":"ConfigurationSetName","documentation":"ConfigurationSetName"},"EventDestinationName":{"shape":"__string","location":"uri","locationName":"EventDestinationName","documentation":"EventDestinationName"}},"required":["EventDestinationName","ConfigurationSetName"]},"DeleteConfigurationSetEventDestinationResponse":{"type":"structure","members":{},"documentation":"An empty object that indicates that the event destination was deleted successfully."},"DeleteConfigurationSetRequest":{"type":"structure","members":{"ConfigurationSetName":{"shape":"__string","location":"uri","locationName":"ConfigurationSetName","documentation":"ConfigurationSetName"}},"required":["ConfigurationSetName"]},"DeleteConfigurationSetResponse":{"type":"structure","members":{},"documentation":"An empty object that indicates that the configuration set was deleted successfully."},"EventDestination":{"type":"structure","members":{"CloudWatchLogsDestination":{"shape":"CloudWatchLogsDestination"},"Enabled":{"shape":"Boolean","documentation":"Indicates whether or not the event destination is enabled. If the event destination is enabled, then Amazon Pinpoint sends response data to the specified event destination."},"KinesisFirehoseDestination":{"shape":"KinesisFirehoseDestination"},"MatchingEventTypes":{"shape":"EventTypes"},"Name":{"shape":"String","documentation":"A name that identifies the event destination configuration."},"SnsDestination":{"shape":"SnsDestination"}},"documentation":"An object that defines an event destination."},"EventDestinationDefinition":{"type":"structure","members":{"CloudWatchLogsDestination":{"shape":"CloudWatchLogsDestination"},"Enabled":{"shape":"Boolean","documentation":"Indicates whether or not the event destination is enabled. If the event destination is enabled, then Amazon Pinpoint sends response data to the specified event destination."},"KinesisFirehoseDestination":{"shape":"KinesisFirehoseDestination"},"MatchingEventTypes":{"shape":"EventTypes"},"SnsDestination":{"shape":"SnsDestination"}},"documentation":"An object that defines a single event destination.","required":[]},"EventDestinations":{"type":"list","documentation":"An array of EventDestination objects. Each EventDestination object includes ARNs and other information that define an event destination.","member":{"shape":"EventDestination"}},"EventType":{"type":"string","documentation":"The types of events that are sent to the event destination.","enum":["INITIATED_CALL","RINGING","ANSWERED","COMPLETED_CALL","BUSY","FAILED","NO_ANSWER"]},"EventTypes":{"type":"list","documentation":"An array of EventDestination objects. Each EventDestination object includes ARNs and other information that define an event destination.","member":{"shape":"EventType"}},"GetConfigurationSetEventDestinationsRequest":{"type":"structure","members":{"ConfigurationSetName":{"shape":"__string","location":"uri","locationName":"ConfigurationSetName","documentation":"ConfigurationSetName"}},"required":["ConfigurationSetName"]},"GetConfigurationSetEventDestinationsResponse":{"type":"structure","members":{"EventDestinations":{"shape":"EventDestinations"}},"documentation":"An object that contains information about an event destination."},"KinesisFirehoseDestination":{"type":"structure","members":{"DeliveryStreamArn":{"shape":"String","documentation":"The Amazon Resource Name (ARN) of an IAM role that can write data to an Amazon Kinesis Data Firehose stream."},"IamRoleArn":{"shape":"String","documentation":"The Amazon Resource Name (ARN) of the Amazon Kinesis Data Firehose destination that you want to use in the event destination."}},"documentation":"An object that contains information about an event destination that sends data to Amazon Kinesis Data Firehose.","required":[]},"ListConfigurationSetsRequest":{"type":"structure","members":{"NextToken":{"shape":"__string","location":"querystring","locationName":"NextToken","documentation":"A token returned from a previous call to the API that indicates the position in the list of results."},"PageSize":{"shape":"__string","location":"querystring","locationName":"PageSize","documentation":"Used to specify the number of items that should be returned in the response."}}},"ListConfigurationSetsResponse":{"type":"structure","members":{"ConfigurationSets":{"shape":"ConfigurationSets","documentation":"An object that contains a list of configuration sets for your account in the current region."},"NextToken":{"shape":"NextTokenString","documentation":"A token returned from a previous call to ListConfigurationSets to indicate the position in the list of configuration sets."}},"documentation":"An object that contains information about the configuration sets for your account in the current region."},"NextTokenString":{"type":"string"},"NonEmptyString":{"type":"string"},"PlainTextMessageType":{"type":"structure","members":{"LanguageCode":{"shape":"String","documentation":"The language to use when delivering the message. For a complete list of supported languages, see the Amazon Polly Developer Guide."},"Text":{"shape":"NonEmptyString","documentation":"The plain (not SSML-formatted) text to deliver to the recipient."},"VoiceId":{"shape":"String","documentation":"The name of the voice that you want to use to deliver the message. For a complete list of supported voices, see the Amazon Polly Developer Guide."}},"documentation":"An object that defines a message that contains unformatted text.","required":[]},"SSMLMessageType":{"type":"structure","members":{"LanguageCode":{"shape":"String","documentation":"The language to use when delivering the message. For a complete list of supported languages, see the Amazon Polly Developer Guide."},"Text":{"shape":"NonEmptyString","documentation":"The SSML-formatted text to deliver to the recipient."},"VoiceId":{"shape":"String","documentation":"The name of the voice that you want to use to deliver the message. For a complete list of supported voices, see the Amazon Polly Developer Guide."}},"documentation":"An object that defines a message that contains SSML-formatted text.","required":[]},"SendVoiceMessageRequest":{"type":"structure","members":{"CallerId":{"shape":"String","documentation":"The phone number that appears on recipients' devices when they receive the message."},"ConfigurationSetName":{"shape":"WordCharactersWithDelimiters","documentation":"The name of the configuration set that you want to use to send the message."},"Content":{"shape":"VoiceMessageContent"},"DestinationPhoneNumber":{"shape":"NonEmptyString","documentation":"The phone number that you want to send the voice message to."},"OriginationPhoneNumber":{"shape":"NonEmptyString","documentation":"The phone number that Amazon Pinpoint should use to send the voice message. This isn't necessarily the phone number that appears on recipients' devices when they receive the message, because you can specify a CallerId parameter in the request."}},"documentation":"SendVoiceMessageRequest"},"SendVoiceMessageResponse":{"type":"structure","members":{"MessageId":{"shape":"String","documentation":"A unique identifier for the voice message."}},"documentation":"An object that that contains the Message ID of a Voice message that was sent successfully."},"SnsDestination":{"type":"structure","members":{"TopicArn":{"shape":"String","documentation":"The Amazon Resource Name (ARN) of the Amazon SNS topic that you want to publish events to."}},"documentation":"An object that contains information about an event destination that sends data to Amazon SNS.","required":[]},"String":{"type":"string"},"UpdateConfigurationSetEventDestinationRequest":{"type":"structure","members":{"ConfigurationSetName":{"shape":"__string","location":"uri","locationName":"ConfigurationSetName","documentation":"ConfigurationSetName"},"EventDestination":{"shape":"EventDestinationDefinition"},"EventDestinationName":{"shape":"__string","location":"uri","locationName":"EventDestinationName","documentation":"EventDestinationName"}},"documentation":"UpdateConfigurationSetEventDestinationRequest","required":["EventDestinationName","ConfigurationSetName"]},"UpdateConfigurationSetEventDestinationResponse":{"type":"structure","members":{},"documentation":"An empty object that indicates that the event destination was updated successfully."},"VoiceMessageContent":{"type":"structure","members":{"CallInstructionsMessage":{"shape":"CallInstructionsMessageType"},"PlainTextMessage":{"shape":"PlainTextMessageType"},"SSMLMessage":{"shape":"SSMLMessageType"}},"documentation":"An object that contains a voice message and information about the recipient that you want to send it to."},"WordCharactersWithDelimiters":{"type":"string"},"__string":{"type":"string"}},"documentation":"Pinpoint SMS and Voice Messaging public facing APIs"}                                                                                                                                                                                                                                                      ˜yŒoƒlo‡y‘ƒ™ˆ‹‹–†{ƒqxjmah_e_gaqk~v…x…z†~‡}‚wxmja_[^]gjwx††•”Ÿ™¡š›“’ˆ…yxrupwt}|†ƒŒ„ˆ’‹–šš‹•…“}s…hyWmWur‘›¼ÅİÛèØß¿È–¥f|7XFL/fO‚t¡•¹¦Â¯Ä­¾¡±’¥~•lˆa€]dŠp—}¢° ¾±Ë·Ì­À˜«{“eWuSu]€t˜­µ¦¶¡°–¥‚’f|PiC`@bCfIkRq_}n‡w{uˆl‚`yXoSlVq\vg€wŠš¨¦­Ÿ£v~gs]lZm^rl}~—˜—œŒ“€ˆq|bqZiTfTg[kfss}…‚†yzqsdfT[JTGURaeq{ƒˆŒ‘‘‡Œ‚uwllba^d_jewpuˆy‡y…v‚r~ozisdncqdxi}m}mwgwk‡x ½¢Ç¤¼–¦ƒ…igSP>A5G<ULpb…r”|–{‘xtˆr‰q„lh|e€j‡s’{š‚¤Š¬´•¸“¯‹¡{’p‰l‰ov›‚¦Œ¬®‘ª£‡—}‡qudoaobtizm{pu…y‹Š~‡xowhveuhzluŒ”‰› ‘¦–§”Ÿ‘†x‚w€w†ˆ™”¥¬¡® §—š‹‚…|€yv‚{‡‚ˆ‘‘‘„‰}„y…u„r~q~qwˆƒ• –¤–£š‚xˆq…nƒo†uŠ{‚–—”wŒq‰lƒkƒm„r‡xŒ{~‘ƒ•…–‘v†ni|rˆˆ›š¨¡«š£Š–uƒ`sKd@a?cJn[}hŠs‘u“v”u“t’n‹g†`]|a€i†t|”…ˆ ‹¡„—v‹j€d|e~lƒt‰~ƒ†“ƒzƒpyjpjnknlmlmqrvtwsspkjfe`c_c\`[b_gfkos{zƒ~‡‚{wrqmlmljnjwqyƒ–†—ƒ”zŠwˆvˆuŠvxx”{˜}™}˜y˜w–u–t—s—r—o™o›n›nnœil¢o¤o kœišj›m ssqv xv˜s“qnpšx¡©…­‡«…¬†¬…ª†ª†¦…¤…¨‡¨‰¦ˆ›€x“}¤¹¡Â¥¿¤²˜ ‡wzipbqbzoŒ•†˜‡•‚Œ~„y~v~vx†€‰ƒ‰„Œ‡Œ‘‘’’‘“•“•“’‘•“˜’••‹‚Šz‚s€s„yŠ|‘}‘wn„byYsRoRsWxZz^|_~]~]|[{XyXxVwSuSwSwUzY\ƒ`†c‡f‹f‰e‡fˆgˆi‰kŒlnm‰k…g‚f‚ea|`{^{`|a}^{\zZyWxXzXzWyUwQuRtSuUvTvTtVsWqXrYqVnTlRlWp`vdxg{i{l}rƒtfubvouƒwƒt~rzqyrxrwxzƒ‚ˆ‡Œ……|tpmmjjhgiirr~|‚€{~zz{yxwww~|~…ˆŠ€‹~ˆ}‹~Œ~€~Œ~‡z‚›Œš‹‘„•‰š‹•ˆ‚‚“†—‰š—˜Œ™Œ”†€ŒŠ}ˆ}‹ŒŒ„ˆ‡ˆƒ…ƒ‰ŠŒŠ††„†ˆ‹‰‰ŠŠ‘‘’Œ‘’““““““•”“”‘‘‘‹‘‹’“’––š˜˜—š“–‘•’˜”›•š—˜™—•–“‡Œ‚Šƒ‹‰‘Œ‰ƒŠ€‰ƒŒƒ‹€Š‡’‘˜–†~††‰“‹‰ƒƒƒ‡‹Œ…‡z~z…Œ…Œ}‡}ˆƒŠ•ƒ|†~…z„}‰~‰|…{~‚|~sulopuy|y{nrdjfnmshmdiekhpounphifefennplnhofrewirem_iZjZr_q]q]saxe{gu`q\p\n[p^t`w`xayfxdt[qUrVqUrUsZqYsZxYsSsUtUpUmSnTu\{bu^r[{]|\{]|]x[‚d]„a‰`†_ŒdŒdic‡^ˆchk‘m“o™v™u“t•v•u—y–v‘r‘s–wœ} €}—z˜|š~™~–|“|“€—†—‡“†‘†‡‘Š——•Œ”Œ”–’–’•–—š’••œ”›’›“—šœššš˜™š›œŸ›¡™¡š Ÿ¡¤›¤™¡š¡›¢›› ›¡˜Ÿ–•œ•œ“œ‘¡ ‹Ÿ‡ ‡ Š¡Š Š ˆˆ‡Ÿ…„™–‚•ƒ—‚—‚”“€~{{‘}’~’€’““~‘||y‹{Š~ŠŠˆ€…†„‚€ƒ‚ƒ‚‚€€}€}ƒ†‚†ƒ†ƒ…ƒ‚‚ƒƒ~ƒ€‚€‚€„†€‡…}ƒ|yxw~x€y€wv‚x{||‚|ƒ{…~‡€ˆ‡‚…€……€‚ƒ€‚‚‚€ƒ€ƒƒ‚„†‰|Š{ŠzŠv‹tŠs‹q‹p‹qonom‹k‰jˆh†e…e„d‚c‚b€aa€`^]‚]‚Z„Z‡X„V€U~VWY€[[]^ƒ]]€\€Z~Z~X~V~VSQ~PQPQƒR„R€Q# Copyright 2023 The HuggingFace Inc. team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""SAM model configuration"""
+
+from huggingface_hub.dataclasses import strict
+
+from ...configuration_utils import PreTrainedConfig
+from ...utils import auto_docstring
+
+
+@auto_docstring(checkpoint="facebook/sam-vit-huge")
+@strict
+class SamPromptEncoderConfig(PreTrainedConfig):
+    r"""
+    mask_input_channels (`int`, *optional*, defaults to 16):
+        The number of channels to be fed to the `MaskDecoder` module.
+    num_point_embeddings (`int`, *optional*, defaults to 4):
+        The number of point embeddings to be used.
+    """
+
+    base_config_key = "prompt_encoder_config"
+
+    hidden_size: int = 256
+    image_size: int | list[int] | tuple[int, int] = 1024
+    patch_size: int | list[int] | tuple[int, int] = 16
+    mask_input_channels: int = 16
+    num_point_embeddings: int = 4
+    hidden_act: str = "gelu"
+    layer_norm_eps: float = 1e-6
+
+    def __post_init__(self, **kwargs):
+        self.image_embedding_size = self.image_size // self.patch_size
+        super().__post_init__(**kwargs)
+
+
+@auto_docstring(checkpoint="facebook/sam-vit-huge")
+@strict
+class SamMaskDecoderConfig(PreTrainedConfig):
+    r"""
+    mlp_dim (`int`, *optional*, defaults to 2048):
+        Dimensionality of the "intermediate" (i.e., feed-forward) layer in the Transformer encoder.
+    attention_downsample_rate (`int`, *optional*, defaults to 2):
+        The downsampling rate of the attention layer.
+    num_multimask_outputs (`int`, *optional*, defaults to 3):
+        The number of outputs from the `SamMaskDecoder` module. In the Segment Anything paper, this is set to 3.
+    iou_head_depth (`int`, *optional*, defaults to 3):
+        The number of layers in the IoU head module.
+    iou_head_hidden_dim (`int`, *optional*, defaults to 256):
+        The dimensionality of the hidden states in the IoU head module.
+    """
+
+    base_config_key = "mask_decoder_config"
+
+    hidden_size: int = 256
+    hidden_act: str = "relu"
+    mlp_dim: int = 2048
+    num_hidden_layers: int = 2
+    num_attention_heads: int = 8
+    attention_downsample_rate: int = 2
+    num_multimask_outputs: int = 3
+    iou_head_depth: int = 3
+    iou_head_hidden_dim: int = 256
+    layer_norm_eps: float = 1e-6
+
+
+@auto_docstring(checkpoint="facebook/sam-vit-huge")
+@strict
+class SamVisionConfig(PreTrainedConfig):
+    r"""
+    output_channels (`int`, *optional*, defaults to 256):
+        Dimensionality of the output channels in the Patch Encoder.
+    use_rel_pos (`bool`, *optional*, defaults to `True`):
+        Whether to use relative position embedding.
+    window_size (`int`, *optional*, defaults to 14):
+        Window size for relative position.
+    global_attn_indexes (`list[int]`, *optional*, defaults to `[2, 5, 8, 11]`):
+        The indexes of the global attention layers.
+    num_pos_feats (`int`, *optional*, defaults to 128):
+        The dimensionality of the position embedding.
+    mlp_dim (`int`, *optional*):
+        The dimensionality of the MLP layer in the Transformer encoder. If `None`, defaults to `mlp_ratio *
+        hidden_size`.
+
+    Example:
+
+    ```python
+    >>> from transformers import (
+    ...     SamVisionConfig,
+    ...     SamVisionModel,
+    ... )
+
+    >>> # Initializing a SamVisionConfig with `"facebook/sam-vit-huge"` style configuration
+    >>> configuration = SamVisionConfig()
+
+    >>> # Initializing a SamVisionModel (with random weights) from the `"facebook/sam-vit-huge"` style configuration
+    >>> model = SamVisionModel(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    ```"""
+
+    base_config_key = "vision_config"
+    model_type = "sam_vision_model"
+
+    hidden_size: int = 768
+    output_channels: int = 256
+    num_hidden_layers: int = 12
+    num_attention_heads: int = 12
+    num_channels: int = 3
+    image_size: int | list[int] | tuple[int, int] = 1024
+    patch_size: int | list[int] | tuple[int, int] = 16
+    hidden_act: str = "gelu"
+    layer_norm_eps: float = 1e-06
+    attention_dropout: float | int = 0.0
+    initializer_range: float = 1e-10
+    qkv_bias: bool = True
+    mlp_ratio: float = 4.0
+    use_abs_pos: bool = True
+    use_rel_pos: bool = True
+    window_size: int = 14
+    global_attn_indexes: list[int] | tuple[int, ...] = (2, 5, 8, 11)
+    num_pos_feats: int = 128
+    mlp_dim: int | None = None
+
+    def __post_init__(self, **kwargs):
+        self.mlp_dim = int(self.hidden_size * self.mlp_ratio) if self.mlp_dim is None else self.mlp_dim
+        self.scale = self.hidden_size // 2
+        super().__post_init__(**kwargs)
+
+
+@auto_docstring(checkpoint="facebook/sam-vit-huge")
+@strict
+class SamConfig(PreTrainedConfig):
+    r"""
+    prompt_encoder_config (Union[`dict`, `SamPromptEncoderConfig`], *optional*):
+        Dictionary of configuration options used to initialize [`SamPromptEncoderConfig`].
+    mask_decoder_config (Union[`dict`, `SamMaskDecoderConfig`], *optional*):
+        Dictionary of configuration options used to initialize [`SamMaskDecoderConfig`].
+
+    Example:
+
+    ```python
+    >>> from transformers import (
+    ...     SamVisionConfig,
+    ...     SamPromptEncoderConfig,
+    ...     SamMaskDecoderConfig,
+    ...     SamModel,
+    ... )
+
+    >>> # Initializing a SamConfig with `"facebook/sam-vit-huge"` style configuration
+    >>> configuration = SamConfig()
+
+    >>> # Initializing a SamModel (with random weights) from the `"facebook/sam-vit-huge"` style configuration
+    >>> model = SamModel(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+
+    >>> # We can also initialize a SamConfig from a SamVisionConfig, SamPromptEncoderConfig, and SamMaskDecoderConfig
+
+    >>> # Initializing SAM vision, SAM Q-Former and language model configurations
+    >>> vision_config = SamVisionConfig()
+    >>> prompt_encoder_config = SamPromptEncoderConfig()
+    >>> mask_decoder_config = SamMaskDecoderConfig()
+
+    >>> config = SamConfig(vision_config, prompt_encoder_config, mask_decoder_config)
+    ```"""
+
+    model_type = "sam"
+    sub_configs = {
+        "prompt_encoder_config": SamPromptEncoderConfig,
+        "mask_decoder_config": SamMaskDecoderConfig,
+        "vision_config": SamVisionConfig,
+    }
+
+    vision_config: dict | PreTrainedConfig | None = None
+    prompt_encoder_config: dict | PreTrainedConfig | None = None
+    mask_decoder_config: dict | PreTrainedConfig | None = None
+    initializer_range: float = 0.02
+    tie_word_embeddings: bool = True
+
+    def __post_init__(self, **kwargs):
+        if isinstance(self.vision_config, dict):
+            self.vision_config = SamVisionConfig(**self.vision_config)
+        elif self.vision_config is None:
+            self.vision_config = SamVisionConfig()
+
+        if isinstance(self.prompt_encoder_config, dict):
+            self.prompt_encoder_config = SamPromptEncoderConfig(**self.prompt_encoder_config)
+        elif self.prompt_encoder_config is None:
+            self.prompt_encoder_config = SamPromptEncoderConfig()
+
+        if isinstance(self.mask_decoder_config, dict):
+            self.mask_decoder_config = SamMaskDecoderConfig(**self.mask_decoder_config)
+        elif self.mask_decoder_config is None:
+            self.mask_decoder_config = SamMaskDecoderConfig()
+
+        super().__post_init__(**kwargs)
+
+
+__all__ = ["SamConfig", "SamMaskDecoderConfig", "SamPromptEncoderConfig", "SamVisionConfig"]
+                                                                                                                                                                                                                                                  # Copyright 2025 The HuggingFace Inc. team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Image processor class for SAM."""
+
+import math
+from collections.abc import Iterable
+from copy import deepcopy
+from itertools import product
+from typing import Any, Optional, Union
+
+import numpy as np
+import torch
+from torch.nn import functional as F
+from torchvision.ops.boxes import batched_nms
+from torchvision.transforms.v2 import functional as tvF
+
+from ...image_processing_backends import TorchvisionBackend
+from ...image_processing_utils import BatchFeature, get_size_dict
+from ...image_transforms import group_images_by_shape, reorder_images
+from ...image_utils import (
+    IMAGENET_DEFAULT_MEAN,
+    IMAGENET_DEFAULT_STD,
+    ChannelDimension,
+    ImageInput,
+    PILImageResampling,
+    SizeDict,
+)
+from ...processing_utils import ImagesKwargs, Unpack
+from ...utils import TensorType, auto_docstring, is_vision_available
+
+
+if is_vision_available():
+    import PIL
+
+
+class SamImageProcessorKwargs(ImagesKwargs, total=False):
+    r"""
+    mask_size (`dict[str, int]`, *optional*):
+        The size `{"longest_edge": int}` to resize the segmentation maps to.
+    mask_pad_size (`dict[str, int]`, *optional*):
+        The size `{"height": int, "width": int}` to pad the segmentation maps to. Must be larger than any segmentation
+        map size provided for preprocessing.
+    """
+
+    mask_size: dict[str, int]
+    mask_pad_size: dict[str, int]
+
+
+@auto_docstring
+class SamImageProcessor(TorchvisionBackend):
+    valid_kwargs = SamImageProcessorKwargs
+    resample = PILImageResampling.BILINEAR
+    image_mean = IMAGENET_DEFAULT_MEAN
+    image_std = IMAGENET_DEFAULT_STD
+    size = {"longest_edge": 1024}
+    mask_size = {"longest_edge": 256}
+    do_resize = True
+    do_rescale = True
+    do_normalize = True
+    do_convert_rgb = True
+    do_pad = True
+    pad_size = {"height": 1024, "width": 1024}
+    mask_pad_size = {"height": 256, "width": 256}
+
+    def __init__(self, **kwargs: Unpack[SamImageProcessorKwargs]):
+        super().__init__(**kwargs)
+
+    @auto_docstring
+    def preprocess(
+        self,
+        images: ImageInput,
+        segmentation_maps: ImageInput | None = None,
+        **kwargs: Unpack[SamImageProcessorKwargs],
+    ) -> BatchFeature:
+        r"""
+        segmentation_maps (`ImageInput`, *optional*):
+            The segmentation maps to preprocess.
+        """
+        return super().preprocess(images, segmentation_maps, **kwargs)
+
+    def _standardize_kwargs(
+        self,
+        mask_size: int | Iterable[int] | dict[str, int] | SizeDict | None = None,
+        mask_pad_size: int | Iterable[int] | dict[str, int] | SizeDict | None = None,
+        **kwargs,
+    ) -> dict:
+        """
+        Update kwargs that need further processing before being validated
+        Can be overridden by subclasses to customize the processing of kwargs.
+        """
+        kwargs = super()._standardize_kwargs(**kwargs)
+        if mask_size is not None and not isinstance(mask_size, SizeDict):
+            mask_size = SizeDict(**get_size_dict(mask_size, param_name="mask_size"))
+        if mask_pad_size is not None and not isinstance(mask_pad_size, SizeDict):
+            mask_pad_size = SizeDict(**get_size_dict(mask_pad_size, param_name="mask_pad_size"))
+
+        kwargs["mask_size"] = mask_size
+        kwargs["mask_pad_size"] = mask_pad_size
+
+        return kwargs
+
+    def _get_preprocess_shape(self, old_shape: tuple[int, int], longest_edge: int):
+        """
+        Compute the output size given input size and target long side length.
+        """
+        oldh, oldw = old_shape
+        scale = longest_edge * 1.0 / max(oldh, oldw)
+        newh, neww = oldh * scale, oldw * scale
+        newh = int(newh + 0.5)
+        neww = int(neww + 0.5)
+        return (newh, neww)
+
+    def resize(
+        self,
+        image: "torch.Tensor",
+        size: SizeDict,
+        resample: "PILImageResampling | tvF.InterpolationMode | int | None" = None,
+        **kwargs,
+    ) -> "torch.Tensor":
+        """
+        Resize an image to `(size["height"], size["width"])`.
+
+        Args:
+            image (`torch.Tensor`):
+                Image to resize.
+            size (`SizeDict`):
+                Dictionary in the format `{"longest_edge": int}` specifying the size of the output image. The longest
+                edge of the image will be resized to the specified size, while the other edge will be resized to
+                maintain the aspect ratio.
+            resample (`PILImageResampling | tvF.InterpolationMode | int | None`, *optional*):
+                Resampling filter to use when resizing the image.
+
+        Returns:
+            `torch.Tensor`: The resized image.
+        """
+        if not size.longest_edge:
+            raise ValueError(f"The `size` dictionary must contain the key `longest_edge`. Got {size.keys()}")
+        input_size = image.shape[-2:]
+        output_height, output_width = self._get_preprocess_shape(input_size, size.longest_edge)
+        return super().resize(
+            image, size=SizeDict(height=output_height, width=output_width), resample=resample, **kwargs
+        )
+
+    def _preprocess_image_like_inputs(
+        self,
+        images: ImageInput,
+        segmentation_maps: ImageInput | None,
+        do_convert_rgb: bool,
+        input_data_format: ChannelDimension,
+        return_tensors: str | TensorType | None,
+        device: Union[str, "torch.device"] | None = None,
+        **kwargs,
+    ) -> BatchFeature:
+        """
+        Preprocess image-like inputs.
+        """
+        images = self._prepare_image_like_inputs(
+            images=images, do_convert_rgb=do_convert_rgb, input_data_format=input_data_format, device=device
+        )
+        original_sizes = [image.shape[-2:] for image in images]
+        images_kwargs = kwargs.copy()
+        pixel_values, reshaped_input_sizes = self._preprocess(images, **images_kwargs)
+        data = {
+            "pixel_values": pixel_values,
+            "original_sizes": original_sizes,
+            "reshaped_input_sizes": reshaped_input_sizes,
+        }
+
+        if segmentation_maps is not None:
+            processed_segmentation_maps = self._prepare_image_like_inputs(
+                images=segmentation_maps,
+                expected_ndims=2,
+                do_convert_rgb=False,
+                input_data_format=ChannelDimension.FIRST,
+            )
+
+            segmentation_maps_kwargs = kwargs.copy()
+            segmentation_maps_kwargs.update(
+                {
+                    "do_normalize": False,
+                    "do_rescale": False,
+                    "resample": PILImageResampling.NEAREST,
+                    "size": segmentation_maps_kwargs.pop("mask_size"),
+                    "pad_size": segmentation_maps_kwargs.pop("mask_pad_size"),
+                }
+            )
+            processed_segmentation_maps, _ = self._preprocess(
+                images=processed_segmentation_maps, **segmentation_maps_kwargs
+            )
+            data["labels"] = [m.squeeze(0).to(torch.int64) for m in processed_segmentation_maps]
+
+        return BatchFeature(data=data, tensor_type=return_tensors)
+
+    def _preprocess(
+        self,
+        images: list["torch.Tensor"],
+        do_resize: bool,
+        size: SizeDict,
+        resample: "PILImageResampling | tvF.InterpolationMode | int | None",
+        do_center_crop: bool,
+        crop_size: SizeDict,
+        do_rescale: bool,
+        rescale_factor: float,
+        do_normalize: bool,
+        image_mean: float | list[float] | None,
+        image_std: float | list[float] | None,
+        do_pad: bool | None,
+        pad_size: SizeDict | None,
+        disable_grouping: bool | None,
+        **kwargs,
+    ) -> tuple[list["torch.Tensor"], list[tuple[int, int]]]:
+        # Group images by size for batched resizing
+        grouped_images, grouped_images_index = group_images_by_shape(images, disable_grouping=disable_grouping)
+        resized_images_grouped = {}
+        for shape, stacked_images in grouped_images.items():
+            if do_resize:
+                stacked_images = self.resize(image=stacked_images, size=size, resample=resample)
+            resized_images_grouped[shape] = stacked_images
+        resized_images = reorder_images(resized_images_grouped, grouped_images_index)
+        reshaped_input_sizes = [image.shape[-2:] for image in resized_images]
+
+        # Group images by size for further processing
+        # Needed in case do_resize is False, or resize returns images with different sizes
+        grouped_images, grouped_images_index = group_images_by_shape(resized_images, disable_grouping=disable_grouping)
+        processed_images_grouped = {}
+        for shape, stacked_images in grouped_images.items():
+            if do_center_crop:
+                stacked_images = self.center_crop(stacked_images, crop_size)
+            # Fused rescale and normalize
+            stacked_images = self.rescale_and_normalize(
+                stacked_images, do_rescale, rescale_factor, do_normalize, image_mean, image_std
+            )
+            processed_images_grouped[shape] = stacked_images
+        processed_images = reorder_images(processed_images_grouped, grouped_images_index)
+
+        if do_pad:
+            processed_images = self.pad(processed_images, pad_size=pad_size, disable_grouping=disable_grouping)
+
+        return processed_images, reshaped_input_sizes
+
+    def generate_crop_boxes(
+        self,
+        image: "np.ndarray | PIL.Image.Image | torch.Tensor",
+        target_size,
+        crop_n_layers: int = 0,
+        overlap_ratio: float = 512 / 1500,
+        points_per_crop: int | None = 32,
+        crop_n_points_downscale_factor: list[int] | None = 1,
+        device: Optional["torch.device"] = None,
+    ):
+        """
+        Generates a list of crop boxes of different sizes. Each layer has (2**i)**2 boxes for the ith layer.
+
+        Args:
+            image (`torch.Tensor`):
+                Input original image
+            target_size (`int`):
+                Target size of the resized image
+            crop_n_layers (`int`, *optional*, defaults to 0):
+                If >0, mask prediction will be run again on crops of the image. Sets the number of layers to run, where
+                each layer has 2**i_layer number of image crops.
+            overlap_ratio (`float`, *optional*, defaults to 512/1500):
+                Sets the degree to which crops overlap. In the first crop layer, crops will overlap by this fraction of
+                the image length. Later layers with more crops scale down this overlap.
+            points_per_crop (`int`, *optional*, defaults to 32):
+                Number of points to sample from each crop.
+            crop_n_points_downscale_factor (`list[int]`, *optional*, defaults to 1):
+                The number of points-per-side sampled in layer n is scaled down by crop_n_points_downscale_factor**n.
+            device (`torch.device`, *optional*, defaults to None):
+                Device to use for the computation. If None, cpu will be used.
+        """
+        image = self.process_image(image)
+        crop_boxes, points_per_crop, cropped_images, input_labels = _generate_crop_boxes(
+            image,
+            target_size,
+            crop_n_layers,
+            overlap_ratio,
+            points_per_crop,
+            crop_n_points_downscale_factor,
+        )
+        if device is None:
+            device = torch.device("cpu")
+        crop_boxes = crop_boxes.to(device)
+        points_per_crop = points_per_crop.to(device)
+        # cropped_images stays as torch.Tensor
+        input_labels = input_labels.to(device)
+
+        return crop_boxes, points_per_crop, cropped_images, input_labels
+
+    def filter_masks(
+        self,
+        masks,
+        iou_scores,
+        original_size,
+        cropped_box_image,
+        pred_iou_thresh=0.88,
+        stability_score_thresh=0.95,
+        mask_threshold=0,
+        stability_score_offset=1,
+    ):
+        """
+        Filters the predicted masks by selecting only the ones that meets several criteria. The first criterion being
+        that the iou scores needs to be greater than `pred_iou_thresh`. The second criterion is that the stability
+        score needs to be greater than `stability_score_thresh`. The method also converts the predicted masks to
+        bounding boxes and pad the predicted masks if necessary.
+
+        Args:
+            masks (`torch.Tensor`):
+                Input masks.
+            iou_scores (`torch.Tensor`):
+                List of IoU scores.
+            original_size (`tuple[int,int]`):
+                Size of the original image.
+            cropped_box_image (`torch.Tensor`):
+                The cropped image.
+            pred_iou_thresh (`float`, *optional*, defaults to 0.88):
+                The threshold for the iou scores.
+            stability_score_thresh (`float`, *optional*, defaults to 0.95):
+                The threshold for the stability score.
+            mask_threshold (`float`, *optional*, defaults to 0):
+                The threshold for the predicted masks.
+            stability_score_offset (`float`, *optional*, defaults to 1):
+                The offset for the stability score used in the `_compute_stability_score` method.
+        """
+        original_height, original_width = original_size
+        iou_scores = iou_scores.flatten(0, 1)
+        masks = masks.flatten(0, 1)
+
+        if masks.shape[0] != iou_scores.shape[0]:
+            raise ValueError("masks and iou_scores must have the same batch size.")
+
+        if masks.device != iou_scores.device:
+            iou_scores = iou_scores.to(masks.device)
+
+        batch_size = masks.shape[0]
+
+        keep_mask = torch.ones(batch_size, dtype=torch.bool, device=masks.device)
+
+        if pred_iou_thresh > 0.0:
+            keep_mask = keep_mask & (iou_scores > pred_iou_thresh)
+
+        # compute stability score
+        if stability_score_thresh > 0.0:
+            stability_scores = _compute_stability_score(masks, mask_threshold, stability_score_offset)
+            keep_mask = keep_mask & (stability_scores > stability_score_thresh)
+
+        scores = iou_scores[keep_mask]
+        masks = masks[keep_mask]
+
+        # binarize masks
+        masks = masks > mask_threshold
+        converted_boxes = _batched_mask_to_box(masks)
+
+        keep_mask = ~_is_box_near_crop_edge(
+            converted_boxes, cropped_box_image, [0, 0, original_width, original_height]
+        )
+
+        scores = scores[keep_mask]
+        masks = masks[keep_mask]
+        converted_boxes = converted_boxes[keep_mask]
+
+        masks = _pad_masks(masks, cropped_box_image, original_height, original_width)
+        # conversion to rle is necessary to run non-maximum suppression
+        masks = _mask_to_rle(masks)
+
+        return masks, scores, converted_boxes
+
+    def post_process_masks(
+        self,
+        masks,
+        original_sizes,
+        reshaped_input_sizes,
+        mask_threshold=0.0,
+        binarize=True,
+        pad_size=None,
+    ):
+        """
+        Remove padding and upscale masks to the original image size.
+
+        Args:
+            masks (`Union[List[torch.Tensor], List[np.ndarray]]`):
+                Batched masks from the mask_decoder in (batch_size, num_channels, height, width) format.
+            original_sizes (`Union[torch.Tensor, List[Tuple[int,int]]]`):
+                The original sizes of each image before it was resized to the model's expected input shape, in (height,
+                width) format.
+            reshaped_input_sizes (`Union[torch.Tensor, List[Tuple[int,int]]]`):
+                The size of each image as it is fed to the model, in (height, width) format. Used to remove padding.
+            mask_threshold (`float`, *optional*, defaults to 0.0):
+                The threshold to use for binarizing the masks.
+            binarize (`bool`, *optional*, defaults to `True`):
+                Whether to binarize the masks.
+            pad_size (`int`, *optional*, defaults to `self.pad_size`):
+                The target size the images were padded to before being passed to the model. If None, the target size is
+                assumed to be the processor's `pad_size`.
+        Returns:
+            (`torch.Tensor`): Batched masks in batch_size, num_channels, height, width) format, where (height, width)
+            is given by original_size.
+        """
+        pad_size = self.pad_size if pad_size is None else pad_size
+        target_image_size = (pad_size["height"], pad_size["width"])
+        if isinstance(original_sizes, (torch.Tensor, np.ndarray)):
+            original_sizes = original_sizes.tolist()
+        if isinstance(reshaped_input_sizes, (torch.Tensor, np.ndarray)):
+            reshaped_input_sizes = reshaped_input_sizes.tolist()
+
+        output_masks = []
+        for i, original_size in enumerate(original_sizes):
+            if isinstance(masks[i], np.ndarray):
+                masks[i] = torch.from_numpy(masks[i])
+            elif not isinstance(masks[i], torch.Tensor):
+                raise TypeError("Input masks should be a list of `torch.tensors` or a list of `np.ndarray`")
+            interpolated_mask = F.interpolate(masks[i], target_image_size, mode="bilinear", align_corners=False)
+            interpolated_mask = interpolated_mask[..., : reshaped_input_sizes[i][0], : reshaped_input_sizes[i][1]]
+            interpolated_mask = F.interpolate(interpolated_mask, original_size, mode="bilinear", align_corners=False)
+            if binarize:
+                interpolated_mask = interpolated_mask > mask_threshold
+            output_masks.append(interpolated_mask)
+
+        return output_masks
+
+    def post_process_for_mask_generation(self, all_masks, all_scores, all_boxes, crops_nms_thresh):
+        """
+        Post processes mask that are generated by calling the Non Maximum Suppression algorithm on the predicted masks.
+
+        Args:
+            all_masks (`torch.Tensor`):
+                List of all predicted segmentation masks
+            all_scores (`torch.Tensor`):
+                List of all predicted iou scores
+            all_boxes (`torch.Tensor`):
+                List of all bounding boxes of the predicted masks
+            crops_nms_thresh (`float`):
+                Threshold for NMS (Non Maximum Suppression) algorithm.
+        """
+        return _post_process_for_mask_generation(all_masks, all_scores, all_boxes, crops_nms_thresh)
+
+
+def _compute_stability_score(masks: "torch.Tensor", mask_threshold: float, stability_score_offset: int):
+    # One mask is always contained inside the other.
+    # Save memory by preventing unnecessary cast to torch.int64
+    intersections = (
+        (masks > (mask_threshold + stability_score_offset)).sum(-1, dtype=torch.int16).sum(-1, dtype=torch.int32)
+    )
+    unions = (masks > (mask_threshold - stability_score_offset)).sum(-1, dtype=torch.int16).sum(-1, dtype=torch.int32)
+    stability_scores = intersections / unions
+    return stability_scores
+
+
+def _batched_mask_to_box(masks: "torch.Tensor"):
+    """
+    Computes the bounding boxes around the given input masks. The bounding boxes are in the XYXY format which
+    corresponds the following required indices:
+        - LEFT: left hand side of the bounding box
+        - TOP: top of the bounding box
+        - RIGHT: right of the bounding box
+        - BOTTOM: bottom of the bounding box
+
+    Return [0,0,0,0] for an empty mask. For input shape channel_1 x channel_2 x ... x height x width, the output shape
+    is channel_1 x channel_2 x ... x 4.
+
+    Args:
+        - masks (`torch.Tensor` of shape `(batch, nb_mask, height, width)`)
+    """
+    # torch.max below raises an error on empty inputs, just skip in this case
+
+    if torch.numel(masks) == 0:
+        return torch.zeros(*masks.shape[:-2], 4, device=masks.device)
+
+    # Normalize shape to Cxheightxwidth
+    shape = masks.shape
+    height, width = shape[-2:]
+
+    # Get top and bottom edges
+    in_height, _ = torch.max(masks, dim=-1)
+    in_height_coords = in_height * torch.arange(height, device=in_height.device)[None, :]
+    bottom_edges, _ = torch.max(in_height_coords, dim=-1)
+    in_height_coords = in_height_coords + height * (~in_height)
+    top_edges, _ = torch.min(in_height_coords, dim=-1)
+
+    # Get left and right edges
+    in_width, _ = torch.max(masks, dim=-2)
+    in_width_coords = in_width * torch.arange(width, device=in_width.device)[None, :]
+    right_edges, _ = torch.max(in_width_coords, dim=-1)
+    in_width_coords = in_width_coords + width * (~in_width)
+    left_edges, _ = torch.min(in_width_coords, dim=-1)
+
+    # If the mask is empty the right edge will be to the left of the left edge.
+    # Replace these boxes with [0, 0, 0, 0]
+    empty_filter = (right_edges < left_edges) | (bottom_edges < top_edges)
+    out = torch.stack([left_edges, top_edges, right_edges, bottom_edges], dim=-1)
+    out = out * (~empty_filter).unsqueeze(-1)
+
+    # Return to original shape
+    out = out.reshape(*shape[:-2], 4)
+    return out
+
+
+def _is_box_near_crop_edge(boxes, crop_box, orig_box, atol=20.0):
+    """Filter masks at the edge of a crop, but not at the edge of the original image."""
+    crop_box_torch = torch.as_tensor(crop_box, dtype=torch.float, device=boxes.device)
+    orig_box_torch = torch.as_tensor(orig_box, dtype=torch.float, device=boxes.device)
+
+    left, top, _, _ = crop_box
+    offset = torch.tensor([[left, top, left, top]], device=boxes.device)
+    # Check if boxes has a channel dimension
+    if len(boxes.shape) == 3:
+        offset = offset.unsqueeze(1)
+    boxes = (boxes + offset).float()
+
+    near_crop_edge = torch.isclose(boxes, crop_box_torch[None, :], atol=atol, rtol=0)
+    near_image_edge = torch.isclose(boxes, orig_box_torch[None, :], atol=atol, rtol=0)
+    near_crop_edge = torch.logical_and(near_crop_edge, ~near_image_edge)
+    return torch.any(near_crop_edge, dim=1)
+
+
+def _pad_masks(masks, crop_box: list[int], orig_height: int, orig_width: int):
+    left, top, right, bottom = crop_box
+    if left == 0 and top == 0 and right == orig_width and bottom == orig_height:
+        return masks
+    # Coordinate transform masks
+    pad_x, pad_y = orig_width - (right - left), orig_height - (bottom - top)
+    pad = (left, pad_x - left, top, pad_y - top)
+    return torch.nn.functional.pad(masks, pad, value=0)
+
+
+def _generate_crop_boxes(
+    image,
+    target_size: int,
+    crop_n_layers: int = 0,
+    overlap_ratio: float = 512 / 1500,
+    points_per_crop: int | None = 32,
+    crop_n_points_downscale_factor: list[int] | None = 1,
+) -> tuple[list[list[int]], list[int]]:
+    """
+    Generates a list of crop boxes of different sizes. Each layer has (2**i)**2 boxes for the ith layer.
+
+    Args:
+        image (`torch.Tensor`):
+            Image to generate crops for.
+        target_size (`int`):
+            Size of the smallest crop.
+        crop_n_layers (`int`, *optional*):
+            If `crops_n_layers>0`, mask prediction will be run again on crops of the image. Sets the number of layers
+            to run, where each layer has 2**i_layer number of image crops.
+        overlap_ratio (`int`, *optional*):
+            Sets the degree to which crops overlap. In the first crop layer, crops will overlap by this fraction of the
+            image length. Later layers with more crops scale down this overlap.
+        points_per_crop (`int`, *optional*):
+            Number of points to sample per crop.
+        crop_n_points_downscale_factor (`int`, *optional*):
+            The number of points-per-side sampled in layer n is scaled down by crop_n_points_downscale_factor**n.
+    """
+
+    if isinstance(image, list):
+        raise ValueError("Only one image is allowed for crop generation.")
+    original_size = image.shape[-2:]
+
+    points_grid = []
+    for i in range(crop_n_layers + 1):
+        n_points = int(points_per_crop / (crop_n_points_downscale_factor**i))
+        points_grid.append(_build_point_grid(n_points))
+
+    crop_boxes, layer_idxs = _generate_per_layer_crops(crop_n_layers, overlap_ratio, original_size)
+
+    cropped_images, point_grid_per_crop = _generate_crop_images(
+        crop_boxes, image, points_grid, layer_idxs, target_size, original_size
+    )
+    crop_boxes = torch.tensor(crop_boxes)
+    crop_boxes = crop_boxes.float()
+    points_per_crop = torch.stack(point_grid_per_crop)
+    points_per_crop = points_per_crop.unsqueeze(0).permute(0, 2, 1, 3)
+    cropped_images = torch.stack(cropped_images)
+
+    input_labels = torch.ones_like(points_per_crop[:, :, :, 0], dtype=torch.int64)
+
+    return crop_boxes, points_per_crop, cropped_images, input_labels
+
+
+def _generate_per_layer_crops(crop_n_layers, overlap_ratio, original_size):
+    """
+    Generates 2 ** (layers idx + 1) crops for each crop_n_layers. Crops are in the XYWH format : The XYWH format
+    consists of the following required indices:
+        - X: X coordinate of the top left of the bounding box
+        - Y: Y coordinate of the top left of the bounding box
+        - W: width of the bounding box
+        - H: height of the bounding box
+    """
+    crop_boxes, layer_idxs = [], []
+    im_height, im_width = original_size
+    short_side = min(im_height, im_width)
+
+    # Original image
+    crop_boxes.append([0, 0, im_width, im_height])
+    layer_idxs.append(0)
+    for i_layer in range(crop_n_layers):
+        n_crops_per_side = 2 ** (i_layer + 1)
+        overlap = int(overlap_ratio * short_side * (2 / n_crops_per_side))
+
+        crop_width = int(math.ceil((overlap * (n_crops_per_side - 1) + im_width) / n_crops_per_side))
+        crop_height = int(math.ceil((overlap * (n_crops_per_side - 1) + im_height) / n_crops_per_side))
+
+        crop_box_x0 = [int((crop_width - overlap) * i) for i in range(n_crops_per_side)]
+        crop_box_y0 = [int((crop_height - overlap) * i) for i in range(n_crops_per_side)]
+
+        for left, top in product(crop_box_x0, crop_box_y0):
+            box = [left, top, min(left + crop_width, im_width), min(top + crop_height, im_height)]
+            crop_boxes.append(box)
+            layer_idxs.append(i_layer + 1)
+
+    return crop_boxes, layer_idxs
+
+
+def _build_point_grid(n_per_side: int) -> torch.Tensor:
+    """Generates a 2D grid of points evenly spaced in [0,1]x[0,1]."""
+    offset = 1 / (2 * n_per_side)
+    points_one_side = torch.linspace(offset, 1 - offset, n_per_side)
+    points_x = torch.tile(points_one_side[None, :], (n_per_side, 1))
+    points_y = torch.tile(points_one_side[:, None], (1, n_per_side))
+    points = torch.stack([points_x, points_y], dim=-1).reshape(-1, 2)
+    return points
+
+
+def _generate_crop_images(
+    crop_boxes, image, points_grid, layer_idxs, target_size, original_size, input_data_format=None
+):
+    """
+    Takes as an input bounding boxes that are used to crop the image. Based in the crops, the corresponding points are
+    also passed.
+    """
+    cropped_images = []
+    total_points_per_crop = []
+    for i, crop_box in enumerate(crop_boxes):
+        left, top, right, bottom = crop_box
+        cropped_im = image[:, top:bottom, left:right]
+
+        cropped_images.append(cropped_im)
+
+        cropped_im_size = cropped_im.shape[-2:]
+        points_scale = torch.tensor(cropped_im_size).flip(dims=(0,)).unsqueeze(0)
+
+        points = points_grid[layer_idxs[i]] * points_scale
+        normalized_points = _normalize_coordinates(target_size, points, original_size)
+        total_points_per_crop.append(normalized_points)
+
+    return cropped_images, total_points_per_crop
+
+
+def _normalize_coordinates(
+    target_size: int, coords: torch.Tensor, original_size: tuple[int, int], is_bounding_box=False
+) -> torch.Tensor:
+    """
+    Expects a numpy array of length 2 in the final dimension. Requires the original image size in (height, width)
+    format.
+    """
+    old_height, old_width = original_size
+
+    scale = target_size * 1.0 / max(old_height, old_width)
+    new_height, new_width = old_height * scale, old_width * scale
+    new_width = int(new_width + 0.5)
+    new_height = int(new_height + 0.5)
+
+    coords = deepcopy(coords).float()
+
+    if is_bounding_box:
+        coords = coords.reshape(-1, 2, 2)
+
+    coords[..., 0] = coords[..., 0] * (new_width / old_width)
+    coords[..., 1] = coords[..., 1] * (new_height / old_height)
+
+    if is_bounding_box:
+        coords = coords.reshape(-1, 4)
+
+    return coords
+
+
+def _rle_to_mask(rle: dict[str, Any]) -> torch.Tensor:
+    """Compute a binary mask from an uncompressed RLE."""
+    height, width = rle["size"]
+    mask = torch.empty(height * width, dtype=bool)
+    idx = 0
+    parity = False
+    for count in rle["counts"]:
+        mask[idx : idx + count] = parity
+        idx += count
+        parity = not parity
+    mask = mask.reshape(width, height)
+    return mask.transpose(0, 1)  # Reshape to original shape
+
+
+def _post_process_for_mask_generation(rle_masks, iou_scores, mask_boxes, amg_crops_nms_thresh=0.7):
+    """
+    Perform NMS (Non Maximum Suppression) on the outputs.
+
+    Args:
+            rle_masks (`torch.Tensor`):
+                binary masks in the RLE format
+            iou_scores (`torch.Tensor` of shape (nb_masks, 1)):
+                iou_scores predicted by the model
+            mask_boxes (`torch.Tensor`):
+                The bounding boxes corresponding to segmentation masks
+            amg_crops_nms_thresh (`float`, *optional*, defaults to 0.7):
+                NMS threshold.
+    """
+    keep_by_nms = batched_nms(
+        boxes=mask_boxes.float(),
+        scores=iou_scores,
+        idxs=torch.zeros(mask_boxes.shape[0]),
+        iou_threshold=amg_crops_nms_thresh,
+    )
+
+    iou_scores = iou_scores[keep_by_nms]
+    rle_masks = [rle_masks[i] for i in keep_by_nms]
+    mask_boxes = mask_boxes[keep_by_nms]
+    masks = [_rle_to_mask(rle) for rle in rle_masks]
+
+    return masks, iou_scores, rle_masks, mask_boxes
+
+
+def _mask_to_rle(input_mask: "torch.Tensor"):
+    """
+    Encodes masks the run-length encoding (RLE), in the format expected by pycoco tools.
+    """
+    # Put in fortran order and flatten height and width
+    batch_size, height, width = input_mask.shape
+    input_mask = input_mask.permute(0, 2, 1).flatten(1)
+
+    # Compute change indices
+    diff = input_mask[:, 1:] ^ input_mask[:, :-1]
+    change_indices = diff.nonzero()
+
+    # Encode run length
+    out = []
+    for i in range(batch_size):
+        cur_idxs = change_indices[change_indices[:, 0] == i, 1] + 1
+        if len(cur_idxs) == 0:
+            # No changes => either all 0 or all 1
+            # If the entire mask is 0, RLE is [height*width] or if the entire mask is 1, RLE is [0, height*width].
+            if input_mask[i, 0] == 0:
+                out.append({"size": [height, width], "counts": [height * width]})
+            else:
+                out.append({"size": [height, width], "counts": [0, height * width]})
+            continue
+        btw_idxs = cur_idxs[1:] - cur_idxs[:-1]
+        counts = [] if input_mask[i, 0] == 0 else [0]
+        counts += [cur_idxs[0].item()] + btw_idxs.tolist() + [height * width - cur_idxs[-1].item()]
+        out.append({"size": [height, width], "counts": counts})
+    return out
+
+
+__all__ = ["SamImageProcessor"]
+                                                                                                                         ¤š£”‹“‡…‚Œ~‡tjveqbodqkvq|y„Œ‡‹’•’’‘‰‡~}nn^aNTAJCNLUU^^gelkruzŠ‰•‘š’™‘‘ˆ€{qn__OTGKCGEFEDEDKHVQh_~q—‡®—¼ŸÂ£Ê¥Í¨Î¦Ê¢Ä›º’­‡Ÿ’u†myfpam`qhyo}r~s|ryˆ€†’ˆ‘‡ˆ€~yvsoompfkcjblcogtm{o~rƒ{†˜’£™§›©˜¦” ‘’ “¢‘Ÿˆ—|ŒzŒ{~’„˜ŠŸ‘¨—®›°²³´³œ²–¯Š¥v”b…VUX†_b“b”d—iœn¡wªƒ²†³‡²‚¬x¥l[LƒEB~CB€=|=€B…M`v­‰»—ÂœÅ£Ë¬Ñ±Ñ¯ÎªÈ£¾µ’©ƒœx’k‡b`€_ac^{\y^}dk…mƒl€l~hxcp`l\i\iYfU`T_T]V\WZZ[cbnktnzo~p~nm‚k†nŒq‹n‡j„c€`_ƒ^ˆ_b‘e•g˜iœiŸj hd c¡c_•V‡K}B}CG„JŠM‹O‹QV‘Y—]Ÿd¢f¢f¡c^—ZRGxBvCsCqCl@kBnEtLY’h¢u®·‡¿Æ•ÈšÆ™Ä™¿–»”´¦‚œzqƒi}g{fxewgr`n^qatdxjpƒs†w†u€q€q€p}oyltkslpllhgeiglkrqxv}z‚~ƒ}‚{ƒ}‡‹†ˆŠ†Š‰ˆ‰†‡„††‰‹’‘”“•Œ’‰Š“•”ˆ‚‰xƒu„u…u…v‡x‰{Œ‚’„–„—…–…”|‰rj{gyfzeybyczf{kq„{†˜’ ›¦£¬«±°³¯±­°­²±·°µ©® §˜ ‘™‰“„}x‡qp‚s„u„w†z‰‘…“„’‚€€Œ}‰{‰{Št…n€k|k~o‚sƒu„x‡|Œ~Œ~‹‡“Œ––•”™——›•›•š˜šœœ›œšš—˜–”“‘’ŒˆŒ„‰ƒŠ„‹‚‹Š€Œ„‡‘†„„‹ƒŒ€‰{…w‚s}mudm]h\g[fYdVdZg`mgpntw|€„‰Š–“˜£š¢˜¢–¥—§˜¤•œ•Š†ˆ}xytwqqmlhfdedgfgfggkkonookmgmgnemclak`k`j\dWbVdVeXfZgZhZi[i\j^odshvnyqzt}z~„€†€†‚ˆ…‰‡Š‡‹†ˆ…†ƒ…‚x~t{r{mvi#                ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨
+#           This file was automatically generated from src/transformers/models/rt_detr_v2/modular_rt_detr_v2.py.
+#               Do NOT edit this file manually as any edits will be overwritten by the generation of
+#             the file from the modular. If any change should be done, please apply the change to the
+#                          modular_rt_detr_v2.py file directly. One of our CI enforces this.
+#                ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨ğŸš¨
+# Copyright 2025 Baidu Inc and The HuggingFace Inc. team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from huggingface_hub.dataclasses import strict
+
+from ...backbone_utils import consolidate_backbone_kwargs_to_config
+from ...configuration_utils import PreTrainedConfig
+from ...utils import auto_docstring
+from ..auto import AutoConfig
+
+
+@auto_docstring(checkpoint="PekingU/rtdetr_r18vd")
+@strict
+class RTDetrV2Config(PreTrainedConfig):
+    r"""
+    initializer_bias_prior_prob (`float`, *optional*):
+        The prior probability used by the bias initializer to initialize biases for `enc_score_head` and `class_embed`.
+        If `None`, `prior_prob` computed as `prior_prob = 1 / (num_labels + 1)` while initializing model weights.
+    freeze_backbone_batch_norms (`bool`, *optional*, defaults to `True`):
+        Whether to freeze the batch normalization layers in the backbone.
+    encoder_in_channels (`list`, *optional*, defaults to `[512, 1024, 2048]`):
+        Multi level features input for encoder.
+    feat_strides (`list[int]`, *optional*, defaults to `[8, 16, 32]`):
+        Strides used in each feature map.
+    encode_proj_layers (`list[int]`, *optional*, defaults to `[2]`):
+        Indexes of the projected layers to be used in the encoder.
+    positional_encoding_temperature (`int`, *optional*, defaults to 10000):
+        The temperature parameter used to create the positional encodings.
+    encoder_activation_function (`str`, *optional*, defaults to `"gelu"`):
+        The non-linear activation function (function or string) in the encoder and pooler. If string, `"gelu"`,
+        `"relu"`, `"silu"` and `"gelu_new"` are supported.
+    activation_function (`str`, *optional*, defaults to `"silu"`):
+        The non-linear activation function (function or string) in the general layer. If string, `"gelu"`,
+        `"relu"`, `"silu"` and `"gelu_new"` are supported.
+    eval_size (`tuple[int, int]`, *optional*):
+        Height and width used to compute the effective height and width of the position embeddings after taking
+        into account the stride.
+    normalize_before (`bool`, *optional*, defaults to `False`):
+        Determine whether to apply layer normalization in the transformer encoder layer before self-attention and
+        feed-forward modules.
+    hidden_expansion (`float`, *optional*, defaults to 1.0):
+        Expansion ratio to enlarge the dimension size of RepVGGBlock and CSPRepLayer.
+    num_queries (`int`, *optional*, defaults to 300):
+        Number of object queries.
+    decoder_in_channels (`list`, *optional*, defaults to `[256, 256, 256]`):
+        Multi level features dimension for decoder
+    num_feature_levels (`int`, *optional*, defaults to 3):
+        The number of input feature levels.
+    decoder_n_points (`int`, *optional*, defaults to 4):
+        The number of sampled keys in each feature level for each attention head in the decoder.
+    decoder_activation_function (`str`, *optional*, defaults to `"relu"`):
+        The non-linear activation function (function or string) in the decoder. If string, `"gelu"`,
+        `"relu"`, `"silu"` and `"gelu_new"` are supported.
+    num_denoising (`int`, *optional*, defaults to 100):
+        The total number of denoising tasks or queries to be used for contrastive denoising.
+    label_noise_ratio (`float`, *optional*, defaults to 0.5):
+        The fraction of denoising labels to which random noise should be added.
+    box_noise_scale (`float`, *optional*, defaults to 1.0):
+        Scale or magnitude of noise to be added to the bounding boxes.
+    learn_initial_query (`bool`, *optional*, defaults to `False`):
+        Indicates whether the initial query embeddings for the decoder should be learned during training
+    anchor_image_size (`tuple[int, int]`, *optional*):
+        Height and width of the input image used during evaluation to generate the bounding box anchors. If None, automatic generate anchor is applied.
+    with_box_refine (`bool`, *optional*, defaults to `True`):
+        Whether to apply iterative bounding box refinement, where each decoder layer refines the bounding boxes
+        based on the predictions from the previous layer.
+    matcher_alpha (`float`, *optional*, defaults to 0.25):
+        Parameter alpha used by the Hungarian Matcher.
+    matcher_gamma (`float`, *optional*, defaults to 2.0):
+        Parameter gamma used by the Hungarian Matcher.
+    matcher_class_cost (`float`, *optional*, defaults to 2.0):
+        The relative weight of the class loss used by the Hungarian Matcher.
+    matcher_bbox_cost (`float`, *optional*, defaults to 5.0):
+        The relative weight of the bounding box loss used by the Hungarian Matcher.
+    matcher_giou_cost (`float`, *optional*, defaults to 2.0):
+        The relative weight of the giou loss of used by the Hungarian Matcher.
+    use_focal_loss (`bool`, *optional*, defaults to `True`):
+        Parameter informing if focal loss should be used.
+    focal_loss_alpha (`float`, *optional*, defaults to 0.75):
+        Parameter alpha used to compute the focal loss.
+    focal_loss_gamma (`float`, *optional*, defaults to 2.0):
+        Parameter gamma used to compute the focal loss.
+    weight_loss_vfl (`float`, *optional*, defaults to 1.0):
+        Relative weight of the varifocal loss in the object detection loss.
+    weight_loss_bbox (`float`, *optional*, defaults to 5.0):
+        Relative weight of the L1 bounding box loss in the object detection loss.
+    weight_loss_giou (`float`, *optional*, defaults to 2.0):
+        Relative weight of the generalized IoU loss in the object detection loss.
+    decoder_n_levels (`int`, *optional*, defaults to 3):
+        The number of feature levels used by the decoder.
+    decoder_offset_scale (`float`, *optional*, defaults to 0.5):
+        Scaling factor applied to the attention offsets in the decoder.
+    decoder_method (`str`, *optional*, defaults to `"default"`):
+        The method to use for the decoder: `"default"` or `"discrete"`.
+
+    Examples:
+
+    ```python
+    >>> from transformers import RTDetrV2Config, RTDetrV2Model
+
+    >>> # Initializing a RT-DETR configuration
+    >>> configuration = RTDetrV2Config()
+
+    >>> # Initializing a model (with random weights) from the configuration
+    >>> model = RTDetrV2Model(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    ```
+    """
+
+    model_type = "rt_detr_v2"
+    sub_configs = {"backbone_config": AutoConfig}
+    layer_types = ["basic", "bottleneck"]
+    attribute_map = {
+        "hidden_size": "d_model",
+        "num_attention_heads": "encoder_attention_heads",
+    }
+
+    initializer_range: float = 0.01
+    initializer_bias_prior_prob: float | None = None
+    layer_norm_eps: float = 1e-5
+    batch_norm_eps: float = 1e-5
+    backbone_config: dict | PreTrainedConfig | None = None
+    freeze_backbone_batch_norms: bool = True
+    encoder_hidden_dim: int = 256
+    encoder_in_channels: list[int] | tuple[int, ...] = (512, 1024, 2048)
+    feat_strides: list[int] | tuple[int, ...] = (8, 16, 32)
+    encoder_layers: int = 1
+    encoder_ffn_dim: int = 1024
+    encoder_attention_heads: int = 8
+    dropout: float | int = 0.0
+    activation_dropout: float | int = 0.0
+    encode_proj_layers: list[int] | tuple[int, ...] = (2,)
+    positional_encoding_temperature: int = 10000
+    encoder_activation_function: str = "gelu"
+    activation_function: str = "silu"
+    eval_size: int | None = None
+    normalize_before: bool = False
+    hidden_expansion: float = 1.0
+    d_model: int = 256
+    num_queries: int = 300
+    decoder_in_channels: list[int] | tuple[int, ...] = (256, 256, 256)
+    decoder_ffn_dim: int = 1024
+    num_feature_levels: int = 3
+    decoder_n_points: int = 4
+    decoder_layers: int = 6
+    decoder_attention_heads: int = 8
+    decoder_activation_function: str = "relu"
+    attention_dropout: float | int = 0.0
+    num_denoising: int = 100
+    label_noise_ratio: float = 0.5
+    box_noise_scale: float = 1.0
+    learn_initial_query: bool = False
+    anchor_image_size: int | list[int] | None = None
+    with_box_refine: bool = True
+    is_encoder_decoder: bool = True
+    matcher_alpha: float = 0.25
+    matcher_gamma: float = 2.0
+    matcher_class_cost: float = 2.0
+    matcher_bbox_cost: float = 5.0
+    matcher_giou_cost: float = 2.0
+    use_focal_loss: bool = True
+    auxiliary_loss: bool = True
+    focal_loss_alpha: float = 0.75
+    focal_loss_gamma: float = 2.0
+    weight_loss_vfl: float = 1.0
+    weight_loss_bbox: float = 5.0
+    weight_loss_giou: float = 2.0
+    eos_coefficient: float = 1e-4
+    decoder_n_levels: int = 3
+    decoder_offset_scale: float = 0.5
+    decoder_method: str = "default"
+    tie_word_embeddings: bool = True
+
+    def __post_init__(self, **kwargs):
+        self.backbone_config, kwargs = consolidate_backbone_kwargs_to_config(
+            backbone_config=self.backbone_config,
+            default_config_type="rt_detr_resnet",
+            default_config_kwargs={"out_indices": [2, 3, 4]},
+            **kwargs,
+        )
+        super().__post_init__(**kwargs)
+
+
+__all__ = ["RTDetrV2Config"]
+                                                                                                                                                                                                                                                                                                                mad\bYa^gfnowv|}‚€ƒ‚…‰‰ŒŒŒŒ‡‡ƒƒzyz€~…„‰‡Š‹‰…Š„‰…€††€†„„…„ˆ‹Š“‘”‘”’ŒŠ‰Š‰ŒŒ‹ŠŠ”“”‘‰‰…‰ˆ‹‰ŠŒ‘‘Œ‘‰ŠŠ…‹‡‰“Œ—‘–‡xliqo‡±§Ñ¿×ÀÉ±¡‹xjj`ibhag`f]b[e\nd‘„°œÈ¯Ö¹Õ¶Å¥¬—|w‹s…pŠu†s…q‚o‰v—‚¤«’©‘–€zidW]Rj^wkˆ|–†œ‰›ˆ—„—ƒ™„˜‚“~Œw|jo^fYk^uhƒw˜ˆ˜…”‚}ˆx†w…w†xu{qwmyo|rƒy€‘„‘ƒ‹~ƒw}r{p{r„|„{ƒ{‚y‚}‡†€‰„ˆ…‚€~~€z|~€€€„†††…‡ˆ††ƒƒ€€y{pslqflholqmtsxszu~x‚zƒx„wƒqqnm€qƒr†xŠ{}}|xŠvˆp‚m€j}g}h|g|jk‚s‰x|“|’y‘s‰m…jƒhgfe‚c€fƒg„l‰q‹roŠj„fb|c~b|d~g~iq„t…u†u†oƒq‡p†p†p…o„q†o…o…ke|Yqbzt‰“§±¼²»®³‹’rft]n_n`pbqapbphv€Œ”š©«¹¶²®£ ’‘„†„‡ƒ…†Š…{x|‰Œ––™–›–œ•†xtmjjitr}{Œˆ–”‘‹‘”’Œ‡ˆŠƒ~{trkksr|x„€†“‡’…€~zŒx‰t‰u‡q…o…m…oŠrw˜~™~—|vuŠqˆrŒvŒvŒv‹uˆr‰sŒuy˜—}•{‘wuy’|—…„œ„šƒ–—ƒ’’ƒ‹~ˆ|…|‡~‡†~„~„~z{‚yy‚z„{†{ˆ|‹€Œ‚„’†„…‚‹‚Šˆ‚ˆ‚ˆŠ„ˆ„‰…‡…‡…†ƒ…„ƒƒ€€}}|}||{|{||~{‚~€|{~x~x}w~v}t|rzozlwhtgugvjxkxlxkwkvlvlvktktjsipkqjplpnrorpsqsmpjokoqv€‚‰‰‹‰†ƒzzssopnpoqpqprpqlnkolooruwvxuvsumqlqmrntoumskrkslunxq{u~t}qymxjvfsivnyp{r}r}r|pzr{r|s}s}t~s}p{p{s}t~t}v€wvv‚wƒx„w‚uu‚t‚sƒuƒu„v„v„x†y†y…z„{…yƒyƒ|„|†}…}…~†~…~„~„†ƒ†„ˆ…‰‡‰‡‰ˆ‹ŠŒ‹ŒŒ‘‘‘Œ‹Š‰Œ‰‰ˆˆ‡‡‡………‘…„‘„“„’‚‘€€€~}}}‘}|{’}’}“~”~•–€–€–€––€————‚•„–…•†•†–ˆ–ˆ–‡•†”…“…’ƒ€~~Œ|Œ{||‘~’~‘~|{{{ŒyŒ{~ƒƒŒƒ‹ƒ‰ƒ‰„‰†‹ˆŠŒŒ‹‰‰ˆŠ†ˆƒ†„ˆƒ‰„Šˆ‰ˆ†„ƒ~|‘|’|‘zxvtŒuŒtŒs‹u‹u‹t‹s‰r‡s†s…s…u‡v‰x‰w‹yŒzŒzŒy‹yŠwŒt‹sŒsp‹nŠlˆj‡i…g„eb~`|`{`{_x_v_u`uawcxcxcvdwcwcvbs_s`uas`rasbrcrdrergsgrfohnhnkploopqptrxsxtyuzu|w|w}x|w|w|x{xzyxxxxxwwywzvxvwuvsutttutssqrqsptqvqvpwqyqzq{q~rq€s‚s‚tƒtƒu…v†u†u…u…u†u†uˆv‰v‹vwxy’y”y•{”z–{—|—|–|–|—|˜|—|–}–{”{“{”|“}“}’~’~’~’““““”€––—‚™„š„˜…˜…˜…˜†—‡—‡˜‰—Š˜šœ’”œ•š“™“–”“•˜š’š’˜‘•••”•‘•‘•‘”’’‹ŠŒŒŒŠˆ‹‡Š†‰‡‰…ˆ„‡†‰ˆŠˆ‰ŠŠ‹Œ‹Œ‹ŠŒ‹ŒŒ‰‰ˆˆ‰Š‰Œ†ˆƒ†‚‡€„~‚~…~‡}…}…}†}„}ƒ}ƒ~ƒ}‚|‚}‚|y{xzx{uxtwuyuytxtytytysxtyuzswqvownwmwmxnymxnyn{o|n|n|n|o|p|o~m{l{l|m}l|m}nm~lk~kj~h~g€g€e€dd~d~def€e~c}c}b{`ybzazaxavavav`t`sauaubububvcveuewfxewfwgygygxhxfxgyhyjykxjvlxlxkwlwlymymyozpzq{q{s{tytytzsysxtxwxyyywytzt|u}ss€s‚r„q…q…p‡pŠpŒqqqonp“q—r™tšsšr›r™qšpšpœqs u¡ur›pœqœq™n™nšpsœs›r™p˜q™r›rt¡x¢x¢x£y¢z z {Ÿ{ }¢€¤‚¤ƒ£ƒ¤…£…¡ƒ ‚œ€œ€ƒ…Ÿ†ˆˆ›‡šˆš‰›‰›Š™ŠšŠ™‹–Š”‰“Š’Š‘‹‘‘ŒŒ‹‹ŒŠŒˆ‰‡‹‡ŒˆŒˆˆ‡Œ†ˆˆ‰‰‰‘ˆ‘‡‘‡‘‰’Š”‹–‹—‹˜Š˜‡˜…˜„—…˜…™ƒ™‚™€˜€——}–|•z–z•y”x”x•x”x”y–y–w•w“u”t’r’q“p‘mn‘mkljijjjŒjŒi‹h‹hŠf‰gŠfŠgŠf‰f‹fŒd‹e‹e‹eŒdŒba``__^^Œ^Œ^Œ\‹\ˆ\ˆ\†\„\…\„]ƒ^‚^‚^€^__```~ab~baa}`|_{`x`x^w^v^s_s`rasbserfrhrkrjqkoknlnpqstwwyuwrussonkmjnhqjwnzo|o|m{jzh{f{d}dƒg…g‡gŠhŠg‡cˆc‹dŠcŒedbaŒaŒbcbe“i•j•j•k•m•m–l–k•j•i™m›pœp›o›q›q™n™pšr˜r–q˜r˜t—t–t”s•s”r’q‘qqqqqpnn‘p’r”t•u•u”w”x•x•w•w”y•z–z–{—}—~—–€˜˜˜ƒ˜„š‡œ‰œŠœ‹šˆ™‡™‰—‰—‰–Š–Œ—––•“““”“’‘‘Œ‹Š‰‹‘‹’‹’Œ“‰‘††…Œ†‡‰‘‹“‹“‹”Œ”Œ”Œ•‹”‹•‹’‰’‰’Š“ˆ‘†’„‘„‘„“…’„“„‘„‚ƒ‚€}‹}Œ}‹|Š|‰{ˆz‡v…w…t„t…s„r‚sƒp‚q„pƒpƒqƒqƒqƒpƒqƒqƒp‚qƒqop}p~qq~sssr}s~t~q}r|oxpxr{vx~yx}vzuxrwpuossvtxvxvvvvttqrqsqsrstuxvxvyxywywyvxvwwwvwvwxwvwvxwwwywxvyxzx~zz€w€w‚yƒ{yƒyƒy†{‡z…y„xƒw‚utrsƒu†xˆz†x†w…w„v‚vƒvƒu‚tƒsƒs…u…uˆw‹{|{z|’|‘}‘~‘~}’~’”ƒ—…˜†™ˆ˜†—…–…—†–†–†–†˜‡™ˆ™ˆšŠšˆš‰›ŠšŠšŠ™‰—‹˜Œ•‹“‹”“Œ““”‘“’”“‘“’”–Œ•‹•‹•Š”‰“‰”‰—‡–†–„•ƒ—‚–€•€–€•~–}—{–y“x“x—y—w—u—t—q•p•o”m“l’j’kkiiiiihiggc‹bŒb‹`‰`‡_†_…_„`†a…_ƒ]‚\‚Z€Y~W}V{VzX{YzWxWwWxWwVvUuTpTnUmUnUnVnXoZn\o_n_m]l_l`lal`kajcjbjekfifghfifhdhdhdgai`kambpcpbm^l_n^n\n\r^t`ubvbvcuas`vbvcvavaxbybybybze}hk‚k„j…l…k†nˆo‡p‡qˆs‰uŠv{}}‹|‹~Š~‰~‰}‰}‰~Š‹€Š‰~‡}ˆ~Œ‚ŒƒŒ‚‹€‹‚„„…„…’††‘ˆ‘Š‘Š“Œ•“Œ’‹’‹””Œ•—––Œ–—‘–—˜››‘›‘›‘›’›’š‘™›“›”™”š“™“™’˜’˜‘—’•‘”‘Œ‰‰‰ˆ‰Š‰‡†††Œ…Œ„‹„‹…Œ‡‡‡Œˆ‡Œ†Š…ˆ…ˆ†ˆ‡ˆ††„„ƒ‚„…‚‚€‚ƒ…„„‚‚€}x~xz€|{zx}v{uzrzs{syrxqxqwqvpxpxo{ozlzm{n|o|o|q~r€r€qp~qqrƒs„r„q…r†s†t‡t†s„rƒq„r„rƒq„s‡uˆu‡r…q†rˆu‰u‹wŒu‹r‹tvw‹v‰tŠv‹xyzŒz‹zˆ{‰{ˆ{ˆ}‰€‹‚ƒƒŒ€‚…Š‡‹ˆŠ‡†

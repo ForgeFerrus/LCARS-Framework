@@ -1,0 +1,8 @@
+{
+  "monitor": {
+    "layout": "compact",
+    "metrics": ["cpu", "memory", "disk", "network"],
+    "animations": true,
+    "update_interval": 2000
+  }
+}

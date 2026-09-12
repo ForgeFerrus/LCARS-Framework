@@ -1,0 +1,18 @@
+Metadata:
+  Id: 03-0001
+  Name: Starfleet Ship's Book & Captain's Log
+  Category: '03'
+  Version: 5.0.0
+  Faction: Federation
+  Type: data
+  Status: nominal
+Specs:
+  Capacity: 8192
+  ColorCode: '#FFCC00'
+  SecurityLevel: 6
+  Bus: ODN-03
+Paths:
+  DatabaseFile: lcars/data/03/03-0001-shipsbook.db
+Entrypoints:
+  Main: lcars.modules.logbook:LogbookManager
+Description: Офіційний судновий журнал корабля та особистий щоденник капітана.

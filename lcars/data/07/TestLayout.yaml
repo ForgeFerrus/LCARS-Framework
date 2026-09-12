@@ -1,0 +1,34 @@
+Version: 0.3.0-alpha
+Era: 24th
+ElementsCount: 3
+Elements:
+- Id: MainPanel
+  Type: PANEL
+  Position: !!python/tuple
+  - 10
+  - 20
+  Size: !!python/tuple
+  - 300
+  - 200
+  IsPrimitive: true
+  Properties: {}
+- Id: WarpBtn
+  Type: BUTTON
+  Position: !!python/tuple
+  - 25
+  - 45
+  Size: !!python/tuple
+  - 120
+  - 40
+  IsPrimitive: true
+  Properties:
+    Text: WARP 9
+  Type: ELBOW
+  Position: !!python/tuple
+  - 155
+  - 45
+  Size: !!python/tuple
+  - 100
+  - 50
+  IsPrimitive: true
+  Properties: {}

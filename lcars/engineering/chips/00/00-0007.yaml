@@ -1,0 +1,19 @@
+Metadata:
+  Id: 00-0007
+  Name: LCARS Script Interpreter & Runtime Engine
+  Category: '00'
+  Version: 5.0.0
+  Faction: Federation
+  Type: kernel
+  Status: nominal
+Specs:
+  Capacity: 4096
+  ColorCode: '#FF9900'
+  SecurityLevel: 9
+  Bus: ODN-00
+Paths:
+  DatabaseFile: lcars/data/00/00-0007-interpreter.db
+Entrypoints:
+  Main: lcars.system.interpreter:Interpreter
+Description: Канонічний інтерпретатор та рантайм-рушій мови LCARS Script (.lcars)
+  у пам'яті.

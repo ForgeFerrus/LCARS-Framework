@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../Geant4/Enterprise"
+		}
+	],
+	"settings": {
+		"powershell.cwd": "LCARS-Framework",
+		"dotnet.preferCSharpExtension": true
+	}
+}

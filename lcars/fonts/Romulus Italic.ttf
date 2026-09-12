@@ -1,0 +1,1032 @@
+#include <origin.h>
+#include <GetNBox.h>
+#include <xfutils.h>
+enum{
+	mode_sweeps,
+	mode_continuous,
+	mode_concatenated,
+};
+//put additional include files here
+#include <xfbase.h>
+#include <..\originlab\fu_utils.h>
+#include <..\originlab\graph_utils.h>
+#include <..\originlab\grobj_utils.h>
+
+#ifdef _FOR_SMART_LOADING_ONLY
+#include <..\originlab\AxisScrollbar.h>
+#endif //_FOR_SMART_LOADING_ONLY
+
+/*------------------------------------------------------------------------------*
+*	Modification Log:															*
+*	Nicole 07/05/2007 v8.0655 REMOVE_SPACE_FOR_LOCATION_STRING					*
+/// Hong 09/11/07 QA80-10360 v8.0700 FIX_UNCHECK_CHANNEL_NOT_RESPOND
+*	Hong 03/03/08 QA80-11194 PCLAMP_TAKE_BACK_MULTI_FILE_SUPPORT				*
+*	Hong 08/08/08 QA80-10360 FIX_MULTI_PCLAMP_FAIL_REPLOT_IN_PLOT_CONTROL		*
+*	Hong 01/15/09 FIX_PCLAMP_PLOT_FAIL_HANDLE_TIME_OFFSET_OF_HOLDING_DURATION	*
+*	Hong 02/03/09 QA80-13318 FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM_IF_HAVE_HOLDING_DURATION_OFFSET
+*	Hong 03/05/09 FIX_FILE_INFO_LOST_IN_REIMPORT_IF_BOOK_CREATED_BY_PLOTCONTROL	*
+*	Hong 03/05/09 QA80-13222 SWEEP_MODE_ALLOW_SHOW_TIME_COL_AS_75_ASKED_BY_USER	*
+*	Hong 03/05/09 FIX_STIMUMUS_NOT_SHOWN_IN_REIMPORT_EVEN_CHECKED				*
+*	Hong 04/08/09 QA80-13222 ALLOW_PLOT_PCLAMP_EVEN_SHOW_TIME_COL				*
+*	Hong 04/09/09 QA80-13318 FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM_IF_HAVE_HOLDING_DURATION_OFFSET_AND_SHOW_TIME_COL
+*	Hong 04/16/09 QA80-10360-P14 REIMPORT_FAIL_TO_KEPT_XO_IF_PARTIAL_STRAT_TIME	*
+*	Sim 04-16-2009 QA80-13318 IMPROVE_HONG_FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM*
+*	Hong 04/23/09 QA80-10360 FIX_TAG_INDEX_IS_WRONG_WHEN_ADD_FROM_PCLAMP_CONTROL*
+*	Hong 04/23/09 QA80-13222-P7 FIX_TAG_TIME_IS_WRONG_WHEN_CHECK_HOLDING_DURATION
+*	Hong 07/16/09 QA80-13958 FIX_PCLAMP_CTRL_RUNTIME_ERROR_IF_NO_PARTIAL_OPTIONS
+*	Nolan 04/03/2015 ORG-12792-P2 FIT_START_END_TIME_DISABLE_IF_CURRENT_AXIS_RANGE_IS_CHECKED 
+*	Nolan 04/07/2015 ORG-12792-P3 FIT_EXCLUDE_UNCHECKED_PLOT_IF_UNCHECK_BOTH_SIGNALS_AND_SWEEPS_PLOT
+*-------------------------------------------------------------------------------*/
+
+//put your own support static functions here
+/// Hong 06/14/07 v8.0641 USER_KEYWORD_FOR_COMBO_STRING
+//enum
+//{
+	//PLOT_MODE_SWEEPS = 0, 
+	//PLOT_MODE_CONTINUOUS,
+	//PLOT_MODE_CONCANITATED
+//};
+/// end USER_KEYWORD_FOR_COMBO_STRING
+
+enum
+{
+	TARGET_NEW_SHEET = 0, 
+	TARGET_NEW_BOOK,
+};
+
+/// Hong 07/30/07 QA80-9709-P11 v8.0671 SAVE_USER_OPERATION_FOR_CONTROL_REOPEN_KEEP_SETTING
+enum
+{
+	UPDATE_TAG 			= 0x0001,
+	UPDATE_PICKVAL		= 0x0002,
+	UPDATE_SCROLLBAR	= 0x0004,
+	UPDATE_PLOTMODE		= 0x0008,
+	UPDATE_SELECTION	= 0x0010,
+	UPDATE_ALL			= 0x001F
+};
+/// end SAVE_USER_OPERATION_FOR_CONTROL_REOPEN_KEEP_SETTING
+
+static bool _update_axis_scrollbar(GraphLayer& gl, bool bAdd)
+{
+	if (bAdd)
+	{
+		XFBase xf("axis_scrollbar");	
+		if( !xf )
+			return false;
+		/// Hong 08/02/07 QA80-9709-P11 FIX_FAIL_REMOVE_SCROLLBAR_IF_ACTIVE_LAYER_CHANGED
+		xf.SetArg("layer", 1);
+		/// end FIX_FAIL_REMOVE_SCROLLBAR_IF_ACTIVE_LAYER_CHANGED
+		int nErr;
+		xf.ExecuteLabTalk(NULL, NULL, NULL, 0, &nErr, 0);
+	}
+	else
+	{
+		remove_axis_scrollbar(gl);		
+	}
+	return true;
+}
+
+/// Hong 05/14/07 v8.0617 ALLOW_TAG_TO_DYNAMIC_UPDATE
+// move from plot_pclamp
+static bool _is_tree_node_not_hidden(TreeNode& trNode)
+{
+	int nShow = 1;
+	if ( !trNode.GetAttribute(STR_SHOW_ATTRIB, nShow) || 1 == nShow )
+		return true;
+	
+	return false;
+}
+
+/// Hong 06/18/07 v8.0621 FIX_ERROR_CACULATE_SWEEP_TARGET_COLUME
+//static int _find_plot_index_by_column_index(GraphLayer& gl,  int nColIndex)
+static int _find_plot_index_by_column_index(GraphLayer& gl,  int nColIndex, int nImpSweeps)
+/// end FIX_ERROR_CACULATE_SWEEP_TARGET_COLUME
+{
+	foreach (DataPlot dpTemp in gl.DataPlots)
+	{
+		DataRange drPlot;
+		dpTemp.GetDataRange(drPlot);
+		Worksheet wksTemp;
+		int nC1, nC2;
+		///Sophy 11/26/2014 ORG-9424-P5 PROPER_GET_Y_COLUMN_INDEX_FROM_RANGE
+		//drPlot.GetRange(wksTemp, nC1, nC2);
+		int nR1, nR2;
+		drPlot.GetRange("Y", nR1, nC1, nR2, nC2, wksTemp);
+		///end PROPER_GET_Y_COLUMN_INDEX_FROM_RANGE
+		/// Hong 08/08/08 QA80-10360 FIX_MULTI_PCLAMP_FAIL_REPLOT_IN_PLOT_CONTROL 
+		//nC2 %= nImpSweeps; // Hong 06/18/07 v8.0621 FIX_ERROR_CACULATE_SWEEP_TARGET_COLUME
+		/// end FIX_MULTI_PCLAMP_FAIL_REPLOT_IN_PLOT_CONTROL 
+		/// Nolan 04/07/2015 ORG-12792-P3 FIT_EXCLUDE_UNCHECKED_PLOT_IF_UNCHECK_BOTH_SIGNALS_AND_SWEEPS_PLOT
+		//if ( nColIndex == nC2)
+		///Sophy 2/26/2016 ORG-14429-P1 PROPER_MATCH_TARGET_COLUMN_WITH_PLOT
+		//if ( nColIndex == nC2 % nImpSweeps)
+		if ( (nC2 - nColIndex) % nImpSweeps == 0 )
+		///end PROPER_MATCH_TARGET_COLUMN_WITH_PLOT
+		{
+			int nRet = dpTemp.GetIndex();
+			return nRet;
+			//return dpTemp.GetIndex();
+		}
+		/// End FIT_EXCLUDE_UNCHECKED_PLOT_IF_UNCHECK_BOTH_SIGNALS_AND_SWEEPS_PLOT
+	}
+	
+	return -1;
+}
+
+static void _check_tag_sweep_in_selected(TreeNode& trFileTags, TreeNode& trSweepInfo, vector<int>& vnIndex)
+{
+	foreach(TreeNode trTag in trFileTags.Children)
+	{
+		int nSweepIndex = 1;
+		int nPlotIndex = -1;
+		bool bInSelect = false;
+		
+		foreach(TreeNode trSweep in trSweepInfo.Children)
+		{
+			if (trSweep.nVal )
+			{
+				nPlotIndex++;
+				if (  nSweepIndex == trTag.SweepNum.nVal )
+				{
+					vnIndex.Add(nPlotIndex); // SweepNum is 1 offset, as Column Index is 0 offset
+					bInSelect = true;	
+					break;
+				}
+			}
+			
+			if ( _is_tree_node_not_hidden(trSweep) ) // if not hidden
+				nSweepIndex++;
+		}
+		if( !bInSelect )
+			vnIndex.Add(-1);
+	}
+}
+
+static bool _update_tags(GraphPage& gp, TreeNode& trGetN)
+{
+	Tree trCtrlInfo;
+	if ( !gp.GetBinaryStorage("pclamp_info", trCtrlInfo) ) // this binary storage is put by XF plotcplamp
+		return false;
+	
+	if ( !trCtrlInfo.FileTags )
+		return false;
+	
+	GraphLayer gl = gp.Layers(0);
+	// clean existing tags objects
+	/*
+	foreach (GraphObject go in gl.GraphObjects)
+	{
+		string strObjName = go.GetName();
+		
+		if ( 0 == strObjName.Find("pclamp_tag_line_") || 0 == strObjName.Find("pclamp_tag_text_") )
+		{
+			go.Destroy();
+		}
+	}
+	*/
+	remove_GraphObjects_with_prefix(gl, "pclamp_tag_");
+		
+	if(trGetN.tag.nVal)
+	{
+		/// Hong 04/23/09 QA80-10360 FIX_TAG_INDEX_IS_WRONG_WHEN_ADD_FROM_PCLAMP_CONTROL
+		// Hong, do NOT who and why comment out code below
+		vector<int> vnIndex;
+		_check_tag_sweep_in_selected(trCtrlInfo.FileTags, trGetN.plot.Sweeps, vnIndex);
+		/// end FIX_TAG_INDEX_IS_WRONG_WHEN_ADD_FROM_PCLAMP_CONTROL
+		
+		int nIndex = 0;
+		foreach(TreeNode trTag in trCtrlInfo.FileTags.Children)
+		{
+			GraphObject grLine;
+			GraphObject grText;
+			string strTag;
+			int nTime;
+			
+			/// Hong 04/23/09 QA80-10360 FIX_TAG_INDEX_IS_WRONG_WHEN_ADD_FROM_PCLAMP_CONTROL
+			// Hong, do NOT who and why comment out code below
+			nIndex++;
+			if( -1 == vnIndex[nIndex - 1] )
+				continue;
+			/// end FIX_TAG_INDEX_IS_WRONG_WHEN_ADD_FROM_PCLAMP_CONTROL
+			
+			TreeNode trSweep =  trCtrlInfo.Import.trSetting.Sweeps.Children.Item(trTag.SweepNum.nVal - 1);
+			if ( !trSweep )
+				continue;
+			int nColIndex = -1;
+			trSweep.GetAttribute("PCLAMP_ColIndex", nColIndex);
+			/// Hong 06/18/07 v8.0621 FIX_ERROR_CACULATE_SWEEP_TARGET_COLUME
+			//int nPlotIndex = _find_plot_index_by_column_index(gl, nColIndex);
+			int nPlotIndex = _find_plot_index_by_column_index(gl, nColIndex, trCtrlInfo.Import.ImpSweeps.nVal);
+			/// end FIX_ERROR_CACULATE_SWEEP_TARGET_COLUME
+
+			DataPlot dp = gl.DataPlots(nPlotIndex);	
+			/// Hong 05/15/07 v8.618 MORE_VALID_CHECK_IF_USER_DELETE_SOMETHING_NEEDED
+			if ( !dp )
+				continue;
+			/// END MORE_VALID_CHECK_IF_USER_DELETE_SOMETHING_NEEDED		
+			/// Hong 04/23/09 QA80-13222-P7 FIX_TAG_TIME_IS_WRONG_WHEN_CHECK_HOLDING_DURATION
+			//nTime = dp.x0 + trTag.OffSet.nVal;
+			nTime = (int)dp.x0 + trTag.OffSet.nVal;
+			/// end FIX_TAG_TIME_IS_WRONG_WHEN_CHECK_HOLDING_DURATION
+			
+			strTag.Format("Tag%lu sw:%d\n%ldms\n%s", nIndex, trTag.SweepNum.nVal, nTime, trTag.Comment.strVal);
+			add_x_tag(gl, grLine, grText, nTime, strTag);
+
+			grLine.SetName("pclamp_tag_line_" + nIndex);
+			grText.SetName("pclamp_tag_text_" + nIndex);
+
+			disable_go_move(grLine);
+			disable_go_move(grText, true, false);
+		}
+	}
+	
+	return true;
+}
+/// END ALLOW_TAG_TO_DYNAMIC_UPDATE
+
+/// Hong 05/21/07 v8.0622 FIX_ERROR_TIME_WHEN_PLOT_CONCANOTATED
+static bool _sort_plot_according_episode(GraphLayer& gl, vector<UINT>& vnSort)
+{
+	if ( !gl || gl.DataPlots.Count() < 0 )
+		return false;
+	
+	Worksheet wks;
+	Column col;
+	vector<int> vnColumn;
+	foreach (DataPlot dp in gl.DataPlots)
+	{
+		string strDataset = dp.GetDatasetName();
+		get_wks_col(strDataset, col, wks);
+		vnColumn.Add(col.GetIndex());
+	}
+	
+	vnColumn.Sort(SORT_ASCENDING, TRUE, vnSort);
+	
+	return true;
+}
+/// end FIX_ERROR_TIME_WHEN_PLOT_CONCANOTATED
+	
+static bool _change_plot_mode(GraphPage& gp, TreeNode& trGetN, bool bModeChange = true)
+{
+	/// Hong 05/15/07 MORE_RELIABLE_TIME_WHEN_PLOT
+	Tree trCtrlInfo;
+	
+	if ( !gp.GetBinaryStorage("pclamp_info", trCtrlInfo) ) // this binary storage is put by XF plotcplamp
+		return false;
+	
+	/// AW 05/17/07 FIX_REIMPORT_PROBELM
+	//double dX0 = trCtrlInfo.Import.XOffset.dVal;
+	double dX0 = 0;
+	///---Sim 04-16-2009 QA80-13318 IMPROVE_HONG_FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM
+	//TreeNode trSkipPoint = tree_get_node_by_id(trGetN, IDE_XFIMP_SKIP_POINT, true);
+	///// Hong 06/29/07 v8.0652 ADD_VALID_CHECK
+	//if ( !trSkipPoint )
+		//return false;
+	///// end ADD_VALID_CHECK
+	//TreeNode trOptions = trSkipPoint.Parent();
+	//trOptions.GetAttribute(STR_PARTIAL_START_TIME, dX0);
+	TreeNode trOrignPartialOption =  tree_get_node_by_tagname(trCtrlInfo, STR_FILTER_PARTIAL_NODE, true);
+	if ( trOrignPartialOption )
+	{
+		if ( fuGetPartialImport(trOrignPartialOption) )
+			dX0 = fuGetStartTime(trOrignPartialOption);
+	}
+	///---END QA80-13318 IMPROVE_HONG_FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM
+	/// END FIX_REIMPORT_PROBELM	
+	/// END MORE_RELIABLE_TIME_WHEN_PLOT
+	/// Hong 01/15/09 FIX_PCLAMP_PLOT_FAIL_HANDLE_TIME_OFFSET_OF_HOLDING_DURATION
+	if ( trGetN.plot.bHoldingDuration && 1 == trGetN.plot.bHoldingDuration.nVal )
+	{
+		double		dHoldingDuration(0.0);
+		trGetN.plot.bHoldingDuration.GetAttribute(STR_HOLDING_DURATION, dHoldingDuration);
+		dX0 += dHoldingDuration;
+	}
+	/// end FIX_PCLAMP_PLOT_FAIL_HANDLE_TIME_OFFSET_OF_HOLDING_DURATION
+	/// Hong 05/17/08 v8.0621 NO_NEED_UPDATE_DIGITAL_WAVEFORM
+	int nImpChannels = trCtrlInfo.Import.ImpChannels.nVal;
+	if ( trCtrlInfo.addstimulur.nVal )
+			nImpChannels += trCtrlInfo.Import.WavStimulu.nVal / trCtrlInfo.Import.ImpSweeps.nVal;
+	/// end NO_NEED_UPDATE_DIGITAL_WAVEFORM
+	
+	/// Hong 05/21/07 v8.0622 FIX_ERROR_TIME_WHEN_PLOT_CONCANOTATED
+	vector<UINT> vnSortedPlot;
+	_sort_plot_according_episode(gp.Layers(0), vnSortedPlot);
+	/// end FIX_ERROR_TIME_WHEN_PLOT_CONCANOTATED
+
+	if ( !(trGetN.plot.ShowTimeCol && trGetN.plot.ShowTimeCol.nVal) )	///Sophy 11/26/2014 ORG-9424-P5 PLOT_X0_UPDATE_CAUSE_X_COLUMN_INFORMATION_LOST
+	{
+		foreach (GraphLayer gl in gp.Layers)
+		{
+			switch(trGetN.mode.nVal)
+			{
+			case mode_sweeps:			
+				foreach (DataPlot dp in gl.DataPlots)
+				{    
+					/// Hong 05/15/07 MORE_RELIABLE_TIME_WHEN_PLOT
+					//dp.x0 = 0;
+					dp.x0 = dX0;
+					/// END MORE_RELIABLE_TIME_WHEN_PLOT
+				}
+				
+				break;
+			case mode_continuous:  		
+				foreach (DataPlot dp in gl.DataPlots)
+				{    
+					DataRange dr;
+					dp.GetDataRange(dr);
+					Worksheet wks;
+					int nC1, nC2;
+					dr.GetRange(wks, nC1, nC2);
+					Column col(wks, nC2);		
+					
+					if (col)
+					{
+						double dXTemp, dInc;
+						col.IsEvenSampling(&dXTemp, &dInc);		   		
+						dp.x0 = dXTemp;
+					}
+				}
+				
+				break;
+			case mode_concatenated:	
+				/// Hong 05/15/07 MORE_RELIABLE_TIME_WHEN_PLOT
+				//double x2Last = 0;
+				double x2Last = dX0;
+				/// END MORE_RELIABLE_TIME_WHEN_PLOT
+				//for(int ii=0; ii < nSelSweeps; ii++)
+				//{    
+					//DataPlot dp = gl.DataPlots(ii);
+				/// Hong 05/21/07 v8.0622 FIX_ERROR_TIME_WHEN_PLOT_CONCANOTATED
+				//foreach (DataPlot dp in gl.DataPlots)    	
+				//{
+				for (int ii = 0; ii < gl.DataPlots.Count(); ii++)
+				{
+					DataPlot dp = gl.DataPlots(vnSortedPlot[ii]);
+					if (!dp)
+						continue;
+				/// end FIX_ERROR_TIME_WHEN_PLOT_CONCANOTATED
+					int nPts = dp.i2;
+					/// Hong 02/12/07 START_TIME_ALREADY_IN_SAMPLING_INTERVAL
+					//if(0 == ii)
+						//dp.x0 = dvStartTime[0];
+					//else
+						//dp.x0 = x2Last; // connect to last data plot
+					dp.x0 = x2Last; // connect to last data plot
+					/// end START_TIME_ALREADY_IN_SAMPLING_INTERVAL
+				   
+					double xEnd = dp.x0 + dp.i2* dp.xInc;
+					x2Last = xEnd;
+				}		
+				break;
+			}
+			/// Hong 05/17/07 v8.620c KEEP_PLOT_COLOR_WHEN_CHANGE_EPISODE
+			/*
+			int nIndex = 0;
+			foreach (DataPlot dp in gl.DataPlots)
+			{
+				// Change the display range of the data plot to show only points from 5 to 10:
+				dp.SetColor(nIndex++);
+			}
+			*/
+			/// end KEEP_PLOT_COLOR_WHEN_CHANGE_EPISODE
+			/// Hong 05/17/08 v8.0621 NO_NEED_UPDATE_DIGITAL_WAVEFORM
+			//if ( bModeChange ) // keep scale when change Episode
+			//// AW 05/18/07 MORE_ON_CHANGE_MODE
+			//if ( bModeChange && ( nImpChannels - 1 ) > gl.GetIndex() ) 
+			/// Hong 05/21/07 ADD_EPISODE_BY_CONTINUOUS_NOT_CORECT_RESCALE
+			//if ( bModeChange && gl.DataPlots.Count() > 1 ) 
+			if ( ( bModeChange && gl.DataPlots.Count() > 1 ) || mode_sweeps != trGetN.mode.nVal ) 
+			/// end ADD_EPISODE_BY_CONTINUOUS_NOT_CORECT_RESCALE
+			/// end NO_NEED_UPDATE_DIGITAL_WAVEFORM
+				gl.Rescale();
+		}	
+	}
+	
+	GraphLayer gl2 = gp.Layers(0);
+	
+	/// Hong 07/16/09 QA80-13958 FIX_PCLAMP_CTRL_RUNTIME_ERROR_IF_NO_PARTIAL_OPTIONS
+	//if ( bModeChange )
+	//{
+	//	TreeNode trPartialImport = tree_get_node_by_id(trGetN, IDE_XFIMP_PARTIAL_IMPORT, true);
+	TreeNode trPartialImport = tree_get_node_by_id(trGetN, IDE_XFIMP_PARTIAL_IMPORT, true);
+	if ( bModeChange && trPartialImport )
+	{
+	/// end FIX_PCLAMP_CTRL_RUNTIME_ERROR_IF_NO_PARTIAL_OPTIONS
+		TreeNode trPartialOption = trPartialImport.Parent();
+		TreeNode trStartTime = tree_get_node_by_id(trPartialOption, IDE_XFIMP_START_TIME, true);
+		TreeNode trEndTime = tree_get_node_by_id(trPartialOption, IDE_XFIMP_END_TIME, true);
+		/// Hong 07/30/2015 ORG-13392 PARTIAL_IMPORT_SUPPORT_SKIP_1ST_FILE
+		//bool	bHasPartialImport = trPartialImport.nVal;
+		bool	bHasPartialImport = 0 != trPartialImport.nVal;
+		/// end PARTIAL_IMPORT_SUPPORT_SKIP_1ST_FILE
+		if ( mode_sweeps == trGetN.mode.nVal )
+		{
+			trPartialOption.axisrange.Enable = bHasPartialImport;
+			
+			if (trPartialOption.axisrange.nVal)
+			{
+				trStartTime.Enable = 0;
+				trEndTime.Enable = 0;
+			}
+		}
+		else
+		{
+			trPartialOption.axisrange.Enable = 0;
+			
+			trStartTime.Enable = bHasPartialImport;
+			trEndTime.Enable = bHasPartialImport;
+		}	
+		
+		if ( mode_concatenated == trGetN.mode.nVal )
+			axis_label_set_show(gl2, AXIS_BOTTOM, false);
+		else
+			axis_label_set_show(gl2, AXIS_BOTTOM);
+	}
+
+	if ( bModeChange || mode_sweeps != trGetN.mode.nVal )
+		_update_axis_scrollbar(gl2, trGetN.scrollbar.nVal);
+	
+	// need add code here to update position of Tags
+	if ( trGetN.tag.nVal )
+		_update_tags(gp, trGetN); /// Hong 05/14/07 v8.0617 ALLOW_TAG_TO_DYNAMIC_UPDATE
+	
+	return true;
+}
+
+static bool OnChangePartialOption(TreeNode& trGetN, int nRow, int nCol, TreeNode& trNode, DWORD nEventInfo, int nCntrlType, WndContainer& getNContainer)
+{
+	TreeNode trPartialOption = trNode.Parent();
+	
+	TreeNode trPartialImport = tree_get_node_by_id(trPartialOption, IDE_XFIMP_PARTIAL_IMPORT, true);
+	TreeNode trSkipPoint = tree_get_node_by_id(trPartialOption, IDE_XFIMP_SKIP_POINT, true);
+	TreeNode trStartTime = tree_get_node_by_id(trPartialOption, IDE_XFIMP_START_TIME, true);
+	TreeNode trEndTime = tree_get_node_by_id(trPartialOption, IDE_XFIMP_END_TIME, true);
+	
+	/// Hong 07/30/2015 ORG-13392 PARTIAL_IMPORT_SUPPORT_SKIP_1ST_FILE
+	//bool	bHasPartialImport = trPartialImport.nVal;
+	bool	bHasPartialImport = 0 != trPartialImport.nVal;
+	/// end PARTIAL_IMPORT_SUPPORT_SKIP_1ST_FILE
+	trPartialOption.axisrange.Enable = bHasPartialImport && (mode_sweeps == trGetN.mode.nVal);
+	trSkipPoint.Enable = bHasPartialImport;
+
+	trStartTime.Enable = bHasPartialImport;
+	trEndTime.Enable = bHasPartialImport;
+	
+	if ( trPartialOption.axisrange.Enable && trPartialOption.axisrange.nVal )	
+	{	
+		trStartTime.Enable = 0;
+		trEndTime.Enable = 0;
+	}
+
+	return true;
+}
+
+static bool _get_channel_sweep_number(TreeNode& trFileNode, int& nChannels, int& nSweeps)
+{
+	if ( !trFileNode.Channels )
+		return false;
+	if ( !trFileNode.Sweeps )
+		return false;
+	
+	nChannels = nSweeps = 0;
+	
+	foreach( TreeNode trChannel in trFileNode.Channels.Children )
+	{
+		if ( trChannel.nVal )
+			nChannels++;
+	}
+	
+	foreach( TreeNode trSweep in trFileNode.Sweeps.Children )
+	{
+		if ( trSweep.nVal )
+			nSweeps++;
+	}
+	
+	if(0 == nChannels || 0 == nSweeps)
+		return false;
+	
+	return true;
+}
+/// Hong 05/18/07 v8.0621 ALLOW_CHNANEL_SELECT
+static bool OnChangeChanne(TreeNode& trGetN, int nRow, int nCol, TreeNode& trNode, DWORD nEventInfo, int nCntrlType, WndContainer& getNContainer)
+{
+	if ( nEventInfo & GETNEVENT_VIEW_LIST ) // only deal event check\uncheck, not sure if this bit is really correct
+	{
+		Tree trCtrlInfo;
+		GraphPage gp = Project.Pages();
+		GraphLayer gl;
+		if ( !gp.GetBinaryStorage("pclamp_info", trCtrlInfo) ) // this binary storage is put by XF plotcplamp
+			return false;
+		
+		TreeNode trRange = tree_get_node_by_tagname(trCtrlInfo, "DataRange", true);
+	
+		DataRange drTarget;
+		drTarget = get_and_check_range(trRange);
+		
+		Worksheet wksTarget;		
+		int nStartCol, nEndCol;
+		WorksheetPage pgTarget;
+		GetRangeInfo(drTarget, wksTarget, pgTarget, nStartCol, nEndCol);
+
+		XFBase xf("plotpclamp");
+		TreeNode trSetting = trNode.Parent();
+		xf.SetArg("trsetting", trGetN.plot);
+		/// Hong 06/29/07 v8.0652 XF_VARIABLE_NAME_HAVE_CHNAGED
+		//xf.SetArg("plotmode", trGetN.mode.nVal);
+		xf.SetArg("mode", trGetN.mode.nVal);
+		/// end XF_VARIABLE_NAME_HAVE_CHNAGED
+		xf.SetArg("plot", gp);
+		xf.SetArg("iw", wksTarget);
+		/// Hong 05/22/07 v8.0623 FIX_CRASH_CAUSE_BY_REATTACH_XFBAR
+		//xf.SetArg("ctrl", 0);
+		xf.SetArg("ctrl", 2);
+		/// end FIX_CRASH_CAUSE_BY_REATTACH_XFBAR
+		/// Hong 06/29/07 v8.0652 XF_VARIABLE_NAME_HAVE_CHNAGED
+		//xf.SetArg("addstimulur", trGetN.plot.addstimulur.nVal); // Hong 05/18/07 v8.0621 KEEP_STIMULUS_SETTING
+		xf.SetArg("stimulur", trGetN.plot.addstimulur.nVal);
+		/// end XF_VARIABLE_NAME_HAVE_CHNAGED
+		/// Hong 08/08/08 QA80-10360 FIX_MULTI_PCLAMP_FAIL_REPLOT_IN_PLOT_CONTROL
+		xf.SetArg("findex", trCtrlInfo.findex.nVal);
+		/// end FIX_MULTI_PCLAMP_FAIL_REPLOT_IN_PLOT_CONTROL
+		/// Hong 08/24/07 QA80-9709 MORE_KEEP_GUI_SETTING
+		xf.SetArg("tag", trGetN.tag.nVal);
+		xf.SetArg("pickval", trGetN.pickval.nVal);
+		xf.SetArg("scrollbar", trGetN.scrollbar.nVal);
+		/// end MORE_KEEP_GUI_SETTING
+		xf.Evaluate();
+	}
+	
+	return true;
+}
+/// end ALLOW_CHNANEL_SELECT
+
+static bool OnChangeEpisode(TreeNode& trGetN, int nRow, int nCol, TreeNode& trNode, DWORD nEventInfo, int nCntrlType, WndContainer& getNContainer)
+{
+	if ( nEventInfo & GETNEVENT_VIEW_LIST ) // only deal event check\uncheck, not sure if this bit is really correct
+	{
+		Tree trCtrlInfo;
+		GraphPage gp = Project.Pages();
+		GraphLayer gl;
+		if ( !gp.GetBinaryStorage("pclamp_info", trCtrlInfo) ) // this binary storage is put by XF plotcplamp
+			return false;
+	
+		TreeNode trRange = tree_get_node_by_tagname(trCtrlInfo, "DataRange", true);
+	
+		DataRange drTarget;
+		drTarget = get_and_check_range(trRange);
+		
+		Worksheet wksTarget;		
+		int nStartCol, nEndCol;
+		WorksheetPage pgTarget;
+		GetRangeInfo(drTarget, wksTarget, pgTarget, nStartCol, nEndCol);
+			
+		int nTargetCol, nImpColIndex = 0, nTargetPlotIndex = -1;
+		trNode.GetAttribute("PCLAMP_ColIndex", nImpColIndex);
+		nTargetCol = nImpColIndex;
+		
+		int nImpChannels, nImpSweeps;
+		nImpSweeps = trCtrlInfo.Import.ImpSweeps.nVal;
+		nImpChannels = trCtrlInfo.Import.ImpChannels.nVal;
+		
+		gl = gp.Layers(0);
+		if ( !trNode.nVal ) // if remove, find the target DataPlot index
+		{
+			//foreach (DataPlot dpTemp in gl.DataPlots)
+			//{
+				//DataRange drPlot;
+				//dpTemp.GetDataRange(drPlot);
+				//Worksheet wksTemp;
+				//int nC1, nC2;
+				//drPlot.GetRange(wksTemp, nC1, nC2);
+				//if ( nTargetCol == nC2 )
+				//{
+					//nTargetPlotIndex = dpTemp.GetIndex();
+					//break;
+				//}
+			//}
+			/// Hong 06/18/07 v8.0621 FIX_ERROR_CACULATE_SWEEP_TARGET_COLUME
+			//nTargetPlotIndex = _find_plot_index_by_column_index(gl, nImpColIndex);
+			nTargetPlotIndex = _find_plot_index_by_column_index(gl, nImpColIndex, nImpSweeps);
+			/// end FIX_ERROR_CACULATE_SWEEP_TARGET_COLUME
+		}		
+		
+	
+		/// Hong 04/08/09 QA80-13222 ALLOW_PLOT_PCLAMP_EVEN_SHOW_TIME_COL
+		BOOL			bTimeCol = FALSE;
+		if ( trGetN.plot.ShowTimeCol )
+			bTimeCol = trGetN.plot.ShowTimeCol.nVal;
+		int				nPlotColor = (bTimeCol ? nImpColIndex - 1 : nImpColIndex) % 14;
+		ASSERT(nPlotColor >= 0);
+		/// end ALLOW_PLOT_PCLAMP_EVEN_SHOW_TIME_COL
+		/// Hong 06/18/07 v8.0621 FIX_ERROR_CACULATE_SWEEP_TARGET_COLUME
+		//if ( trCtrlInfo.addstimulur.nVal )
+			//nImpChannels += trCtrlInfo.Import.WavStimulu.nVal / trCtrlInfo.Import.ImpSweeps.nVal;
+		//
+		//for (int ii = 0; ii < nImpChannels; ii++)
+		int nLayerIndex = 0;
+		foreach (TreeNode trChannel in trGetN.plot.Channels.Children)
+		/// end FIX_ERROR_CACULATE_SWEEP_TARGET_COLUME
+		{
+			if ( !_is_tree_node_not_hidden(trChannel) )
+				continue;
+			if ( trChannel.nVal )
+			{
+				gl = gp.Layers(nLayerIndex++);
+				if ( !gl )
+					break;
+	
+				if (trNode.nVal)
+				{				
+					DataRange dr;
+					dr.Add(wksTarget, nTargetCol, "Y");					
+					int nPlotIndex = gl.AddPlot(dr, IDM_PLOT_LINE, GAP_USE_X_FROM_SY);
+					/// Hong 05/17/07 v8.620c KEEP_PLOT_COLOR_WHEN_CHANGE_EPISODE
+					/// Hong 05/23/07 AVOID_WHITE_COLOR_MIXED_WITH_BKGRND
+					//gl.DataPlots(nPlotIndex).SetColor(nImpColIndex);
+					/// Hong 04/08/09 QA80-13222 ALLOW_PLOT_PCLAMP_EVEN_SHOW_TIME_COL
+					//gl.DataPlots(nPlotIndex).SetColor(nImpColIndex % 14);
+					gl.DataPlots(nPlotIndex).SetColor(nPlotColor);
+					/// end ALLOW_PLOT_PCLAMP_EVEN_SHOW_TIME_COL
+					/// end AVOID_WHITE_COLOR_MIXED_WITH_BKGRND
+					/// end KEEP_PLOT_COLOR_WHEN_CHANGE_EPISODE
+				}
+				else
+				{
+					gl.RemovePlot(nTargetPlotIndex);
+				}
+			}
+			
+			nTargetCol += nImpSweeps;
+		}
+		
+		/// Hong 06/18/07 v8.0621 FIX_ERROR_CACULATE_SWEEP_TARGET_COLUME
+		if ( trCtrlInfo.addstimulur.nVal ) 
+		{
+			int nWaveLayers = trCtrlInfo.Import.WavStimulu.nVal / trCtrlInfo.Import.ImpSweeps.nVal;
+			for (int ii = 0; ii < nWaveLayers; ii++)
+			{
+				gl = gp.Layers(nLayerIndex + ii);
+				
+				if ( !gl )
+					break;
+				
+				if (trNode.nVal)
+				{				
+					DataRange dr;
+					dr.Add(wksTarget, nTargetCol, "Y");					
+					int nPlotIndex = gl.AddPlot(dr, IDM_PLOT_LINE, GAP_USE_X_FROM_SY);
+					/// Hong 05/17/07 v8.620c KEEP_PLOT_COLOR_WHEN_CHANGE_EPISODE
+					/// Hong 05/23/07 AVOID_WHITE_COLOR_MIXED_WITH_BKGRND
+					//gl.DataPlots(nPlotIndex).SetColor(nImpColIndex);
+					/// Hong 04/08/09 QA80-13222 ALLOW_PLOT_PCLAMP_EVEN_SHOW_TIME_COL
+					//gl.DataPlots(nPlotIndex).SetColor(nImpColIndex % 14);
+					gl.DataPlots(nPlotIndex).SetColor(nPlotColor);
+					/// end ALLOW_PLOT_PCLAMP_EVEN_SHOW_TIME_COL
+					/// end AVOID_WHITE_COLOR_MIXED_WITH_BKGRND
+					/// end KEEP_PLOT_COLOR_WHEN_CHANGE_EPISODE
+				}
+				else
+				{
+					gl.RemovePlot(nTargetPlotIndex);
+				}
+				nTargetCol += nImpSweeps;
+			}
+		}
+		/// end FIX_ERROR_CACULATE_SWEEP_TARGET_COLUME
+		
+		/// AW 05/16/07 SPEED_ON_ESPICODE_CHECK_CHANGING
+		//_change_plot_mode(gp, trGetN);
+		_change_plot_mode(gp, trGetN, false);
+		/// END SPEED_ON_ESPICODE_CHECK_CHANGING
+		
+		/// Hong 07/30/07 QA80-9709-P11 v8.0671 SAVE_USER_OPERATION_FOR_CONTROL_REOPEN_KEEP_SETTING
+		_update_storage_save_user_setting(gp, trGetN, UPDATE_SELECTION);
+		/// end SAVE_USER_OPERATION_FOR_CONTROL_REOPEN_KEEP_SETTING
+	}
+	return true;
+}
+
+/// Hong 07/30/07 QA80-9709-P11 v8.0671 SAVE_USER_OPERATION_FOR_CONTROL_REOPEN_KEEP_SETTING
+static bool _update_storage_save_user_setting(GraphPage& gp, TreeNode& trGetN, DWORD dwCtrl)
+{
+	Tree trCtrlInfo;
+	if ( !gp.GetBinaryStorage("pclamp_info", trCtrlInfo) ) // this binary storage is put by XF plotcplamp
+		return false;
+	// save GUI setting to binary storage
+	if ( dwCtrl & UPDATE_TAG )
+		trCtrlInfo.addtag.nVal = trGetN.tag.nVal;
+	
+	if ( dwCtrl & UPDATE_PICKVAL )
+		trCtrlInfo.addpickvalue.nVal = trGetN.pickval.nVal;
+	
+	if ( dwCtrl & UPDATE_SCROLLBAR )
+		trCtrlInfo.addscrollbar.nVal = trGetN.scrollbar.nVal;
+	
+	if ( dwCtrl & UPDATE_PLOTMODE )
+		trCtrlInfo.plotmode.nVal = trGetN.Mode.nVal;
+	
+	if ( dwCtrl & UPDATE_SELECTION )
+		trCtrlInfo.trsetting.Sweeps.Replace(trGetN.plot.Sweeps);
+	
+	return gp.PutBinaryStorage("pclamp_info", trCtrlInfo);	
+}
+/// end SAVE_USER_OPERATION_FOR_CONTROL_REOPEN_KEEP_SETTING
+		
+
+void pclampplotcontrol(const string& fname, const int& findex, const Range& orng, const int& mode, const int& tag, const int& pickval, const int& scrollbar, const TreeNode& plot, const TreeNode& reimp)
+{
+	Tree trCtrlInfo;
+	GraphPage gp = Project.Pages();
+	
+	if ( !gp.GetBinaryStorage("pclamp_info", trCtrlInfo) ) // this binary storage is put by XF plotcplamp
+		XF_THROW(0); // should not come here
+	
+	TreeNode trRange = tree_get_node_by_tagname(trCtrlInfo, "DataRange", true);
+	
+	DataRange drTarget;
+	drTarget = get_and_check_range(trRange);
+	
+	Worksheet wksTarget;		
+	int nStartCol, nEndCol;
+	WorksheetPage pgTarget;
+	GetRangeInfo(drTarget, wksTarget, pgTarget, nStartCol, nEndCol);
+	
+	XFBase xf("imppclamp");
+	if(!xf)
+		XF_THROW(XFERR_FAIL_LOAD_XF);
+	
+	if( !xf.SetArg("fname", trCtrlInfo.fname.strVal) )
+		XF_THROW(XFERR_FAIL_SET_ARG);
+	
+	int nLayerIndex = 0;
+	if ( TARGET_NEW_SHEET == reimp.target.nVal )
+		nLayerIndex = pgTarget.AddLayer();
+	else
+		pgTarget.Create("Origin");
+	
+	wksTarget = pgTarget.Layers(nLayerIndex);
+	set_active_layer(wksTarget);
+	
+	DataRange dr;
+	dr.Add(wksTarget, 0, "X", wksTarget.GetNumCols() -1);
+	if( !xf.SetArg("orng", dr) )
+		XF_THROW(XFERR_FAIL_SET_ARG);
+	
+	Tree trJunk; // for memory of tree
+	TreeNode trGetN;
+	xf.GetGUI(trJunk, trGetN);
+	/// convert tree structure for imppclamp
+	Tree trFiles;
+	/// Hong 03/05/09 FIX_FILE_INFO_LOST_IN_REIMPORT_IF_BOOK_CREATED_BY_PLOTCONTROL
+	if ( plot.InfoFileNormal )
+		trFiles.AddNode(plot.InfoFileNormal);
+	/// end FIX_FILE_INFO_LOST_IN_REIMPORT_IF_BOOK_CREATED_BY_PLOTCONTROL
+	/// Hong 05/14/07 v8.0617 MOVE_FILE_NODE_AS_SINGLE_FILE
+	//TreeNode trFielSetting = trFiles.AddNode("file1");
+	/// END MOVE_FILE_NODE_AS_SINGLE_FILE
+	/// Hong 03/05/09 FIX_STIMUMUS_NOT_SHOWN_IN_REIMPORT_EVEN_CHECKED
+	//trFiles.AddNode(plot.Stimulus); // Hong 05/14/07 v8.0617 ADD_STIMULUS_SELECT_OPTION
+	if ( plot.Stimulus )
+	{
+		trFiles.AddNode(plot.Stimulus);
+		TreeNode		trStimulus = trFiles.GetNode(plot.Stimulus.tagName);
+		if ( trStimulus && trStimulus.nVal )
+			trStimulus.Show = 1;
+	}
+	/// end FIX_STIMUMUS_NOT_SHOWN_IN_REIMPORT_EVEN_CHECKED
+	
+	/// Fisher 01/07/09 QA80-12413 ADD_HOLDING_DURATION_TIME_IN_PCLAMP	
+	/// Hong 01/15/09 FIX_PCLAMP_PLOT_FAIL_HANDLE_TIME_OFFSET_OF_HOLDING_DURATION
+	//if(trGetN.trfiles.bHoldingDuration)				
+	//	trFiles.bHoldingDuration.nVal = trGetN.trfiles.bHoldingDuration.nVal;		
+	if ( trGetN.trfiles.bHoldingDuration )
+	{
+		TreeNode		trbHoldingDuration;
+		trbHoldingDuration = plot.bHoldingDuration ? plot.bHoldingDuration : trGetN.trfiles.bHoldingDuration;
+		trFiles.AddNode(trbHoldingDuration);
+	}
+	/// end FIX_PCLAMP_PLOT_FAIL_HANDLE_TIME_OFFSET_OF_HOLDING_DURATION
+	/// End ADD_HOLDING_DURATION_TIME_IN_PCLAMP
+	
+	/// Hong 03/05/09 QA80-13222 SWEEP_MODE_ALLOW_SHOW_TIME_COL_AS_75_ASKED_BY_USER
+	if ( trGetN.trfiles.ShowTimeCol)
+	{
+		TreeNode		trbHoldingDuration;
+		trbHoldingDuration = plot.ShowTimeCol ? plot.ShowTimeCol : trGetN.trfiles.ShowTimeCol;
+		trFiles.AddNode(trbHoldingDuration);
+	}
+	/// end SWEEP_MODE_ALLOW_SHOW_TIME_COL_AS_75_ASKED_BY_USER
+	
+	plot.Channels.Show = 1; // show channel node when reimport
+	/// Hong 05/17/07 v8.0620c NOT_ALLOW_ONE_EVENT_AS_NEED_DETAIL_CONTROL
+	// restore check/uncheck all one event for import
+	int nBranchAttr;
+	plot.Sweeps.GetAttribute(STR_ATTRIB_BRANCH, nBranchAttr);
+	nBranchAttr |= GETNBRANCH_CHECK_CONTROL_ONE_EVENT;
+	plot.Sweeps.SetAttribute(STR_ATTRIB_BRANCH, nBranchAttr);
+	/// Hong 09/11/07 QA80-10360 v8.0700 FIX_UNCHECK_CHANNEL_NOT_RESPOND
+	plot.Channels.GetAttribute(STR_ATTRIB_BRANCH, nBranchAttr);
+	nBranchAttr |= GETNBRANCH_CHECK_CONTROL_ONE_EVENT;
+	plot.Channels.SetAttribute(STR_ATTRIB_BRANCH, nBranchAttr);
+	/// end FIX_UNCHECK_CHANNEL_NOT_RESPOND
+	/// end NOT_ALLOW_ONE_EVENT_AS_NEED_DETAIL_CONTROL
+	trFiles.AddNode(plot.Channels);
+	trFiles.AddNode(plot.Sweeps);
+	// need add code here to convert partail time if axis is on
+	/// Hong 06/04/07 v8.0623 USE_MACRO_FOR_MORE_FRIENDLY_NAME
+	//TreeNode trPartialOption = reimport.SkipPointsOptions;
+	TreeNode trPartialOption = reimp.GetNode(STR_FILTER_PARTIAL_NODE);
+	/// end USE_MACRO_FOR_MORE_FRIENDLY_NAME
+	//if (trPartialOption.axisrange.Enable && trPartialOption.axisrange.nVal)
+	if ( trPartialOption.IsValid() && trPartialOption.axisrange.Enable && trPartialOption.axisrange.nVal ) /// Hong 03/03/08 QA80-11194 PCLAMP_TAKE_BACK_MULTI_FILE_SUPPORT
+	{
+		GraphLayer gl = gp.Layers(0);
+		double dStartTime, dEndTime;
+		dStartTime = gl.X.From;
+		dEndTime = gl.X.To;
+		/// Hong 02/03/09 QA80-13318 FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM_IF_HAVE_HOLDING_DURATION_OFFSET
+		if ( plot.bHoldingDuration && 1 == plot.bHoldingDuration.nVal )
+		{
+			double		dHoldingDuration(0.0);
+			plot.bHoldingDuration.GetAttribute(STR_HOLDING_DURATION, dHoldingDuration);
+			dStartTime -= dHoldingDuration;
+			dEndTime -= dHoldingDuration;
+		}
+		/// end FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM_IF_HAVE_HOLDING_DURATION_OFFSET
+		if ( dStartTime < 0 )
+			dStartTime = 0;
+		
+		double dDuration, dInterval;		
+		trPartialOption.GetAttribute(STR_PARTIAL_IMPORT_INTERVAL, dInterval);
+		trPartialOption.GetAttribute(STR_PARTIAL_DURATION_TIME, dDuration);
+	
+		
+		///---Sim 04-16-2009 QA80-13318 IMPROVE_HONG_FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM
+		//TreeNode trStartPoint	= tree_get_node_by_id(trPartialOption, IDE_XFIMP_START_POINT, true);
+		//TreeNode trEndPoint 	= tree_get_node_by_id(trPartialOption, IDE_XFIMP_END_POINT, true);
+		///---END QA80-13318 IMPROVE_HONG_FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM
+	
+		/// Hong 04/16/09 QA80-10360-P14 REIMPORT_FAIL_TO_KEPT_XO_IF_PARTIAL_STRAT_TIME
+		/* Hong, i am NOT sure why andrew subtract dXOffset here, this offset is generated by partial settting, so should be kept when reimport.
+		/// AW 05/17/07 FIX_REIMPORT_PROBELM
+		//trStartPoint.nVal = dStartTime  / dInterval + 1; 
+		//trEndPoint.nVal = dEndTime / dInterval; 
+		double dXOffset = 0;
+		trPartialOption.GetAttribute(STR_PARTIAL_START_TIME, dXOffset);
+		/// Hong 04/09/09 QA80-13318 FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM_IF_HAVE_HOLDING_DURATION_OFFSET_AND_SHOW_TIME_COL
+		// Hong, all pclamp data is import by float, and when convert float to double, pricision error appear,
+		// float ff = -0.36; double dd = ff; double dd2 = -0.36;
+		// then dump dd&dd2 in bytes, they all different!!!
+		//trStartPoint.nVal = (dStartTime - dXOffset)  / dInterval + 1; 
+		trStartPoint.nVal = (float)((dStartTime - dXOffset)  / dInterval) + 1; 
+		/// end FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM_IF_HAVE_HOLDING_DURATION_OFFSET_AND_SHOW_TIME_COL
+		/// Hong 11/09/07 QA80-10360 FIX_REIMPORT_MISSING_LAST_CELL_AS_LT_OFFSET
+		//trEndPoint.nVal = (dEndTime - dXOffset) / dInterval;
+		/// Hong 04/09/09 QA80-13318 FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM_IF_HAVE_HOLDING_DURATION_OFFSET_AND_SHOW_TIME_COL
+		//trEndPoint.nVal = (dEndTime - dXOffset) / dInterval + 1;
+		trEndPoint.nVal = (float)((dEndTime - dXOffset) / dInterval) + 1;
+		/// end FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM_IF_HAVE_HOLDING_DURATION_OFFSET_AND_SHOW_TIME_COL
+		/// end FIX_REIMPORT_MISSING_LAST_CELL_AS_LT_OFFSET
+		/// END FIX_REIMPORT_PROBELM
+		*/
+		// Hong, all pclamp data is import by float, and when convert float to double, pricision error appear,
+		// float ff = -0.36; double dd = ff; double dd2 = -0.36;
+		// then dump dd&dd2 in bytes, they are different!!!
+		///---Sim 04-16-2009 QA80-13318 IMPROVE_HONG_FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM
+		//trStartPoint.nVal = (float)(dStartTime / dInterval) + 1;
+		//trEndPoint.nVal = (float)(dEndTime / dInterval) + 1;
+		fuSetStartPoint(trPartialOption, (float)(dStartTime / dInterval) + 1);
+		fuSetEndPoint(trPartialOption, (float)(dEndTime / dInterval) + 1);
+		fuSetStartTime(trPartialOption, dStartTime);
+		fuSetEndTime(trPartialOption, dEndTime);
+		///---END QA80-13318 IMPROVE_HONG_FIX_REIMPORT_FAIL_GET_CORRECT_ROW_NUM
+		/// end REIMPORT_FAIL_TO_KEPT_XO_IF_PARTIAL_STRAT_TIME
+	}
+	/// Hong 06/28/07 v8.0652 FIX_REIMPOPRT_FROM_MENU_GET_DUPLICATE_PARTIAL_IMPORT_NODE
+	/// Hong 06/29/07 v8.0652 MORE_RELIABLE_MOTHOD_TO_GET_VALID_PARTIAL_SETTING
+	/*
+	Tree trDefaultFilter;
+	constructOptionsForXF(trDefaultFilter, false, false, false, false, false, true, false, false, true); // prepare default pclamp partial node 
+	tree_copy_values_by_id(trPartialOption, trDefaultFilter);
+	string strInfo; // as .Info node have no dataid, so need restore value by hand
+	if ( trPartialOption.Info )
+		strInfo = trPartialOption.Info.strVal;
+	trPartialOption = tree_get_node_by_tagname(trDefaultFilter, STR_FILTER_PARTIAL_NODE, true);
+	if ( trPartialOption.Info )	
+		trPartialOption.Info.strVal = strInfo;
+	*/
+	TreeNode trOrignPartialOption =  tree_get_node_by_tagname(trCtrlInfo, STR_FILTER_PARTIAL_NODE, true);
+	/// Hong 03/03/08 QA80-11194 PCLAMP_TAKE_BACK_MULTI_FILE_SUPPORT
+	if ( trOrignPartialOption.IsValid() )
+	{
+		TreeNode trPartial = trOrignPartialOption.Clone();
+		tree_copy_values_by_id(trPartialOption, trPartial);
+		/// end MORE_RELIABLE_MOTHOD_TO_GET_VALID_PARTIAL_SETTING
+		/// end FIX_REIMPOPRT_FROM_MENU_GET_DUPLICATE_PARTIAL_IMPORT_NODE
+		//trFiles.AddNode(trPartialOption);
+		trFiles.AddNode(trPartial); /// Hong 06/29/07 v8.0652 MORE_RELIABLE_MOTHOD_TO_GET_VALID_PARTIAL_SETTING
+	}
+	/// end PCLAMP_TAKE_BACK_MULTI_FILE_SUPPORT
+	/// Hong 06/11/07 v8.0638 ALLOW_LT_ACCESS_FOR_STIMULUS
+	// can always replace as for reimport
+	//if ( trGetN.trfiles && trGetN.trfiles.GetNodeCount() > 0 )
+	//{
+		//xf.SetArg("trfiles", trFiles); 
+	//}
+	//else
+	/// end ALLOW_LT_ACCESS_FOR_STIMULUS
+	/// Hong 06/28/07 v8.0652 FIX_REIMPOPRT_FROM_MENU_GET_DUPLICATE_PARTIAL_IMPORT_NODE
+	Tree trOriginInfo;
+	
+	int nErrCode = XFERR_REIMP_SELECT_NO_IMPORT_FILE;
+	if ( getFileInfoByRange(trOriginInfo, drTarget, &nErrCode) <= 0 )
+		XF_THROW(nErrCode);
+	
+	trGetN.options.Replace(trOriginInfo.FilterInfo, true, true);
+	/// end FIX_REIMPOPRT_FROM_MENU_GET_DUPLICATE_PARTIAL_IMPORT_NODE
+	{
+		trGetN.trfiles.Replace(trFiles, true, true);
+		xf.SetGUI(trGetN);
+	}
+	/// Hong 05/18/07 v8.0621 REIMP_FROM_GRAPH_AUTO_PLOT
+	//if( !xf.SetArg("reimp", 0) )
+	if( !xf.SetArg("reimp", 2) )
+	/// end REIMP_FROM_GRAPH_AUTO_PLOT
+		XF_THROW(XFERR_FAIL_SET_ARG);
+		
+	int nErr;
+	xf.ExecuteLabTalk(NULL, NULL, NULL, 0, &nErr, 0);
+	
+}
+
+//nEventID < 0 on event, like GETNE_ON_INIT, GETNE_ON_OK etc, >0 on change from control
+//return 0 to do nothing, return PEVENT_GETN_RET_TO_CLOSE to close dialog
+//dwEnables = bOKEnable, bBTN1Enable, bBTN2Enable, bBTN3Enable, , can set to false to disable OK/Apply buttons
+//lpcszNodeName = the trGetN TreeNode tag name that generates the event, or is  if GETNE_ON_OK etc
+//strAux = optional string for XF Wizard Bar, like DLG_NEED_CHANGE_GRID etc, it will be invalid if from internal node value change event
+//strErrMsg = allowing messages to be shown
+int pclampplotcontrol_event1(TreeNode& trGetN, int nRow, int nEventID, DWORD& dwEnables, LPCSTR lpcszNodeName, WndContainer& DynaCntrlContainer, string& strAux, string& strErrMsg)
+{
+	if( xf_is_extended_event(nEventID) )
+		return pclampplotcontrol_event1_ex(trGetN, nRow, nEventID, dwEnables, lpcszNodeName, DynaCntrlContainer, strAux, strErrMsg);
+	DECLARE_BUTTON_ENABLES
+	/// Hong 05/21/07 MORE_ERROR_MESSAGE
+	if ( GETNE_ON_INIT == nEventID || GETNE_ON_THEME == nEventID )
+	{
+		Tree trCtrlInfo;
+		GraphPage gp = Project.Pages();
+		if (!gp)
+		{
+			bOKEnable = false;
+			warning_msg_box(CER_INVALID_PAGE, false); /// Hong 05/21/07 add error message 
+			return true;
+		}
+		
+		if ( !gp.GetBinaryStorage("pclamp_info", trCtrlInfo) ) // this binary storage is put by XF plotcplamp
+		{
+			bOKEnable = false;
+			warning_msg_box(CER_INVALID_IMPORT_DATA_FILE, false); /// Hong 05/21/07 add error message 
+			return true;		
+		}
+		
+		/// Hong 04/08/09 QA80-13222 ALLOW_PLOT_PCLAMP_EVEN_SHOW_TIME_COL
+		if ( trGetN.plot.ShowTimeCol && 1 == trGetN.plot.ShowTimeCol.nVal )
+		{
+			trGetN.mode.nVal = mode_sweeps;
+			trGetN.mode.Enable = ENABLE_READ_ONLY;
+		}
+		/// end ALLOW_PLOT_PCLAMP_EVEN_SHOW_TIME_COL
+	}
+	/// end MORE_ERROR_MESSAGE
+	GraphPage gp = Project.Pages();
+	GraphLayer gl = gp.Layers(0); 
+	if (!gl)
+		return false;
+	
+		
+	if( 0 == lstrcmp(lpcszNodeName, "mode") )
+	{
+		_change_plot_mode(gp, trGetN);
+		/// Hong 07/30/07 QA80-9709-P11 v8.0671 SAVE_USER_OPERATION_FOR_CONTROL_REOPEN_KEEP_SETTING
+		_update_storage_save_user_setting(gp, trGetN, UPDATE_PLOTMODE);
+		/// end SAVE_USER_OPERATION_FOR_CONTROL_REOPEN_KEEP_SETTING
+		return true;
+	}
+	
+	if( 0 == lstrcmp(lpcszNodeName, "tag") )
+	{
+		/// Hong 05/14/07 v8.0617 ALLOW_TAG_TO_DYNAMIC_UPDATE
+		/*
+		foreach (GraphObject go in gl.GraphObjects)
+		{
+			string strObjName = go.GetName();
+			
+			if ( 0 == strObjName.Find("pclamp_tag_line_") || 0 == strObjName.Find("pclamp_tag_text_") )
+			{
+				go.Show = trGetN.addtag.nVal;
+			}
+		}
+		*/
+		_update_tags(gp, trGetN);
+		/// END ALLOW_TAG_TO_DYNAMIC_UPDATE
+		/// Hong 07/30/07 QA80-9709-P11 v8.0671 SAVE_USER_OPERATION_FOR_CONTROL

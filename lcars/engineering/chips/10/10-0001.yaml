@@ -1,0 +1,18 @@
+Metadata:
+  Id: 10-0001
+  Name: Long & Short Range Sensor Array Array
+  Category: '10'
+  Version: 5.0.0
+  Faction: Federation
+  Type: sensors
+  Status: nominal
+Specs:
+  Capacity: 8192
+  ColorCode: '#3399FF'
+  SecurityLevel: 6
+  Bus: ODN-10
+Paths:
+  DatabaseFile: lcars/data/10/10-0001-sensors.db
+Entrypoints:
+  Main: lcars.modules.sensor:SensorArray
+Description: Керування сенсорами далекого радіусу дії, тактичним лідаром та біосканерами.

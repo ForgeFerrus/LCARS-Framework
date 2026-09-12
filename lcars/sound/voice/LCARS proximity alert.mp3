@@ -1,0 +1,4319 @@
+#if !defined(TORCH_STABLE_ONLY) && !defined(TORCH_TARGET_VERSION)
+
+#pragma once
+#include <ATen/cpu/vec/intrinsics.h>
+#include <ATen/cpu/vec/vec256/vsx/vsx_helpers.h>
+#include <ATen/cpu/vec/vec_base.h>
+#include <c10/util/complex.h>
+#include <c10/util/irange.h>
+
+namespace at {
+namespace vec {
+// See Note [CPU_CAPABILITY namespace]
+inline namespace CPU_CAPABILITY {
+using ComplexFlt = c10::complex<float>;
+
+template <>
+struct is_vec_specialized_for<ComplexFlt> : std::bool_constant<true> {};
+
+template <>
+class Vectorized<ComplexFlt> {
+ private:
+  union {
+    struct {
+      vfloat32 _vec0;
+      vfloat32 _vec1;
+    };
+    struct {
+      vbool32 _vecb0;
+      vbool32 _vecb1;
+    };
+
+  } __attribute__((__may_alias__));
+
+ public:
+  using value_type = ComplexFlt;
+  using vec_internal_type = vfloat32;
+  using vec_internal_mask_type = vbool32;
+  using size_type = int;
+
+  static constexpr size_type size() {
+    return 4;
+  }
+  Vectorized() {}
+
+  C10_ALWAYS_INLINE Vectorized(vfloat32 v) : _vec0{v}, _vec1{v} {}
+  C10_ALWAYS_INLINE Vectorized(vbool32 vmask) : _vecb0{vmask}, _vecb1{vmask} {}
+  C10_ALWAYS_INLINE Vectorized(vfloat32 v1, vfloat32 v2)
+      : _vec0{v1}, _vec1{v2} {}
+  C10_ALWAYS_INLINE Vectorized(vbool32 v1, vbool32 v2)
+      : _vecb0{v1}, _vecb1{v2} {}
+
+  Vectorized(ComplexFlt val) {
+    float real_value = val.real();
+    float imag_value = val.imag();
+    _vec0 = vfloat32{real_value, imag_value, real_value, imag_value};
+    _vec1 = vfloat32{real_value, imag_value, real_value, imag_value};
+  }
+
+  Vectorized(
+      ComplexFlt val1,
+      ComplexFlt val2,
+      ComplexFlt val3,
+      ComplexFlt val4) {
+    _vec0 = vfloat32{val1.real(), val1.imag(), val2.real(), val2.imag()};
+    _vec1 = vfloat32{val3.real(), val3.imag(), val4.real(), val4.imag()};
+  }
+
+  C10_ALWAYS_INLINE const vec_internal_type& vec0() const {
+    return _vec0;
+  }
+  C10_ALWAYS_INLINE const vec_internal_type& vec1() const {
+    return _vec1;
+  }
+
+  template <uint64_t mask>
+  static std::enable_if_t<blendChoiceComplex(mask) == 0, Vectorized<ComplexFlt>>
+      C10_ALWAYS_INLINE
+      blend(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+    return a;
+  }
+
+  template <uint64_t mask>
+  static std::enable_if_t<blendChoiceComplex(mask) == 1, Vectorized<ComplexFlt>>
+      C10_ALWAYS_INLINE
+      blend(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+    return b;
+  }
+
+  template <uint64_t mask>
+  static std::enable_if_t<blendChoiceComplex(mask) == 2, Vectorized<ComplexFlt>>
+      C10_ALWAYS_INLINE
+      blend(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+    return {b._vec0, a._vec1};
+  }
+
+  template <uint64_t mask>
+  static std::enable_if_t<blendChoiceComplex(mask) == 3, Vectorized<ComplexFlt>>
+      C10_ALWAYS_INLINE
+      blend(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+    return {a._vec0, b._vec1};
+  }
+
+  template <uint64_t mask>
+  static std::enable_if_t<blendChoiceComplex(mask) == 4, Vectorized<ComplexFlt>>
+      C10_ALWAYS_INLINE
+      blend(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+    const vbool32 mask_1st = VsxComplexMask1(mask);
+    return {(vfloat32)vec_sel(a._vec0, b._vec0, mask_1st), a._vec1};
+  }
+
+  template <uint64_t mask>
+  static std::enable_if_t<blendChoiceComplex(mask) == 5, Vectorized<ComplexFlt>>
+      C10_ALWAYS_INLINE
+      blend(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+    const vbool32 mask_1st = VsxComplexMask1(mask);
+    return {(vfloat32)vec_sel(a._vec0, b._vec0, mask_1st), b._vec1};
+  }
+
+  template <uint64_t mask>
+  static std::enable_if_t<blendChoiceComplex(mask) == 6, Vectorized<ComplexFlt>>
+      C10_ALWAYS_INLINE
+      blend(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+    const vbool32 mask_2nd = VsxComplexMask2(mask);
+    // generated masks
+    return {a._vec0, (vfloat32)vec_sel(a._vec1, b._vec1, mask_2nd)};
+  }
+
+  template <uint64_t mask>
+  static std::enable_if_t<blendChoiceComplex(mask) == 7, Vectorized<ComplexFlt>>
+      C10_ALWAYS_INLINE
+      blend(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+    const vbool32 mask_2nd = VsxComplexMask2(mask);
+    // generated masks
+    return {b._vec0, (vfloat32)vec_sel(a._vec1, b._vec1, mask_2nd)};
+  }
+
+  template <uint64_t mask>
+  static std::enable_if_t<blendChoiceComplex(mask) == 8, Vectorized<ComplexFlt>>
+      C10_ALWAYS_INLINE
+      blend(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+    const vbool32 mask_1st = VsxComplexMask1(mask);
+    const vbool32 mask_2nd = VsxComplexMask2(mask);
+    return {
+        (vfloat32)vec_sel(a._vec0, b._vec0, mask_1st),
+        (vfloat32)vec_sel(a._vec1, b._vec1, mask_2nd)};
+  }
+
+  template <int64_t mask>
+  static Vectorized<ComplexFlt> C10_ALWAYS_INLINE
+  el_blend(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+    const vbool32 mask_1st = VsxMask1(mask);
+    const vbool32 mask_2nd = VsxMask2(mask);
+    return {
+        (vfloat32)vec_sel(a._vec0, b._vec0, mask_1st),
+        (vfloat32)vec_sel(a._vec1, b._vec1, mask_2nd)};
+  }
+
+  static Vectorized<ComplexFlt> blendv(
+      const Vectorized<ComplexFlt>& a,
+      const Vectorized<ComplexFlt>& b,
+      const Vectorized<ComplexFlt>& mask) {
+    // convert std::complex<V> index mask to V index mask: xy -> xxyy
+    auto mask_complex = Vectorized<ComplexFlt>(
+        vec_mergeh(mask._vec0, mask._vec0), vec_mergeh(mask._vec1, mask._vec1));
+    return {
+        vec_sel(
+            a._vec0, b._vec0, reinterpret_cast<vbool32>(mask_complex._vec0)),
+        vec_sel(
+            a._vec1, b._vec1, reinterpret_cast<vbool32>(mask_complex._vec1)),
+    };
+  }
+
+  static Vectorized<ComplexFlt> elwise_blendv(
+      const Vectorized<ComplexFlt>& a,
+      const Vectorized<ComplexFlt>& b,
+      const Vectorized<ComplexFlt>& mask) {
+    return {
+        vec_sel(a._vec0, b._vec0, reinterpret_cast<vbool32>(mask._vec0)),
+        vec_sel(a._vec1, b._vec1, reinterpret_cast<vbool32>(mask._vec1)),
+    };
+  }
+
+  template <typename step_t>
+  static Vectorized<ComplexFlt> arange(
+      ComplexFlt base = 0.,
+      step_t step = static_cast<step_t>(1)) {
+    return Vectorized<ComplexFlt>(
+        base,
+        base + step,
+        base + ComplexFlt(2) * step,
+        base + ComplexFlt(3) * step);
+  }
+  static Vectorized<ComplexFlt> set(
+      const Vectorized<ComplexFlt>& a,
+      const Vectorized<ComplexFlt>& b,
+      int64_t count = size()) {
+    switch (count) {
+      case 0:
+        return a;
+      case 1:
+        return blend<1>(a, b);
+      case 2:
+        return blend<3>(a, b);
+      case 3:
+        return blend<7>(a, b);
+    }
+    return b;
+  }
+
+  static Vectorized<value_type> C10_ALWAYS_INLINE
+  loadu(const void* ptr, int count = size()) {
+    if (count == size()) {
+      return {
+          vec_vsx_ld(offset0, reinterpret_cast<const float*>(ptr)),
+          vec_vsx_ld(offset16, reinterpret_cast<const float*>(ptr))};
+    }
+
+    __at_align__ value_type tmp_values[size()] = {};
+    std::memcpy(tmp_values, ptr, std::min(count, size()) * sizeof(value_type));
+
+    return {
+        vec_vsx_ld(offset0, reinterpret_cast<const float*>(tmp_values)),
+        vec_vsx_ld(offset16, reinterpret_cast<const float*>(tmp_values))};
+  }
+
+  void C10_ALWAYS_INLINE store(void* ptr, int count = size()) const {
+    if (count == size()) {
+      vec_vsx_st(_vec0, offset0, reinterpret_cast<float*>(ptr));
+      vec_vsx_st(_vec1, offset16, reinterpret_cast<float*>(ptr));
+    } else if (count > 0) {
+      __at_align__ value_type tmp_values[size()];
+      vec_vsx_st(_vec0, offset0, reinterpret_cast<float*>(tmp_values));
+      vec_vsx_st(_vec1, offset16, reinterpret_cast<float*>(tmp_values));
+      std::memcpy(
+          ptr, tmp_values, std::min(count, size()) * sizeof(value_type));
+    }
+  }
+
+  const ComplexFlt& operator[](int idx) const = delete;
+  ComplexFlt& operator[](int idx) = delete;
+
+  Vectorized<ComplexFlt> map(ComplexFlt (*const f)(ComplexFlt)) const {
+    __at_align__ ComplexFlt tmp[size()];
+    store(tmp);
+    for (const auto i : c10::irange(size())) {
+      tmp[i] = f(tmp[i]);
+    }
+    return loadu(tmp);
+  }
+
+  Vectorized<ComplexFlt> map(ComplexFlt (*const f)(const ComplexFlt&)) const {
+    __at_align__ ComplexFlt tmp[size()];
+    store(tmp);
+    for (const auto i : c10::irange(size())) {
+      tmp[i] = f(tmp[i]);
+    }
+    return loadu(tmp);
+  }
+
+  static Vectorized<ComplexFlt> horizontal_add(
+      Vectorized<ComplexFlt>& first,
+      Vectorized<ComplexFlt>& second) {
+    // Operates on individual floats, see _mm_hadd_ps
+    // {f0+f1, s0+s1, f2+f3, s2+s3, ...}
+    // i.e. it sums the re and im of each value and interleaves first and
+    // second: {f_re0 + f_im0, s_re0 + s_im0, f_re1 + f_im1, s_re1 + s_im1, ...}
+    return el_mergee(first, second) + el_mergeo(first, second);
+  }
+
+  static Vectorized<ComplexFlt> horizontal_sub_permD8(
+      Vectorized<ComplexFlt>& first,
+      Vectorized<ComplexFlt>& second) {
+    // we will simulate it differently with 6 instructions total
+    // lets permute second so that we can add it getting horizontal sums
+    auto first_perm = first.el_swapped(); // 2perm
+    auto second_perm = second.el_swapped(); // 2perm
+    // sum
+    auto first_ret = first - first_perm; // 2sub
+    auto second_ret = second - second_perm; // 2 sub
+    // now lets choose evens
+    return el_mergee(first_ret, second_ret); // 2 mergee's
+  }
+
+  Vectorized<ComplexFlt> abs_2_() const {
+    auto a = (*this).elwise_mult(*this);
+    auto permuted = a.el_swapped();
+    a = a + permuted;
+    return a.el_mergee();
+  }
+
+  Vectorized<ComplexFlt> abs_() const {
+    auto vi = el_mergeo();
+    auto vr = el_mergee();
+    return {
+        Sleef_hypotf4_u05vsx(vr._vec0, vi._vec0),
+        Sleef_hypotf4_u05vsx(vr._vec1, vi._vec1)};
+  }
+
+  Vectorized<ComplexFlt> abs() const {
+    return abs_() & real_mask;
+  }
+
+  Vectorized<ComplexFlt> real_() const {
+    return *this & real_mask;
+  }
+  Vectorized<ComplexFlt> real() const {
+    return *this & real_mask;
+  }
+  Vectorized<ComplexFlt> imag_() const {
+    return *this & imag_mask;
+  }
+  Vectorized<ComplexFlt> imag() const {
+    // we can use swap_mask or sldwi
+    auto ret = imag_();
+    return {
+        vec_sldw(ret._vec0, ret._vec0, 3), vec_sldw(ret._vec1, ret._vec1, 3)};
+  }
+
+  Vectorized<ComplexFlt> conj_() const {
+    return *this ^ isign_mask;
+  }
+  Vectorized<ComplexFlt> conj() const {
+    return *this ^ isign_mask;
+  }
+
+  Vectorized<ComplexFlt> log() const {
+    // Most trigonomic ops use the log() op to improve complex number
+    // performance.
+    return map(std::log);
+  }
+
+  Vectorized<ComplexFlt> log2() const {
+    // log2eB_inv
+    auto ret = log();
+    return ret.elwise_mult(log2e_inv);
+  }
+  Vectorized<ComplexFlt> log10() const {
+    auto ret = log();
+    return ret.elwise_mult(log10e_inv);
+  }
+
+  Vectorized<ComplexFlt> log1p() const {
+    return map(std::log1p);
+  }
+
+  Vectorized<ComplexFlt> el_swapped() const {
+    vfloat32 v0 = vec_perm(_vec0, _vec0, swap_mask);
+    vfloat32 v1 = vec_perm(_vec1, _vec1, swap_mask);
+    return {v0, v1};
+  }
+
+  Vectorized<ComplexFlt> el_mergee() const {
+    // as mergee phased in , we can use vec_perm with mask
+    return {vec_mergee(_vecb0, _vecb0), vec_mergee(_vecb1, _vecb1)};
+  }
+
+  Vectorized<ComplexFlt> el_mergeo() const {
+    // as mergeo phased in , we can use vec_perm with mask
+    return {vec_mergeo(_vecb0, _vecb0), vec_mergeo(_vecb1, _vecb1)};
+  }
+
+  Vectorized<ComplexFlt> el_madd(
+      const Vectorized<ComplexFlt>& multiplier,
+      const Vectorized<ComplexFlt>& val) const {
+    return {
+        vec_madd(_vec0, multiplier._vec0, val._vec0),
+        vec_madd(_vec1, multiplier._vec1, val._vec1)};
+  }
+
+  static Vectorized<ComplexFlt> el_mergee(
+      const Vectorized<ComplexFlt>& first,
+      const Vectorized<ComplexFlt>& second) {
+    return {
+        vec_mergee(first._vecb0, second._vecb0),
+        vec_mergee(first._vecb1, second._vecb1)};
+  }
+
+  static Vectorized<ComplexFlt> el_mergeo(
+      const Vectorized<ComplexFlt>& first,
+      const Vectorized<ComplexFlt>& second) {
+    return {
+        vec_mergeo(first._vecb0, second._vecb0),
+        vec_mergeo(first._vecb1, second._vecb1)};
+  }
+
+  Vectorized<ComplexFlt> angle_() const {
+    // angle = atan2(b/a)
+    // auto b_a = _mm256_permute_ps(values, 0xB1); // b        a
+    // return Sleef_atan2f8_u10(values, b_a); // 90-angle angle
+    Vectorized<ComplexFlt> ret;
+    for (int i = 0; i < 4; i += 2) {
+      ret._vec0[i] = std::atan2(_vec0[i + 1], _vec0[i]);
+      ret._vec1[i] = std::atan2(_vec1[i + 1], _vec1[i]);
+    }
+    return ret;
+  }
+
+  Vectorized<ComplexFlt> angle() const {
+    return angle_() & real_mask;
+  }
+
+  Vectorized<ComplexFlt> sin() const {
+    return map(std::sin);
+  }
+  Vectorized<ComplexFlt> sinh() const {
+    return map(std::sinh);
+  }
+  Vectorized<ComplexFlt> cos() const {
+    return map(std::cos);
+  }
+  Vectorized<ComplexFlt> cosh() const {
+    return map(std::cosh);
+  }
+  Vectorized<ComplexFlt> ceil() const {
+    return {vec_ceil(_vec0), vec_ceil(_vec1)};
+  }
+  Vectorized<ComplexFlt> floor() const {
+    return {vec_floor(_vec0), vec_floor(_vec1)};
+  }
+  Vectorized<ComplexFlt> neg() const {
+    auto z = Vectorized<ComplexFlt>(zero);
+    return z - *this;
+  }
+  Vectorized<ComplexFlt> round() const {
+    return {vec_round(_vec0), vec_round(_vec1)};
+  }
+  Vectorized<ComplexFlt> tan() const {
+    return map(std::tan);
+  }
+  Vectorized<ComplexFlt> tanh() const {
+    return map(std::tanh);
+  }
+  Vectorized<ComplexFlt> trunc() const {
+    return {vec_trunc(_vec0), vec_trunc(_vec1)};
+  }
+
+  Vectorized<ComplexFlt> elwise_sqrt() const {
+    return {vec_sqrt(_vec0), vec_sqrt(_vec1)};
+  }
+
+  Vectorized<ComplexFlt> sqrt() const {
+    return map(std::sqrt);
+  }
+
+  Vectorized<ComplexFlt> reciprocal() const {
+    // re + im*i = (a + bi)  / (c + di)
+    // re = (ac + bd)/abs_2() = c/abs_2()
+    // im = (bc - ad)/abs_2() = d/abs_2()
+    auto c_d = *this ^ isign_mask; // c       -d
+    auto abs = abs_2_();
+    return c_d.elwise_div(abs);
+  }
+
+  Vectorized<ComplexFlt> rsqrt() const {
+    return sqrt().reciprocal();
+  }
+
+  Vectorized<ComplexFlt> pow(const Vectorized<ComplexFlt>& exp) const {
+    __at_align__ ComplexFlt x_tmp[size()];
+    __at_align__ ComplexFlt y_tmp[size()];
+    store(x_tmp);
+    exp.store(y_tmp);
+    for (const auto i : c10::irange(size())) {
+      x_tmp[i] = std::pow(x_tmp[i], y_tmp[i]);
+    }
+    return loadu(x_tmp);
+  }
+
+  Vectorized<ComplexFlt> atan() const {
+    // atan(x) = i/2 * ln((i + z)/(i - z))
+    auto ione = Vectorized(imag_one);
+    auto sum = ione + *this;
+    auto sub = ione - *this;
+    auto ln = (sum / sub).log(); // ln((i + z)/(i - z))
+    return ln * imag_half; // i/2*ln()
+  }
+  Vectorized<ComplexFlt> atanh() const {
+    return map(std::atanh);
+  }
+
+  Vectorized<ComplexFlt> acos() const {
+    // acos(x) = pi/2 - asin(x)
+    return Vectorized(pi_2) - asin();
+  }
+
+  Vectorized<ComplexFlt> inline operator*(
+      const Vectorized<ComplexFlt>& b) const {
+    //(a + bi)  * (c + di) = (ac - bd) + (ad + bc)i
+
+#if 1
+    // this is more vsx friendly than simulating horizontal from x86
+
+    auto vi = b.el_mergeo();
+    auto vr = b.el_mergee();
+    vi = vi ^ rsign_mask;
+    auto ret = elwise_mult(vr);
+    auto vx_swapped = el_swapped();
+    ret = vx_swapped.elwise_mult(vi) + ret;
+    return ret;
+
+#else
+
+    auto ac_bd = elwise_mult(b);
+    auto d_c = b.el_swapped();
+    d_c = d_c ^ isign_mask;
+    auto ad_bc = elwise_mult(d_c);
+    auto ret = horizontal_sub_permD8(ac_bd, ad_bc);
+    return ret;
+#endif
+  }
+
+  Vectorized<ComplexFlt> inline operator/(
+      const Vectorized<ComplexFlt>& b) const {
+#if 1
+    __at_align__ c10::complex<float>
+        tmp1[Vectorized<c10::complex<float>>::size()];
+    __at_align__ c10::complex<float>
+        tmp2[Vectorized<c10::complex<float>>::size()];
+    __at_align__ c10::complex<float>
+        out[Vectorized<c10::complex<float>>::size()];
+    this->store(tmp1);
+    b.store(tmp2);
+
+    for (const auto i : c10::irange(Vectorized<c10::complex<float>>::size())) {
+      out[i] = tmp1[i] / tmp2[i];
+    }
+    return loadu(out);
+#else
+    auto fabs_cd = Vectorized{
+        vec_andc(b._vec0, sign_mask), vec_andc(b._vec1, sign_mask)}; // |c| |d|
+    auto fabs_dc = fabs_cd.el_swapped(); // |d|            |c|
+    auto scale = fabs_cd.elwise_max(fabs_dc); // sc = max(|c|, |d|)
+    auto a2 = elwise_div(scale); // a/sc           b/sc
+    auto b2 = b.elwise_div(scale); // c/sc           d/sc
+    auto acbd2 = a2.elwise_mult(b2); // ac/sc^2        bd/s
+    auto dc2 = b2.el_swapped(); // d/sc           c/sc
+    dc2 = dc2 ^ rsign_mask; // -d/sc          c/sc
+    auto adbc2 = a2.elwise_mult(dc2); // -ad/sc^2       bc/sc^2
+    auto ret = horizontal_add(acbd2, adbc2); // (ac+bd)/sc^2   (bc-ad)/sc^2
+    auto denom2 = b2.abs_2_(); // (c^2+d^2)/sc^2 (c^2+d^2)/sc^2
+    ret = ret.elwise_div(denom2);
+    return ret;
+#endif
+  }
+
+  Vectorized<ComplexFlt> asin() const {
+    // asin(x)
+    // = -i*ln(iz + sqrt(1 -z^2))
+    // = -i*ln((ai - b) + sqrt(1 - (a + bi)*(a + bi)))
+    // = -i*ln((-b + ai) + sqrt(1 - (a**2 - b**2) - 2*abi))
+
+#if 1
+    auto conj = conj_();
+    auto b_a = conj.el_swapped();
+    auto ab = conj.elwise_mult(b_a);
+    auto im = ab + ab;
+    auto val_2 = (*this).elwise_mult(*this);
+    auto val_2_swapped = val_2.el_swapped();
+    auto re = horizontal_sub_permD8(val_2, val_2_swapped);
+    re = Vectorized<ComplexFlt>(one) - re;
+    auto root = el_blend<0xAA>(re, im).sqrt();
+    auto ln = (b_a + root).log();
+    return ln.el_swapped().conj();
+#else
+    return map(std::asin);
+#endif
+  }
+
+  Vectorized<ComplexFlt> exp() const {
+    return map(std::exp);
+  }
+  Vectorized<ComplexFlt> exp2() const {
+    return map(exp2_impl);
+  }
+  Vectorized<ComplexFlt> expm1() const {
+    return map(std::expm1);
+  }
+
+  Vectorized<ComplexFlt> eq(const Vectorized<ComplexFlt>& other) const {
+    auto eq = (*this == other); // compares real and imag individually
+    // If both real numbers and imag numbers are equal, then the complex numbers
+    // are equal
+    return (eq.real() & eq.imag()) & one;
+  }
+  Vectorized<ComplexFlt> ne(const Vectorized<ComplexFlt>& other) const {
+    auto ne = (*this != other); // compares real and imag individually
+    // If either real numbers or imag numbers are not equal, then the complex
+    // numbers are not equal
+    return (ne.real() | ne.imag()) & one;
+  }
+
+  Vectorized<ComplexFlt> sgn() const {
+    return map(at::native::sgn_impl);
+  }
+
+  Vectorized<ComplexFlt> operator<(const Vectorized<ComplexFlt>& other) const {
+    TORCH_CHECK(false, "not supported for complex numbers");
+  }
+
+  Vectorized<ComplexFlt> operator<=(const Vectorized<ComplexFlt>& other) const {
+    TORCH_CHECK(false, "not supported for complex numbers");
+  }
+
+  Vectorized<ComplexFlt> operator>(const Vectorized<ComplexFlt>& other) const {
+    TORCH_CHECK(false, "not supported for complex numbers");
+  }
+
+  Vectorized<ComplexFlt> operator>=(const Vectorized<ComplexFlt>& other) const {
+    TORCH_CHECK(false, "not supported for complex numbers");
+  }
+
+  DEFINE_MEMBER_OP(operator==, ComplexFlt, vec_cmpeq)
+  DEFINE_MEMBER_OP(operator!=, ComplexFlt, vec_cmpne)
+
+  DEFINE_MEMBER_OP(operator+, ComplexFlt, vec_add)
+  DEFINE_MEMBER_OP(operator-, ComplexFlt, vec_sub)
+  DEFINE_MEMBER_OP(operator&, ComplexFlt, vec_and)
+  DEFINE_MEMBER_OP(operator|, ComplexFlt, vec_or)
+  DEFINE_MEMBER_OP(operator^, ComplexFlt, vec_xor)
+  // elementwise helpers
+  DEFINE_MEMBER_OP(elwise_mult, ComplexFlt, vec_mul)
+  DEFINE_MEMBER_OP(elwise_div, ComplexFlt, vec_div)
+  DEFINE_MEMBER_OP(elwise_gt, ComplexFlt, vec_cmpgt)
+  DEFINE_MEMBER_OP(elwise_ge, ComplexFlt, vec_cmpge)
+  DEFINE_MEMBER_OP(elwise_lt, ComplexFlt, vec_cmplt)
+  DEFINE_MEMBER_OP(elwise_le, ComplexFlt, vec_cmple)
+  DEFINE_MEMBER_OP(elwise_max, ComplexFlt, vec_max)
+};
+
+template <>
+Vectorized<ComplexFlt> inline maximum(
+    const Vectorized<ComplexFlt>& a,
+    const Vectorized<ComplexFlt>& b) {
+  auto abs_a = a.abs_2_();
+  auto abs_b = b.abs_2_();
+  // auto mask = _mm256_cmp_ps(abs_a, abs_b, _CMP_LT_OQ);
+  // auto max = _mm256_blendv_ps(a, b, mask);
+  auto mask = abs_a.elwise_lt(abs_b);
+  auto max = Vectorized<ComplexFlt>::elwise_blendv(a, b, mask);
+
+  return max;
+  // Exploit the fact that all-ones is a NaN.
+  // auto isnan = _mm256_cmp_ps(abs_a, abs_b, _CMP_UNORD_Q);
+  // return _mm256_or_ps(max, isnan);
+}
+
+template <>
+Vectorized<ComplexFlt> inline minimum(
+    const Vectorized<ComplexFlt>& a,
+    const Vectorized<ComplexFlt>& b) {
+  auto abs_a = a.abs_2_();
+  auto abs_b = b.abs_2_();
+  // auto mask = _mm256_cmp_ps(abs_a, abs_b, _CMP_GT_OQ);
+  // auto min = _mm256_blendv_ps(a, b, mask);
+  auto mask = abs_a.elwise_gt(abs_b);
+  auto min = Vectorized<ComplexFlt>::elwise_blendv(a, b, mask);
+  return min;
+  // Exploit the fact that all-ones is a NaN.
+  // auto isnan = _mm256_cmp_ps(abs_a, abs_b, _CMP_UNORD_Q);
+  // return _mm256_or_ps(min, isnan);
+}
+
+template <>
+Vectorized<ComplexFlt> C10_ALWAYS_INLINE
+operator+(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+  return Vectorized<ComplexFlt>{
+      vec_add(a.vec0(), b.vec0()), vec_add(a.vec1(), b.vec1())};
+}
+
+template <>
+Vectorized<ComplexFlt> C10_ALWAYS_INLINE
+operator-(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+  return Vectorized<ComplexFlt>{
+      vec_sub(a.vec0(), b.vec0()), vec_sub(a.vec1(), b.vec1())};
+}
+
+template <>
+Vectorized<ComplexFlt> C10_ALWAYS_INLINE
+operator&(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+  return Vectorized<ComplexFlt>{
+      vec_and(a.vec0(), b.vec0()), vec_and(a.vec1(), b.vec1())};
+}
+
+template <>
+Vectorized<ComplexFlt> C10_ALWAYS_INLINE
+operator|(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+  return Vectorized<ComplexFlt>{
+      vec_or(a.vec0(), b.vec0()), vec_or(a.vec1(), b.vec1())};
+}
+
+template <>
+Vectorized<ComplexFlt> C10_ALWAYS_INLINE
+operator^(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+  return Vectorized<ComplexFlt>{
+      vec_xor(a.vec0(), b.vec0()), vec_xor(a.vec1(), b.vec1())};
+}
+
+template <>
+Vectorized<ComplexFlt> C10_ALWAYS_INLINE
+operator*(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+  // (a + ib) * (c + id) = (ac - bd) + i(ad + bc)
+  // Split into real and imaginary parts
+  auto a_real = a.el_mergee(); // real part of a
+  auto a_imag = a.el_mergeo(); // imag part of a
+  auto b_real = b.el_mergee(); // real part of b
+  auto b_imag = b.el_mergeo(); // imag part of b
+
+  auto b_imag_neg = b_imag ^ rsign_mask;
+  // Compute components
+  auto ac = a_real.elwise_mult(b_real); // real * real
+  auto bd = a_imag.elwise_mult(b_imag_neg); // imag * imag
+  auto ad = a_real.elwise_mult(b_imag); // real * imag
+  auto bc = a_imag.elwise_mult(b_real); // imag * real
+
+  // Real = ac - bd (fix the negative bd part)
+  auto real = ac + bd; // Real part calculation
+  auto imag = ad + bc; // Imaginary part calculation
+
+  // Step 1: Extract from real and imag
+  __vector float r0 = real.vec0(); // {r0, r1, r2, r3}
+  __vector float i0 = imag.vec0(); // {i0, i1, i2, i3}
+
+  __vector float r1 = real.vec1(); // imag[0..3]
+  __vector float i1 = imag.vec1(); // imag[4..7]
+
+  __vector unsigned char perm_lo = {
+      0,
+      1,
+      2,
+      3, // r0
+      16,
+      17,
+      18,
+      19, //
+      8,
+      9,
+      10,
+      11, // r1
+      24,
+      25,
+      26,
+      27};
+  __vector float v0 =
+      vec_perm(r0, i0, perm_lo); // Interleave r0 and i0, r1 and i1
+  __vector float v1 = vec_perm(r1, i1, perm_lo);
+  Vectorized<ComplexFlt> result(v0, v1);
+  return result;
+}
+
+template <>
+Vectorized<ComplexFlt> C10_ALWAYS_INLINE
+operator/(const Vectorized<ComplexFlt>& a, const Vectorized<ComplexFlt>& b) {
+  // Take absolute values of real and imaginary parts of b
+  __at_align__ c10::complex<float>
+      tmp1[Vectorized<c10::complex<float>>::size()];
+  __at_align__ c10::complex<float>
+      tmp2[Vectorized<c10::complex<float>>::size()];
+  __at_align__ c10::complex<float> out[Vectorized<c10::complex<float>>::size()];
+  a.store(tmp1);
+  b.store(tmp2);
+  for (const auto i :
+       c10::irange(Vectorized<c10::complex<float>>::
+                       size())) { //{Vectorized<c10::complex<float>>::size()))
+                                  //{
+    out[i] = tmp1[i] / tmp2[i];
+  }
+  return Vectorized<ComplexFlt>::loadu(out);
+}
+
+} // namespace CPU_CAPABILITY
+} // namespace vec
+} // namespace at
+
+#else
+#error "This file should not be included when either TORCH_STABLE_ONLY or TORCH_TARGET_VERSION is defined."
+#endif  // !defined(TORCH_STABLE_ONLY) && !defined(TORCH_TARGET_VERSION)
+                                                                                                                                                                                                       Ñ`Ê T,ê®ôÉÜº °Ù∞I%"iàÇÅåúì
+/ –8»QáÇâã@! M¬!ÑüMbÒàîëHÅò¥π*⁄sÍæÀ*`…∫Kbˇ7Æ„]Z√n,;îVíCRéY∫jÆ:Ê˙ï í›Ï√Cx”‹†Á 4”†à¿T¬ê¡@4p.0T_ ¶5öF=fá"0Dƒ¬’cóêQAÑ“LÜÃ2V184√¬s	Üfå√f4$If-À>5C1‡â˝°!Q6&ñ#•—{Ä Ñ_O§æ\Ø∫—≈≤¯ îbPB›Ç’≠#—ê\%ÿÔBÄ`∞Ä0xÀZQ@ T-$–‚ﬂÉ *@Òì<0†Ób=à¡¥°X ¿‡∆Q◊‡—÷Ùm˜û¨·R ¬ó`:î]4vI•o0äE¢cL¶≈\D2'ƒ" ,	BaÃq⁄Ä(‘áR£pjI~¢ÅsGÅ`»	bY¿"î¶;∏ÿ)jKx‹Ø≥¥jX≠f¡µL~$ÜcÅ‰aBFC°îa∫Ü!Œd*Qdz£&\¿™f–ÑfºñoMl}™ñsfD|]"dÉ rI∆hÈ `98fÄd(\eú>4Ùôpbûô‘v ˆ”/«3	«<∆„%∆„õ†Zbâ:(Ã¯ˇ˚‘d◊˘SJõºÀp     1âIwk¿  4Ä  ¬0†PbòRaÿé`<c¯Ja¯ö.Ã/¡ (H4D"¢©úëôXÒÈêÅ©D hC>88Vêπ±óà!2∞»T0 XÃ=ah…¡åêd(*1p##P2Ä≥)P0¢Ä,åöh(1»ƒ√FFhãôiÄá	/ DMÿÄÀå –1QŒ…ú˛¿√L‘DJ4d`•FcÇa≈F§"H
+a¢¶:7ÜàIG(ÄÃå \ÕNå†∫CDÇ
+bB*p`£F 6a *ƒrbbâûß‹p#^CªíüsŒ≤=4’%”O˚ÏÒ≤Ÿ©}¿q»€⁄7m¥™ çT®’ ™œü	«h∆LÏ‘√<KÃIA–¡P£¿ ﬁaéÊ“`≤ÊN-S–#=}§2{<ó4p7∏ 2‹Y6\ï4t0$€1`Ø4|45w1†¨1º<4m$6f3t2TLBìcí±≈¢†¡#î’¥Ãq`”RÙYÜÜMF*êÊIâ¶>ÜgÜâ¶åf9áR¿ 0√aD¡PA∆/)Ñ Ä0J0GPsíx¯ƒ´@¯@dÀ7£êJmáôs(∞qå	IA!”∆pY…t
+j: ‘37	ÕÛ~§¡
+&0µå ≥t`⁄ßE£4Î SÅ,∆ÒìÄaî2FXÄYÜ>g$Qu@™Dÿ¿0‡A$¡Oò≤£,ò@Tπó2™œ≥+2B<!3≤a∆=…ˆJ8XìÉ¥t)hëT∫›nó©QÚ
+SÖ÷•é¨µıñÍºZìó-Sﬂﬂ˚4ò äö÷öŸÜhÖ!ÄXä‰¡?Ã>¿∞¬L	Äl¡§/Mo33B¨ÕÇsç∏ÕÈ;q$—Ë1≥Åöf)Yî˙f¢±áR}\ôËˇ˚‘dÊé˚·SDã›”p     ,ÅKsã¿  4Ä  ÇeCPdcTaÄS&&'ïH†·§–&[!òU8juÍg!|gc±áMÇ®¶3—8«ßcDïÕn3p≈às>¨åòé>4–iÇÜ0úaÅ!ëÇ∆	‘d„0@‰ƒ@ìÜ¡ “"{ÏDM	Ä°Qb `!0»D,å,>1ÿ∏ò∞øA¬êÑƒc≥éLf5≈Ñ¬0ŸÖÅÖü0pP
+ÑBAdGÇ¿≥âSúºÇ ÈáA,4æêF 2`0xêFë	®´{c0@8¿ÄH`¥Le7òª∆©◊™3¨UˆÈµ’bdŒú¥eë~Hﬁ˜ùÙóT∑V]gñkÀÈæ•ç’  –¬êVLP\ƒ06ƒÄh¡0¿Ä S ÄT0w≤ Ä√ˆ` ∆ 
+``'öäi«∆®*c‚°AF`aF^BgÁ†„”&0¢Aê \ !(-+Ñ`Å!Bcn'0íê ÅΩ¢)1ùò"ê4LÿÇ £Î,Pÿ…ÕºD≈KL`ÃÃ'Å”g;|h]¬«
+*Pc…`Ö*z2√‡i@–9«*ò˘!é °∏(¿ÉÃ†hŒœQL«Àõ¿(ò\ÀIB‚Ã0◊L@¢»^f`U0≥S0≤Ä·0·e÷®( ..ZH	0ê4#F¥r
+_çqHµvC{·ƒËq≈ã5VòeâûZµá  HÙˇ¥åë6ñê®+w*Ñ§2*ë∂Œ„Irã±BÌ√ÌÎTâ;Ï“Ü€3HiÒI|NÀz®çÃ·ë`úòÃP…Ç¿û}êq?"Åâ(-òFä±É8x@d¡p1Ä¿¯
+Ã!@ÿ√t[œéà4x÷É5øMvW1"ÿ
+0 »Eì$å˙t2‡ÙÀAQd`$–cTqãÃ∆5Ö†eê	–eTQëäm¯‡¡‡ˇ˚‘d‰˙vTÀ€€r     2Ìc osç¿  4Ä  õ2ëPƒÖ£+íÕL˛é7¥0˚¿%0Å:m q¶‹#3N0K1x$—‚†*”#sMùÕŸ3Kà—i£Yàçr‘3ã@«µchéŒ¨7 `—OC©M;<5@îŸâ„7ûÕô4€cÉìn46S‹˙)≥áUÊªF©
+dAQÉõFô®Z
+`&éÑ+åb2ËÄ¡"„	∆P$AÇAFòÿnÖf.àB(–à$ó@«‡∏t0ûHH Ä «Å √¡Dëu(£)ÙÓç Ò¢y‘‰G!¿8n∞™QET";) ≈@†ÿ‚
+¢R¿'0`√è.çµúÂåÍ'ø9Œ_Øs;áSä™   p√†‡…•LÓ¥\¬ ∞¡P@.%òz)# R!∏¬0¥√ÄH∆18¿PH¬‡`PËP8—ÅÃ4»*ÄLòô¿≥ (8«Eåe$jd*d∆DT,nf'Hb¡!«&@6(Pb¡&î(`å¨œÅ@A#∆6\aDÛ g”Üää0†¿EV34≥%/#á?)É<;î”5:3íë2Å#8l74SF:)!a∏∆ú˙…¥K(!ÉÏ)Yı®ò0Ò¡Å YâØ–a∫ËIãíqiØÍIç¨òpÇòÖåÜØJ#Lÿ¿áLe(à$ÑH(»LdÜu‘X†\*- \—ÖñÒ⁄°Åfõˆ“ZÏ "“˜÷Fˇ∫0•†œóºΩ°@ÓîeŒ„ä„∑W©‹doZõ±IåœdœÏjrb’=k=’€˙®&ù&πaáËÖÊ\ì&tó¶9é¶d∆å$FÉífÅÜ<ÊäF'î·ﬂÉïæü2: Õbì åLe2X¡·ÛûçÑ2@h ·Û)Ã>L3à§ƒSÑ¿§£ˇ˚‘dﬁé˙ﬁXÀª€p     1Õa$.Û≠–  4Ä  ^Õ0	$…©ÛèÇè4⁄8»E2'!¢TË2¨êûHE0 <¬Ñ„¢1|””4åÕ∞|1	41hÕ™≥*ö†z2…»Œu√Éà3ÉQ√÷–c)êì*H≥7”)ÖCIÉáìS `rL`Ä»cHÓh ™ay\k:∞d±Fcq“éòULÕ°¡åÆ¡ƒ]¯¥¶|àx(ò‡5ò‹	êEò#if !defined(TORCH_STABLE_ONLY) && !defined(TORCH_TARGET_VERSION)
+#pragma once
+
+// DO NOT DEFINE STATIC DATA IN THIS HEADER!
+// See Note [Do not compile initializers with AVX]
+
+#include <ATen/cpu/vec/intrinsics.h>
+#include <ATen/cpu/vec/vec_base.h>
+#include <c10/util/complex.h>
+#include <c10/util/irange.h>
+#if defined(CPU_CAPABILITY_AVX512)
+#define SLEEF_STATIC_LIBS
+#include <sleef.h>
+#endif
+
+namespace at::vec {
+// See Note [CPU_CAPABILITY namespace]
+inline namespace CPU_CAPABILITY {
+
+#if defined(CPU_CAPABILITY_AVX512)
+
+template <>
+struct is_vec_specialized_for<c10::complex<float>> : std::bool_constant<true> {
+};
+
+template <>
+class Vectorized<c10::complex<float>> {
+ private:
+  __m512 values;
+  static constexpr __m512i zero_vector{0, 0, 0, 0, 0, 0, 0, 0};
+
+ public:
+  using value_type = c10::complex<float>;
+  using size_type = int;
+  static constexpr size_type size() {
+    return 8;
+  }
+  Vectorized() {
+    values = _mm512_setzero_ps();
+  }
+  Vectorized(__m512 v) : values(v) {}
+  Vectorized(c10::complex<float> val) {
+    float real_value = val.real();
+    float imag_value = val.imag();
+    values = _mm512_setr_ps(
+        real_value,
+        imag_value,
+        real_value,
+        imag_value,
+        real_value,
+        imag_value,
+        real_value,
+        imag_value,
+        real_value,
+        imag_value,
+        real_value,
+        imag_value,
+        real_value,
+        imag_value,
+        real_value,
+        imag_value);
+  }
+  Vectorized(
+      c10::complex<float> val1,
+      c10::complex<float> val2,
+      c10::complex<float> val3,
+      c10::complex<float> val4,
+      c10::complex<float> val5,
+      c10::complex<float> val6,
+      c10::complex<float> val7,
+      c10::complex<float> val8) {
+    values = _mm512_setr_ps(
+        val1.real(),
+        val1.imag(),
+        val2.real(),
+        val2.imag(),
+        val3.real(),
+        val3.imag(),
+        val4.real(),
+        val4.imag(),
+        val5.real(),
+        val5.imag(),
+        val6.real(),
+        val6.imag(),
+        val7.real(),
+        val7.imag(),
+        val8.real(),
+        val8.imag());
+  }
+  operator __m512() const {
+    return values;
+  }
+  template <int64_t mask>
+  static Vectorized<c10::complex<float>> blend(
+      const Vectorized<c10::complex<float>>& a,
+      const Vectorized<c10::complex<float>>& b) {
+    // convert c10::complex<V> index mask to V index mask: xy -> xxyy
+    static_assert(mask > -1 && mask < 256, "Unexpected mask value");
+    // The compiler would hopefully convert this switch condition
+    // into a jump table
+    switch (mask) {
+      case 0:
+        return a;
+      case 1:
+        return _mm512_mask_blend_ps(0x03, a.values, b.values);
+      case 2:
+        return _mm512_mask_blend_ps(0x0C, a.values, b.values);
+      case 3:
+        return _mm512_mask_blend_ps(0x0F, a.values, b.values);
+      case 4:
+        return _mm512_mask_blend_ps(0x30, a.values, b.values);
+      case 5:
+        return _mm512_mask_blend_ps(0x33, a.values, b.values);
+      case 6:
+        return _mm512_mask_blend_ps(0x3C, a.values, b.values);
+      case 7:
+        return _mm512_mask_blend_ps(0x3F, a.values, b.values);
+      case 8:
+        return _mm512_mask_blend_ps(0xC0, a.values, b.values);
+      case 9:
+        return _mm512_mask_blend_ps(0xC3, a.values, b.values);
+      case 10:
+        return _mm512_mask_blend_ps(0xCC, a.values, b.values);
+      case 11:
+        return _mm512_mask_blend_ps(0xCF, a.values, b.values);
+      case 12:
+        return _mm512_mask_blend_ps(0xF0, a.values, b.values);
+      case 13:
+        return _mm512_mask_blend_ps(0xF3, a.values, b.values);
+      case 14:
+        return _mm512_mask_blend_ps(0xFC, a.values, b.values);
+      case 15:
+        return _mm512_mask_blend_ps(0xFF, a.values, b.values);
+      case 16:
+        return _mm512_mask_blend_ps(0x300, a.values, b.values);
+      case 17:
+        return _mm512_mask_blend_ps(0x303, a.values, b.values);
+      case 18:
+        return _mm512_mask_blend_ps(0x30C, a.values, b.values);
+      case 19:
+        return _mm512_mask_blend_ps(0x30F, a.values, b.values);
+      case 20:
+        return _mm512_mask_blend_ps(0x330, a.values, b.values);
+      case 21:
+        return _mm512_mask_blend_ps(0x333, a.values, b.values);
+      case 22:
+        return _mm512_mask_blend_ps(0x33C, a.values, b.values);
+      case 23:
+        return _mm512_mask_blend_ps(0x33F, a.values, b.values);
+      case 24:
+        return _mm512_mask_blend_ps(0x3C0, a.values, b.values);
+      case 25:
+        return _mm512_mask_blend_ps(0x3C3, a.values, b.values);
+      case 26:
+        return _mm512_mask_blend_ps(0x3CC, a.values, b.values);
+      case 27:
+        return _mm512_mask_blend_ps(0x3CF, a.values, b.values);
+      case 28:
+        return _mm512_mask_blend_ps(0x3F0, a.values, b.values);
+      case 29:
+        return _mm512_mask_blend_ps(0x3F3, a.values, b.values);
+      case 30:
+        return _mm512_mask_blend_ps(0x3FC, a.values, b.values);
+      case 31:
+        return _mm512_mask_blend_ps(0x3FF, a.values, b.values);
+      case 32:
+        return _mm512_mask_blend_ps(0xC00, a.values, b.values);
+      case 33:
+        return _mm512_mask_blend_ps(0xC03, a.values, b.values);
+      case 34:
+        return _mm512_mask_blend_ps(0xC0C, a.values, b.values);
+      case 35:
+        return _mm512_mask_blend_ps(0xC0F, a.values, b.values);
+      case 36:
+        return _mm512_mask_blend_ps(0xC30, a.values, b.values);
+      case 37:
+        return _mm512_mask_blend_ps(0xC33, a.values, b.values);
+      case 38:
+        return _mm512_mask_blend_ps(0xC3C, a.values, b.values);
+      case 39:
+        return _mm512_mask_blend_ps(0xC3F, a.values, b.values);
+      case 40:
+        return _mm512_mask_blend_ps(0xCC0, a.values, b.values);
+      case 41:
+        return _mm512_mask_blend_ps(0xCC3, a.values, b.values);
+      case 42:
+        return _mm512_mask_blend_ps(0xCCC, a.values, b.values);
+      case 43:
+        return _mm512_mask_blend_ps(0xCCF, a.values, b.values);
+      case 44:
+        return _mm512_mask_blend_ps(0xCF0, a.values, b.values);
+      case 45:
+        return _mm512_mask_blend_ps(0xCF3, a.values, b.values);
+      case 46:
+        return _mm512_mask_blend_ps(0xCFC, a.values, b.values);
+      case 47:
+        return _mm512_mask_blend_ps(0xCFF, a.values, b.values);
+      case 48:
+        return _mm512_mask_blend_ps(0xF00, a.values, b.values);
+      case 49:
+        return _mm512_mask_blend_ps(0xF03, a.values, b.values);
+      case 50:
+        return _mm512_mask_blend_ps(0xF0C, a.values, b.values);
+      case 51:
+        return _mm512_mask_blend_ps(0xF0F, a.values, b.values);
+      case 52:
+        return _mm512_mask_blend_ps(0xF30, a.values, b.values);
+      case 53:
+        return _mm512_mask_blend_ps(0xF33, a.values, b.values);
+      case 54:
+        return _mm512_mask_blend_ps(0xF3C, a.values, b.values);
+      case 55:
+        return _mm512_mask_blend_ps(0xF3F, a.values, b.values);
+      case 56:
+        return _mm512_mask_blend_ps(0xFC0, a.values, b.values);
+      case 57:
+        return _mm512_mask_blend_ps(0xFC3, a.values, b.values);
+      case 58:
+        return _mm512_mask_blend_ps(0xFCC, a.values, b.values);
+      case 59:
+        return _mm512_mask_blend_ps(0xFCF, a.values, b.values);
+      case 60:
+        return _mm512_mask_blend_ps(0xFF0, a.values, b.values);
+      case 61:
+        return _mm512_mask_blend_ps(0xFF3, a.values, b.values);
+      case 62:
+        return _mm512_mask_blend_ps(0xFFC, a.values, b.values);
+      case 63:
+        return _mm512_mask_blend_ps(0xFFF, a.values, b.values);
+      case 64:
+        return _mm512_mask_blend_ps(0x3000, a.values, b.values);
+      case 65:
+        return _mm512_mask_blend_ps(0x3003, a.values, b.values);
+      case 66:
+        return _mm512_mask_blend_ps(0x300C, a.values, b.values);
+      case 67:
+        return _mm512_mask_blend_ps(0x300F, a.values, b.values);
+      case 68:
+        return _mm512_mask_blend_ps(0x3030, a.values, b.values);
+      case 69:
+        return _mm512_mask_blend_ps(0x3033, a.values, b.values);
+      case 70:
+        return _mm512_mask_blend_ps(0x303C, a.values, b.values);
+      case 71:
+        return _mm512_mask_blend_ps(0x303F, a.values, b.values);
+      case 72:
+        return _mm512_mask_blend_ps(0x30C0, a.values, b.values);
+      case 73:
+        return _mm512_mask_blend_ps(0X30C3, a.values, b.values);
+      case 74:
+        return _mm512_mask_blend_ps(0x30CC, a.values, b.values);
+      case 75:
+        return _mm512_mask_blend_ps(0x30CF, a.values, b.values);
+      case 76:
+        return _mm512_mask_blend_ps(0x30F0, a.values, b.values);
+      case 77:
+        return _mm512_mask_blend_ps(0x30F3, a.values, b.values);
+      case 78:
+        return _mm512_mask_blend_ps(0x30FC, a.values, b.values);
+      case 79:
+        return _mm512_mask_blend_ps(0x30FF, a.values, b.values);
+      case 80:
+        return _mm512_mask_blend_ps(0x3300, a.values, b.values);
+      case 81:
+        return _mm512_mask_blend_ps(0X3303, a.values, b.values);
+      case 82:
+        return _mm512_mask_blend_ps(0x330C, a.values, b.values);
+      case 83:
+        return _mm512_mask_blend_ps(0x330F, a.values, b.values);
+      case 84:
+        return _mm512_mask_blend_ps(0x3330, a.values, b.values);
+      case 85:
+        return _mm512_mask_blend_ps(0x3333, a.values, b.values);
+      case 86:
+        return _mm512_mask_blend_ps(0x333C, a.values, b.values);
+      case 87:
+        return _mm512_mask_blend_ps(0X333F, a.values, b.values);
+      case 88:
+        return _mm512_mask_blend_ps(0x33C0, a.values, b.values);
+      case 89:
+        return _mm512_mask_blend_ps(0x33C3, a.values, b.values);
+      case 90:
+        return _mm512_mask_blend_ps(0x33CC, a.values, b.values);
+      case 91:
+        return _mm512_mask_blend_ps(0x33CF, a.values, b.values);
+      case 92:
+        return _mm512_mask_blend_ps(0x33F0, a.values, b.values);
+      case 93:
+        return _mm512_mask_blend_ps(0x33F3, a.values, b.values);
+      case 94:
+        return _mm512_mask_blend_ps(0x33FC, a.values, b.values);
+      case 95:
+        return _mm512_mask_blend_ps(0x33FF, a.values, b.values);
+      case 96:
+        return _mm512_mask_blend_ps(0X3C00, a.values, b.values);
+      case 97:
+        return _mm512_mask_blend_ps(0x3C03, a.values, b.values);
+      case 98:
+        return _mm512_mask_blend_ps(0x3C0C, a.values, b.values);
+      case 99:
+        return _mm512_mask_blend_ps(0x3C0F, a.values, b.values);
+      case 100:
+        return _mm512_mask_blend_ps(0x3C30, a.values, b.values);
+      case 101:
+        return _mm512_mask_blend_ps(0x3C33, a.values, b.values);
+      case 102:
+        return _mm512_mask_blend_ps(0x3C3C, a.values, b.values);
+      case 103:
+        return _mm512_mask_blend_ps(0x3C3F, a.values, b.values);
+      case 104:
+        return _mm512_mask_blend_ps(0x3CC0, a.values, b.values);
+      case 105:
+        return _mm512_mask_blend_ps(0x3CC3, a.values, b.values);
+      case 106:
+        return _mm512_mask_blend_ps(0x3CCC, a.values, b.values);
+      case 107:
+        return _mm512_mask_blend_ps(0x3CCF, a.values, b.values);
+      case 108:
+        return _mm512_mask_blend_ps(0x3CF0, a.values, b.values);
+      case 109:
+        return _mm512_mask_blend_ps(0x3CF3, a.values, b.values);
+      case 110:
+        return _mm512_mask_blend_ps(0x3CFC, a.values, b.values);
+      case 111:
+        return _mm512_mask_blend_ps(0x3CFF, a.values, b.values);
+      case 112:
+        return _mm512_mask_blend_ps(0x3F00, a.values, b.values);
+      case 113:
+        return _mm512_mask_blend_ps(0x3F03, a.values, b.values);
+      case 114:
+        return _mm512_mask_blend_ps(0x3F0C, a.values, b.values);
+      case 115:
+        return _mm512_mask_blend_ps(0x3F0F, a.values, b.values);
+      case 116:
+        return _mm512_mask_blend_ps(0x3F30, a.values, b.values);
+      case 117:
+        return _mm512_mask_blend_ps(0x3F33, a.values, b.values);
+      case 118:
+        return _mm512_mask_blend_ps(0x3F3C, a.values, b.values);
+      case 119:
+        return _mm512_mask_blend_ps(0x3F3F, a.values, b.values);
+      case 120:
+        return _mm512_mask_blend_ps(0x3FC0, a.values, b.values);
+      case 121:
+        return _mm512_mask_blend_ps(0x3FC3, a.values, b.values);
+      case 122:
+        return _mm512_mask_blend_ps(0x3FCC, a.values, b.values);
+      case 123:
+        return _mm512_mask_blend_ps(0x3FCF, a.values, b.values);
+      case 124:
+        return _mm512_mask_blend_ps(0x3FF0, a.values, b.values);
+      case 125:
+        return _mm512_mask_blend_ps(0x3FF3, a.values, b.values);
+      case 126:
+        return _mm512_mask_blend_ps(0x3FFC, a.values, b.values);
+      case 127:
+        return _mm512_mask_blend_ps(0x3FFF, a.values, b.values);
+      case 128:
+        return _mm512_mask_blend_ps(0xC000, a.values, b.values);
+      case 129:
+        return _mm512_mask_blend_ps(0xC003, a.values, b.values);
+      case 130:
+        return _mm512_mask_blend_ps(0xC00C, a.values, b.values);
+      case 131:
+        return _mm512_mask_blend_ps(0xC00F, a.values, b.values);
+      case 132:
+        return _mm512_mask_blend_ps(0xC030, a.values, b.values);
+      case 133:
+        return _mm512_mask_blend_ps(0xC033, a.values, b.values);
+      case 134:
+        return _mm512_mask_blend_ps(0xC03C, a.values, b.values);
+      case 135:
+        return _mm512_mask_blend_ps(0xC03F, a.values, b.values);
+      case 136:
+        return _mm512_mask_blend_ps(0xC0C0, a.values, b.values);
+      case 137:
+        return _mm512_mask_blend_ps(0xC0C3, a.values, b.values);
+      case 138:
+        return _mm512_mask_blend_ps(0xC0CC, a.values, b.values);
+      case 139:
+        return _mm512_mask_blend_ps(0xC0CF, a.values, b.values);
+      case 140:
+        return _mm512_mask_blend_ps(0xC0F0, a.values, b.values);
+      case 141:
+        return _mm512_mask_blend_ps(0xC0F3, a.values, b.values);
+      case 142:
+        return _mm512_mask_blend_ps(0xC0FC, a.values, b.values);
+      case 143:
+        return _mm512_mask_blend_ps(0xC0FF, a.values, b.values);
+      case 144:
+        return _mm512_mask_blend_ps(0xC300, a.values, b.values);
+      case 145:
+        return _mm512_mask_blend_ps(0xC303, a.values, b.values);
+      case 146:
+        return _mm512_mask_blend_ps(0xC30C, a.values, b.values);
+      case 147:
+        return _mm512_mask_blend_ps(0xC30F, a.values, b.values);
+      case 148:
+        return _mm512_mask_blend_ps(0xC330, a.values, b.values);
+      case 149:
+        return _mm512_mask_blend_ps(0xC333, a.values, b.values);
+      case 150:
+        return _mm512_mask_blend_ps(0xC33C, a.values, b.values);
+      case 151:
+        return _mm512_mask_blend_ps(0xC33F, a.values, b.values);
+      case 152:
+        return _mm512_mask_blend_ps(0xC3C0, a.values, b.values);
+      case 153:
+        return _mm512_mask_blend_ps(0xC3C3, a.values, b.values);
+      case 154:
+        return _mm512_mask_blend_ps(0xC3CC, a.values, b.values);
+      case 155:
+        return _mm512_mask_blend_ps(0xC3CF, a.values, b.values);
+      case 156:
+        return _mm512_mask_blend_ps(0xC3F0, a.values, b.values);
+      case 157:
+        return _mm512_mask_blend_ps(0xC3F3, a.values, b.values);
+      case 158:
+        return _mm512_mask_blend_ps(0xC3FC, a.values, b.values);
+      case 159:
+        return _mm512_mask_blend_ps(0xC3FF, a.values, b.values);
+      case 160:
+        return _mm512_mask_blend_ps(0xCC00, a.values, b.values);
+      case 161:
+        return _mm512_mask_blend_ps(0xCC03, a.values, b.values);
+      case 162:
+        return _mm512_mask_blend_ps(0xCC0C, a.values, b.values);
+      case 163:
+        return _mm512_mask_blend_ps(0xCC0F, a.values, b.values);
+      case 164:
+        return _mm512_mask_blend_ps(0xCC30, a.values, b.values);
+      case 165:
+        return _mm512_mask_blend_ps(0xCC33, a.values, b.values);
+      case 166:
+        return _mm512_mask_blend_ps(0xCC3C, a.values, b.values);
+      case 167:
+        return _mm512_mask_blend_ps(0xCC3F, a.values, b.values);
+      case 168:
+        return _mm512_mask_blend_ps(0xCCC0, a.values, b.values);
+      case 169:
+        return _mm512_mask_blend_ps(0xCCC3, a.values, b.values);
+      case 170:
+        return _mm512_mask_blend_ps(0xCCCC, a.values, b.values);
+      case 171:
+        return _mm512_mask_blend_ps(0xCCCF, a.values, b.values);
+      case 172:
+        return _mm512_mask_blend_ps(0xCCF0, a.values, b.values);
+      case 173:
+        return _mm512_mask_blend_ps(0xCCF3, a.values, b.values);
+      case 174:
+        return _mm512_mask_blend_ps(0xCCFC, a.values, b.values);
+      case 175:
+        return _mm512_mask_blend_ps(0xCCFF, a.values, b.values);
+      case 176:
+        return _mm512_mask_blend_ps(0xCF00, a.values, b.values);
+      case 177:
+        return _mm512_mask_blend_ps(0xCF03, a.values, b.values);
+      case 178:
+        return _mm512_mask_blend_ps(0xCF0C, a.values, b.values);
+      case 179:
+        return _mm512_mask_blend_ps(0xCF0F, a.values, b.values);
+      case 180:
+        return _mm512_mask_blend_ps(0xCF30, a.values, b.values);
+      case 181:
+        return _mm512_mask_blend_ps(0xCF33, a.values, b.values);
+      case 182:
+        return _mm512_mask_blend_ps(0xCF3C, a.values, b.values);
+      case 183:
+        return _mm512_mask_blend_ps(0xCF3F, a.values, b.values);
+      case 184:
+        return _mm512_mask_blend_ps(0xCFC0, a.values, b.values);
+      case 185:
+        return _mm512_mask_blend_ps(0xCFC3, a.values, b.values);
+      case 186:
+        return _mm512_mask_blend_ps(0xCFCC, a.values, b.values);
+      case 187:
+        return _mm512_mask_blend_ps(0xCFCF, a.values, b.values);
+      case 188:
+        return _mm512_mask_blend_ps(0xCFF0, a.values, b.values);
+      case 189:
+        return _mm512_mask_blend_ps(0xCFF3, a.values, b.values);
+      case 190:
+        return _mm512_mask_blend_ps(0xCFFC, a.values, b.values);
+      case 191:
+        return _mm512_mask_blend_ps(0xCFFF, a.values, b.values);
+      case 192:
+        return _mm512_mask_blend_ps(0xF000, a.values, b.values);
+      case 193:
+        return _mm512_mask_blend_ps(0xF003, a.values, b.values);
+      case 194:
+        return _mm512_mask_blend_ps(0xF00C, a.values, b.values);
+      case 195:
+        return _mm512_mask_blend_ps(0xF00F, a.values, b.values);
+      case 196:
+        return _mm512_mask_blend_ps(0xF030, a.values, b.values);
+      case 197:
+        return _mm512_mask_blend_ps(0xF033, a.values, b.values);
+      case 198:
+        return _mm512_mask_blend_ps(0xF03C, a.values, b.values);
+      case 199:
+        return _mm512_mask_blend_ps(0xF03F, a.values, b.values);
+      case 200:
+        return _mm512_mask_blend_ps(0XF0C0, a.values, b.values);
+      case 201:
+        return _mm512_mask_blend_ps(0xF0C3, a.values, b.values);
+      case 202:
+        return _mm512_mask_blend_ps(0xF0CC, a.values, b.values);
+      case 203:
+        return _mm512_mask_blend_ps(0xF0CF, a.values, b.values);
+      case 204:
+        return _mm512_mask_blend_ps(0xF0F0, a.values, b.values);
+      case 205:
+        return _mm512_mask_blend_ps(0xF0F3, a.values, b.values);
+      case 206:
+        return _mm512_mask_blend_ps(0xF0FC, a.values, b.values);
+      case 207:
+        return _mm512_mask_blend_ps(0xF0FF, a.values, b.values);
+      case 208:
+        return _mm512_mask_blend_ps(0XF300, a.values, b.values);
+      case 209:
+        return _mm512_mask_blend_ps(0xF303, a.values, b.values);
+      case 210:
+        return _mm512_mask_blend_ps(0xF30C, a.values, b.values);
+      case 211:
+        return _mm512_mask_blend_ps(0xF30F, a.values, b.values);
+      case 212:
+        return _mm512_mask_blend_ps(0xF330, a.values, b.values);
+      case 213:
+        return _mm512_mask_blend_ps(0xF333, a.values, b.values);
+      case 214:
+        return _mm512_mask_blend_ps(0XF33C, a.values, b.values);
+      case 215:
+        return _mm512_mask_blend_ps(0xF33F, a.values, b.values);
+      case 216:
+        return _mm512_mask_blend_ps(0xF3C0, a.values, b.values);
+      case 217:
+        return _mm512_mask_blend_ps(0xF3C3, a.values, b.values);
+      case 218:
+        return _mm512_mask_blend_ps(0xF3CC, a.values, b.values);
+      case 219:
+        return _mm512_mask_blend_ps(0xF3CF, a.values, b.values);
+      case 220:
+        return _mm512_mask_blend_ps(0xF3F0, a.values, b.values);
+      case 221:
+        return _mm512_mask_blend_ps(0xF3F3, a.values, b.values);
+      case 222:
+        return _mm512_mask_blend_ps(0xF3FC, a.values, b.values);
+      case 223:
+        return _mm512_mask_blend_ps(0XF3FF, a.values, b.values);
+      case 224:
+        return _mm512_mask_blend_ps(0xFC00, a.values, b.values);
+      case 225:
+        return _mm512_mask_blend_ps(0xFC03, a.values, b.values);
+      case 226:
+        return _mm512_mask_blend_ps(0xFC0C, a.values, b.values);
+      case 227:
+        return _mm512_mask_blend_ps(0xFC0F, a.values, b.values);
+      case 228:
+        return _mm512_mask_blend_ps(0xFC30, a.values, b.values);
+      case 229:
+        return _mm512_mask_blend_ps(0xFC33, a.values, b.values);
+      case 230:
+        return _mm512_mask_blend_ps(0xFC3C, a.values, b.values);
+      case 231:
+        return _mm512_mask_blend_ps(0xFC3F, a.values, b.values);
+      case 232:
+        return _mm512_mask_blend_ps(0xFCC0, a.values, b.values);
+      case 233:
+        return _mm512_mask_blend_ps(0xFCC3, a.values, b.values);
+      case 234:
+        return _mm512_mask_blend_ps(0xFCCC, a.values, b.values);
+      case 235:
+        return _mm512_mask_blend_ps(0xFCCF, a.values, b.values);
+      case 236:
+        return _mm512_mask_blend_ps(0xFCF0, a.values, b.values);
+      case 237:
+        return _mm512_mask_blend_ps(0xFCF3, a.values, b.values);
+      case 238:
+        return _mm512_mask_blend_ps(0xFCFC, a.values, b.values);
+      case 239:
+        return _mm512_mask_blend_ps(0xFCFF, a.values, b.values);
+      case 240:
+        return _mm512_mask_blend_ps(0xFF00, a.values, b.values);
+      case 241:
+        return _mm512_mask_blend_ps(0xFF03, a.values, b.values);
+      case 242:
+        return _mm512_mask_blend_ps(0xFF0C, a.values, b.values);
+      case 243:
+        return _mm512_mask_blend_ps(0xFF0F, a.values, b.values);
+      case 244:
+        return _mm512_mask_blend_ps(0xFF30, a.values, b.values);
+      case 245:
+        return _mm512_mask_blend_ps(0xFF33, a.values, b.values);
+      case 246:
+        return _mm512_mask_blend_ps(0xFF3C, a.values, b.values);
+      case 247:
+        return _mm512_mask_blend_ps(0xFF3F, a.values, b.values);
+      case 248:
+        return _mm512_mask_blend_ps(0xFFC0, a.values, b.values);
+      case 249:
+        return _mm512_mask_blend_ps(0xFFC3, a.values, b.values);
+      case 250:
+        return _mm512_mask_blend_ps(0xFFCC, a.values, b.values);
+      case 251:
+        return _mm512_mask_blend_ps(0xFFCF, a.values, b.values);
+      case 252:
+        return _mm512_mask_blend_ps(0xFFF0, a.values, b.values);
+      case 253:
+        return _mm512_mask_blend_ps(0xFFF3, a.values, b.values);
+      case 254:
+        return _mm512_mask_blend_ps(0xFFFC, a.values, b.values);
+      default:
+        break;
+    }
+    return b;
+  }
+  static Vectorized<c10::complex<float>> blendv(
+      const Vectorized<c10::complex<float>>& a,
+      const Vectorized<c10::complex<float>>& b,
+      const Vectorized<c10::complex<float>>& mask) {
+    // convert c10::complex<V> index mask to V index mask: xy -> xxyy
+    auto mask_ = _mm512_unpacklo_ps(mask.values, mask.values);
+    auto all_ones = _mm512_set1_epi32(0xFFFFFFFF);
+    auto mmask = _mm512_cmp_epi32_mask(
+        _mm512_castps_si512(mask_), all_ones, _MM_CMPINT_EQ);
+    return _mm512_mask_blend_ps(mmask, a.values, b.values);
+  }
+  template <typename step_t>
+  static Vectorized<c10::complex<float>> arange(
+      c10::complex<float> base = 0.,
+      step_t step = static_cast<step_t>(1)) {
+    return Vectorized<c10::complex<float>>(
+        base,
+        base + step,
+        base + c10::complex<float>(2) * step,
+        base + c10::complex<float>(3) * step,
+        base + c10::complex<float>(4) * step,
+        base + c10::complex<float>(5) * step,
+        base + c10::complex<float>(6) * step,
+        base + c10::complex<float>(7) * step);
+  }
+  static Vectorized<c10::complex<float>> set(
+      const Vectorized<c10::complex<float>>& a,
+      const Vectorized<c10::complex<float>>& b,
+      int64_t count = size()) {
+    switch (count) {
+      case 0:
+        return a;
+      case 1:
+        return blend<1>(a, b);
+      case 2:
+        return blend<3>(a, b);
+      case 3:
+        return blend<7>(a, b);
+      case 4:
+        return blend<15>(a, b);
+      case 5:
+        return blend<31>(a, b);
+      case 6:
+        return blend<63>(a, b);
+      case 7:
+        return blend<127>(a, b);
+    }
+    return b;
+  }
+  static Vectorized<c10::complex<float>> loadu(
+      const void* ptr,
+      int64_t count = size()) {
+    if (count == size())
+      return _mm512_loadu_ps(reinterpret_cast<const float*>(ptr));
+
+    __at_align__ float tmp_values[2 * size()];
+    // Ensure uninitialized memory does not change the output value See
+    // https://github.com/pytorch/pytorch/issues/32502 for more details. We do
+    // not initialize arrays to zero using "={0}" because gcc would compile it
+    // to two instructions while a loop would be compiled to one instruction.
+    for (const auto i : c10::irange(2 * size())) {
+      tmp_values[i] = 0.0;
+    }
+    std::memcpy(
+        tmp_values,
+        reinterpret_cast<const float*>(ptr),
+        count * sizeof(c10::complex<float>));
+    return _mm512_load_ps(tmp_values);
+  }
+  void store(void* ptr, int count = size()) const {
+    if (count == size()) {
+      _mm512_storeu_ps(reinterpret_cast<float*>(ptr), values);
+    } else if (count > 0) {
+      float tmp_values[2 * size()];
+      _mm512_storeu_ps(reinterpret_cast<float*>(tmp_values), values);
+      std::memcpy(ptr, tmp_values, count * sizeof(c10::complex<float>));
+    }
+  }
+  // AVX512 doesn't have horizontal add & horizontal sub instructions.
+  // TODO: hadd_pd() & hsub_pd() may have scope for improvement.
+  static inline __m512 hadd_ps(__m512 a, __m512 b) {
+    __m512i idx1 = _mm512_set_epi32(
+        30, 14, 28, 12, 26, 10, 24, 8, 22, 6, 20, 4, 18, 2, 16, 0);
+    __m512i idx2 = _mm512_set_epi32(
+        31, 15, 29, 13, 27, 11, 25, 9, 23, 7, 21, 5, 19, 3, 17, 1);
+    return _mm512_add_ps(
+        _mm512_mask_permutex2var_ps(a, 0xffff, idx1, b),
+        _mm512_mask_permutex2var_ps(a, 0xffff, idx2, b));
+  }
+  static inline __m512 hsub_ps(__m512 a, __m512 b) {
+    __m512i idx1 = _mm512_set_epi32(
+        30, 14, 28, 12, 26, 10, 24, 8, 22, 6, 20, 4, 18, 2, 16, 0);
+    __m512i idx2 = _mm512_set_epi32(
+        31, 15, 29, 13, 27, 11, 25, 9, 23, 7, 21, 5, 19, 3, 17, 1);
+    return _mm512_sub_ps(
+        _mm512_mask_permutex2var_ps(a, 0xffff, idx1, b),
+        _mm512_mask_permutex2var_ps(a, 0xffff, idx2, b));
+  }
+  const c10::complex<float>& operator[](int idx) const = delete;
+  c10::complex<float>& operator[](int idx) = delete;
+  Vectorized<c10::complex<float>> map(
+      c10::complex<float> (*const f)(const c10::complex<float>&)) const {
+    __at_align__ c10::complex<float> tmp[size()];
+    store(tmp);
+    for (const auto i : c10::irange(size())) {
+      tmp[i] = f(tmp[i]);
+    }
+    return loadu(tmp);
+  }
+  __m512 abs_2_() const {
+    auto val_2 = _mm512_mul_ps(values, values); // a*a     b*b
+    auto ret = hadd_ps(val_2, val_2); // a*a+b*b a*a+b*b
+    return ret;
+  }
+  __m512 abs_() const {
+    auto real = _mm512_moveldup_ps(values); // real real
+    auto imag = _mm512_movehdup_ps(values); // imag imag
+    return Sleef_hypotf16_u05(real, imag); // abs  abs
+  }
+  Vectorized<c10::complex<float>> abs() const {
+    const __m512 real_mask = _mm512_castsi512_ps(_mm512_setr_epi32(
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000));
+    return _mm512_and_ps(abs_(), real_mask); // abs     0
+  }
+  __m512 angle_() const {
+    // angle = atan2(b/a)
+    auto b_a = _mm512_permute_ps(values, 0xB1); // b        a
+    return Sleef_atan2f16_u10(values, b_a); // 90-angle angle
+  }
+  Vectorized<c10::complex<float>> angle() const {
+    const __m512 real_mask = _mm512_castsi512_ps(_mm512_setr_epi32(
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000));
+    auto angle = _mm512_permute_ps(angle_(), 0xB1); // angle    90-angle
+    return _mm512_and_ps(angle, real_mask); // angle    0
+  }
+  Vectorized<c10::complex<float>> sgn() const {
+    auto abs = abs_();
+    auto zero = _mm512_setzero_ps();
+    auto mask = _mm512_cmp_ps_mask(abs, zero, _CMP_EQ_OQ);
+    auto div = _mm512_div_ps(values, abs);
+    return _mm512_mask_blend_ps(mask, div, zero);
+  }
+  __m512 real_() const {
+    const __m512 real_mask = _mm512_castsi512_ps(_mm512_setr_epi32(
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000));
+    return _mm512_and_ps(values, real_mask);
+  }
+  Vectorized<c10::complex<float>> real() const {
+    return real_();
+  }
+  __m512 imag_() const {
+    const __m512 imag_mask = _mm512_castsi512_ps(_mm512_setr_epi32(
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF,
+        0x00000000,
+        0xFFFFFFFF));
+    return _mm512_and_ps(values, imag_mask);
+  }
+  Vectorized<c10::complex<float>> imag() const {
+    return _mm512_permute_ps(imag_(), 0xB1); // b        a
+  }
+  __m512 conj_() const {
+    const __m512 sign_mask = _mm512_setr_ps(
+        0.0,
+        -0.0,
+        0.0,
+        -0.0,
+        0.0,
+        -0.0,
+        0.0,
+        -0.0,
+        0.0,
+        -0.0,
+        0.0,
+        -0.0,
+        0.0,
+        -0.0,
+        0.0,
+        -0.0);
+    return _mm512_xor_ps(values, sign_mask); // a       -b
+  }
+  Vectorized<c10::complex<float>> conj() const {
+    return conj_();
+  }
+  Vectorized<c10::complex<float>> log() const {
+    // Most trigonomic ops use the log() op to improve complex number
+    // performance.
+    return map(std::log);
+  }
+  Vectorized<c10::complex<float>> log2() const {
+    const __m512 log2_ = _mm512_set1_ps(std::log(2));
+    return _mm512_div_ps(log(), log2_);
+  }
+  Vectorized<c10::complex<float>> log10() const {
+    const __m512 log10_ = _mm512_set1_ps(std::log(10));
+    return _mm512_div_ps(log(), log10_);
+  }
+  Vectorized<c10::complex<float>> log1p() const {
+    return map(std::log1p);
+  }
+  Vectorized<c10::complex<float>> asin() const {
+    // TODO: The vectorized implementation requires special handling for the
+    // case where real number/imag number is 0/Inf/NaN.
+    // // asin(x)
+    // // = -i*ln(iz + sqrt(1 -z^2))
+    // // = -i*ln((ai - b) + sqrt(1 - (a + bi)*(a + bi)))
+    // // = -i*ln((-b + ai) + sqrt(1 - (a**2 - b**2) - 2*abi))
+    // const __m512 one = _mm512_set1_ps(1);
+
+    // auto conj = conj_();
+    // auto b_a = _mm512_permute_ps(conj, 0xB1);                         //-b a
+    // auto ab = _mm512_mul_ps(conj, b_a);                               //-ab
+    // -ab auto im = _mm512_add_ps(ab, ab); //-2ab      -2ab
+
+    // auto val_2 = _mm512_mul_ps(values, values);                       // a*a
+    // b*b auto re = hsub_ps(val_2, _mm512_permute_ps(val_2, 0xB1));  // a*a-b*b
+    // b*b-a*a re = _mm512_sub_ps(one, re);
+
+    // auto root = Vectorized(_mm512_mask_blend_ps(0xAAAA, re, im)).sqrt();
+    // //sqrt(re + i*im) auto ln = Vectorized(_mm512_add_ps(b_a, root)).log();
+    // //ln(iz + sqrt()) return Vectorized(_mm512_permute_ps(ln.values,
+    // 0xB1)).conj();         //-i*ln()
+    return map(std::asin);
+  }
+  Vectorized<c10::complex<float>> acos() const {
+    return map(std::acos);
+  }
+  Vectorized<c10::complex<float>> atan() const;
+  Vectorized<c10::complex<float>> atanh() const {
+    return map(std::atanh);
+  }
+  Vectorized<c10::complex<float>> exp() const {
+    // TODO: The vectorized implementation requires special handling for the
+    // case where real number/imag number is 0/Inf/NaN.
+    // //exp(a + bi)
+    // // = exp(a)*(cos(b) + sin(b)i)
+    // auto exp = Sleef_expf16_u10(values); //exp(a)           exp(b) exp =
+    // _mm512_mask_blend_ps(0xAAAA, exp, _mm512_permute_ps(exp, 0xB1)); //exp(a)
+    // exp(a)
+
+    // auto sin_cos = Sleef_sincosf16_u10(values); //[sin(a), cos(a)] [sin(b),
+    // cos(b)] auto cos_sin = _mm512_mask_blend_ps(0xAAAA,
+    // _mm512_permute_ps(sin_cos.y, 0xB1),
+    //                                sin_cos.x);                  //cos(b)
+    //                                sin(b)
+    // return _mm512_mul_ps(exp, cos_sin);
+    return map(std::exp);
+  }
+  Vectorized<c10::complex<float>> exp2() const {
+    // Use identity 2**x = exp(log(2) * x)
+    const __m512 ln_2 = _mm512_set1_ps(c10::ln_2<float>);
+    Vectorized<c10::complex<float>> scaled_values = _mm512_mul_ps(values, ln_2);
+    return scaled_values.exp();
+  }
+  Vectorized<c10::complex<float>> expm1() const {
+    return map(std::expm1);
+  }
+  Vectorized<c10::complex<float>> sin() const {
+    return map(std::sin);
+  }
+  Vectorized<c10::complex<float>> sinh() const {
+    return map(std::sinh);
+  }
+  Vectorized<c10::complex<float>> cos() const {
+    return map(std::cos);
+  }
+  Vectorized<c10::complex<float>> cosh() const {
+    return map(std::cosh);
+  }
+  Vectorized<c10::complex<float>> ceil() const {
+    return _mm512_ceil_ps(values);
+  }
+  Vectorized<c10::complex<float>> floor() const {
+    return _mm512_floor_ps(values);
+  }
+  Vectorized<c10::complex<float>> neg() const {
+    auto zero = _mm512_setzero_ps();
+    return _mm512_sub_ps(zero, values);
+  }
+  Vectorized<c10::complex<float>> round() const {
+    return _mm512_roundscale_ps(
+        values, (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));
+  }
+  Vectorized<c10::complex<float>> tan() const {
+    return map(std::tan);
+  }
+  Vectorized<c10::complex<float>> tanh() const {
+    return map(std::tanh);
+  }
+  Vectorized<c10::complex<float>> trunc() const {
+    return _mm512_roundscale_ps(
+        values, (_MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC));
+  }
+  Vectorized<c10::complex<float>> sqrt() const {
+    return map(std::sqrt);
+  }
+  Vectorized<c10::complex<float>> reciprocal() const;
+  Vectorized<c10::complex<float>> rsqrt() const {
+    return sqrt().reciprocal();
+  }
+  Vectorized<c10::complex<float>> pow(
+      const Vectorized<c10::complex<float>>& exp) const {
+    __at_align__ c10::complex<float> x_tmp[size()];
+    __at_align__ c10::complex<float> y_tmp[size()];
+    store(x_tmp);
+    exp.store(y_tmp);
+    for (const auto i : c10::irange(size())) {
+      x_tmp[i] = std::pow(x_tmp[i], y_tmp[i]);
+    }
+    return loadu(x_tmp);
+  }
+  // Comparison using the _CMP_**_OQ predicate.
+  //   `O`: get false if an operand is NaN
+  //   `Q`: do not raise if an operand is NaN
+  Vectorized<c10::complex<float>> operator==(
+      const Vectorized<c10::complex<float>>& other) const {
+    auto mask = _mm512_cmp_ps_mask(values, other.values, _CMP_EQ_OQ);
+    return _mm512_castsi512_ps(
+        _mm512_mask_set1_epi32(zero_vector, mask, 0xFFFFFFFF));
+  }
+  Vectorized<c10::complex<float>> operator!=(
+      const Vectorized<c10::complex<float>>& other) const {
+    auto mask = _mm512_cmp_ps_mask(values, other.values, _CMP_NEQ_UQ);
+    return _mm512_castsi512_ps(
+        _mm512_mask_set1_epi32(zero_vector, mask, 0xFFFFFFFF));
+  }
+  Vectorized<c10::complex<float>> operator<(
+      const Vectorized<c10::complex<float>>& other [[maybe_unused]]) const {
+    TORCH_CHECK(false, "not supported for complex numbers");
+  }
+  Vectorized<c10::complex<float>> operator<=(
+      const Vectorized<c10::complex<float>>& other [[maybe_unused]]) const {
+    TORCH_CHECK(false, "not supported for complex numbers");
+  }
+  Vectorized<c10::complex<float>> operator>(
+      const Vectorized<c10::complex<float>>& other [[maybe_unused]]) const {
+    TORCH_CHECK(false, "not supported for complex numbers");
+  }
+  Vectorized<c10::complex<float>> operator>=(
+      const Vectorized<c10::complex<float>>& other [[maybe_unused]]) const {
+    TORCH_CHECK(false, "not supported for complex numbers");
+  }
+
+  Vectorized<c10::complex<float>> eq(
+      const Vectorized<c10::complex<float>>& other) const;
+  Vectorized<c10::complex<float>> ne(
+      const Vectorized<c10::complex<float>>& other) const;
+};
+
+template <>
+Vectorized<c10::complex<float>> inline operator+(
+    const Vectorized<c10::complex<float>>& a,
+    const Vectorized<c10::complex<float>>& b) {
+  return _mm512_add_ps(a, b);
+}
+
+template <>
+Vectorized<c10::complex<float>> inline operator-(
+    const Vectorized<c10::complex<float>>& a,
+    const Vectorized<c10::complex<float>>& b) {
+  return _mm512_sub_ps(a, b);
+}
+
+template <>
+Vectorized<c10::complex<float>> inline operator*(
+    const Vectorized<c10::complex<float>>& a,
+    const Vectorized<c10::complex<float>>& b) {
+  //(a + bi)  * (c + di) = (ac - bd) + (ad + bc)i
+  const __m512 sign_mask = _mm512_setr_ps(
+      0.0,
+      -0.0,
+      0.0,
+      -0.0,
+      0.0,
+      -0.0,
+      0.0,
+      -0.0,
+      0.0,
+      -0.0,
+      0.0,
+      -0.0,
+      0.0,
+      -0.0,
+      0.0,
+      -0.0);
+  auto ac_bd = _mm512_mul_ps(a, b); // ac       bd
+
+  auto d_c = _mm512_permute_ps(b, 0xB1); // d        c
+  d_c = _mm512_xor_ps(sign_mask, d_c); // d       -c
+  auto ad_bc = _mm512_mul_ps(a, d_c); // ad      -bc
+
+  auto ret = Vectorized<c10::complex<float>>::hsub_ps(
+      ac_bd, ad_bc); // ac - bd  ad + bc
+  return ret;
+}
+
+template <>
+Vectorized<c10::complex<float>> inline operator/(
+    const Vectorized<c10::complex<float>>& a,
+    const Vectorized<c10::complex<float>>& b) {
+  // TODO: The vectorized implementation requires special handling for the case
+  // where real number/imag number is 0/Inf/NaN.
+  // //re + im*i = (a + bi)  / (c + di)
+  // auto mask = _mm512_set1_ps(-0.f);
+  // auto fabs_cd = _mm512_andnot_ps(mask, b);     // |c|    |d|
+  // auto fabs_dc = _mm512_permute_ps(fabs_cd, 0xB1);   // |d|    |c|
+  // auto scale = _mm512_rcp14_ps(_mm512_max_ps(fabs_cd, fabs_dc));  // 1/sc
+  // 1/sc auto a2 = _mm512_mul_ps(a, scale);         // a/sc     b/sc auto b2 =
+  // _mm512_mul_ps(b, scale);         // c/sc     d/sc auto acbd2 =
+  // _mm512_mul_ps(a2, b2);
+
+  // const __m512 sign_mask = _mm512_setr_ps(-0.0, 0.0, -0.0, 0.0, -0.0, 0.0,
+  // -0.0, 0.0,
+  //                                         -0.0, 0.0, -0.0, 0.0, -0.0, 0.0,
+  //                                         -0.0, 0.0);
+  // auto dc2 = _mm512_permute_ps(b2, 0xB1);    // d/sc         c/sc
+  // dc2 = _mm512_xor_ps(sign_mask, dc2);       // -d/|c,d|        c/sc
+  // auto adbc2 = _mm512_mul_ps(a2, dc2);       //-ad/sc^2      bc/sc^2
+  // auto res2 = Vectorized<c10::complex<float>>::hadd_ps(acbd2, adbc2);
+  // //(ac+bd)/sc^2  (bc-ad)/sc^2
+
+  // // get the denominator
+  // auto denom2 = Vectorized<c10::complex<float>>(b2).abs_2_();  //
+  // (c^2+d^2)/sc^2   (c^2+d^2)/sc^2 res2 = _mm512_div_ps(res2, denom2); return
+  // res2;
+  __at_align__ c10::complex<float>
+      tmp1[Vectorized<c10::complex<float>>::size()];
+  __at_align__ c10::complex<float>
+      tmp2[Vectorized<c10::complex<float>>::size()];
+  __at_align__ c10::complex<float> out[Vectorized<c10::complex<float>>::size()];
+  a.store(tmp1);
+  b.store(tmp2);
+  for (const auto i : c10::irange(Vectorized<c10::complex<float>>::size())) {
+    out[i] = tmp1[i] / tmp2[i];
+  }
+  return _mm512_loadu_ps(reinterpret_cast<const float*>(out));
+}
+
+// reciprocal. Implement this here so we can use multiplication.
+inline Vectorized<c10::complex<float>> Vectorized<
+    c10::complex<float>>::reciprocal() const {
+  // TODO: The vectorized implementation requires special handling for the case
+  // where real number/imag number is 0/Inf/NaN.
+  // //re + im*i = (a + bi)  / (c + di)
+  // //re = (ac + bd)/abs_2() = c/abs_2()
+  // //im = (bc - ad)/abs_2() = d/abs_2()
+  // const __m512 sign_mask = _mm512_setr_ps(0.0, -0.0, 0.0, -0.0, 0.0, -0.0,
+  // 0.0, -0.0,
+  //                                         0.0, -0.0, 0.0, -0.0, 0.0, -0.0,
+  //                                         0.0, -0.0);
+  // auto c_d = _mm512_xor_ps(sign_mask, values);    //c       -d
+  // return _mm512_div_ps(c_d, abs_2_());
+  __at_align__ c10::complex<float> tmp[size()];
+  store(tmp);
+  for (const auto i : c10::irange(size())) {
+    tmp[i] = c10::complex<float>(1) / tmp[i];
+  }
+  return loadu(tmp);
+}
+
+inline Vectorized<c10::complex<float>> Vectorized<c10::complex<float>>::atan()
+    const {
+  // TODO: The vectorized implementation requires special handling for the case
+  // where real number/imag number is 0/Inf/NaN.
+  // // atan(x) = i/2 * ln((i + z)/(i - z))
+  // const __m512 i = _mm512_setr_ps(0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0,
+  //                                 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
+  // const Vectorized i_half = _mm512_setr_ps(0.0, 0.5, 0.0, 0.5, 0.0, 0.5, 0.0,
+  // 0.5,
+  //                                         0.0, 0.5, 0.0, 0.5, 0.0, 0.5, 0.0,
+  //                                         0.5);
+
+  // auto sum = Vectorized(_mm512_add_ps(i, values));                      // a
+  // 1+b auto sub = Vectorized(_mm512_sub_ps(i, values)); // -a       1-b auto
+  // ln = (sum/sub).log();                                        // ln((i +
+  // z)/(i - z)) return i_half*ln; // i/2*ln()
+  return map(std::atan);
+}
+
+template <>
+Vectorized<c10::complex<float>> inline maximum(
+    const Vectorized<c10::complex<float>>& a,
+    const Vectorized<c10::complex<float>>& b) {
+  auto zero_vector = _mm512_set1_epi32(0);
+  auto abs_a = a.abs_2_();
+  auto abs_b = b.abs_2_();
+  auto mask = _mm512_cmp_ps_mask(abs_a, abs_b, _CMP_LT_OQ);
+  auto max = _mm512_mask_blend_ps(mask, a, b);
+  // Exploit the fact that all-ones is a NaN.
+  auto isnan_mask = _mm512_cmp_ps_mask(abs_a, abs_b, _CMP_UNORD_Q);
+  auto isnan = _mm512_mask_set1_epi32(zero_vector, isnan_mask, 0xFFFFFFFF);
+  return _mm512_or_ps(max, _mm512_castsi512_ps(isnan));
+}
+
+template <>
+Vectorized<c10::complex<float>> inline minimum(
+    const Vectorized<c10::complex<float>>& a,
+    const Vectorized<c10::complex<float>>& b) {
+  auto zero_vector = _mm512_set1_epi32(0);
+  auto abs_a = a.abs_2_();
+  auto abs_b = b.abs_2_();
+  auto mask = _mm512_cmp_ps_mask(abs_a, abs_b, _CMP_GT_OQ);
+  auto min = _mm512_mask_blend_ps(mask, a, b);
+  // Exploit the fact that all-ones is a NaN.
+  auto isnan_mask = _mm512_cmp_ps_mask(abs_a, abs_b, _CMP_UNORD_Q);
+  auto isnan = _mm512_mask_set1_epi32(zero_vector, isnan_mask, 0xFFFFFFFF);
+  return _mm512_or_ps(min, _mm512_castsi512_ps(isnan));
+}
+
+template <>
+Vectorized<c10::complex<float>> inline operator&(
+    const Vectorized<c10::complex<float>>& a,
+    const Vectorized<c10::complex<float>>& b) {
+  return _mm512_and_ps(a, b);
+}
+
+template <>
+Vectorized<c10::complex<float>> inline operator|(
+    const Vectorized<c10::complex<float>>& a,
+    const Vectorized<c10::complex<float>>& b) {
+  return _mm512_or_ps(a, b);
+}
+
+template <>
+Vectorized<c10::complex<float>> inline operator^(
+    const Vectorized<c10::complex<float>>& a,
+    const Vectorized<c10::complex<float>>& b) {
+  return _mm512_xor_ps(a, b);
+}
+
+inline Vectorized<c10::complex<float>> Vectorized<c10::complex<float>>::eq(
+    const Vectorized<c10::complex<float>>& other) const {
+  auto eq = (*this == other); // compares real and imag individually
+  // If both real numbers and imag numbers are equal, then the complex numbers
+  // are equal
+  return (eq.real() & eq.imag()) &
+      Vectorized<c10::complex<float>>(_mm512_set1_ps(1.0f));
+}
+
+inline Vectorized<c10::complex<float>> Vectorized<c10::complex<float>>::ne(
+    const Vectorized<c10::complex<float>>& other) const {
+  auto ne = (*this != other); // compares real and imag individually
+  // If either real numbers or imag numbers are not equal, then the complex
+  // numbers are not equal
+  return (ne.real() | ne.imag()) &
+      Vectorized<c10::complex<float>>(_mm512_set1_ps(1.0f));
+}
+
+#endif
+
+} // namespace CPU_CAPABILITY
+} // namespace at::vec
+
+#else
+#error "This file should not be included when either TORCH_STABLE_ONLY or TORCH_TARGET_VERSION is defined."
+#endif  // !defined(TORCH_STABLE_ONLY) && !defined(TORCH_TARGET_VERSION)
+                                                   â⁄Nw t$ƒ0ΩÂE¢Q◊	¸HËDY:ï•ú,"	–‰	Hïﬁ√⁄Í>ßbq≈öT5aÆ+«ª2	sÅ§œfUÆΩz „¿Ü3X2AF1e	„ p‹4ã88·ã0p!„H607√32Q√PÓ0E √DSv2}Y7]œ:x©2F0ë 0§41úo0»PÃEL:LLé.âc√AÉ¬# É√S4«Úπ&sX–ì<ƒŒ34≈aD√ º∆2,∆ê¯»p»Ã `«ê\ŒÙ‘¿√X…4x †åﬂñàƒú ÙÙ…A<√‡` ND0ôÙhÄŸö8xò§ùM1££õ··åÉ@A∆  	UAPPqÀ;0‡îéF≤ŸÄJ	àå∏*&fC"≈ ¿q!˘W¶D` ‚ #C75P#$ò`8–s"& Ud◊]H%Qx€.
+Çá ÅâÄ"+≥‡Ä0·Çá¢2>ÇK∫õÄ‡unƒ—ñ	j»¿$ÃBB	É‘¨uë¸¡¬`°†4ç.Í]MÉä@*]õ3xI^›MÛ∑“—Ç@ﬂ÷#·à0=9”Qÿ19„PC5\FS¿W0ËN√Ì0π
+s‘ó0√rª5—SÛ)1ŸÌ9œ2H?2Ã[3xw0Hr0x…1 B08L2∞ˇ˚‘dÌé¸?VHì›€t     +çM"/wm–  4Ä  2LS(≈ÑÇÁòûò§òP  ò†òÍ2ú èô¬„kPò)ô Q§5FòÆVôj/∆Iï&[&WFm¶åÊL∫ß'ßÜ&ï0∆dôÉqÇCÒÉCIåƒiÅÁAühåŒë£ÃòbŒljá¡bi	@Ìêp[Ï±ì≈®Ä¶P±HÅë®∂‡†"4„b®Lb˚ã%j⁄vìPJ{Å®"
+àò`Òâ¢‡(,¡ƒëò [∏,PY¥8ñ…bî≈îä◊-˚â2ËﬁµÊ›Q¥YSÄﬁÊÂmßøN2ˇemï˘d ∆Ûª¶ È∑HîÅ√¬f[+ôòΩ5Af∂Í  Ä≈å@ä` L’L¡l¡0'ˆD8≈4!'à—Ñ<$A‡«∏Äå A«¶®ŒéŒ¯≈4&Ml1M¯'LçÇ*ƒÄ„ã≥J»†aÇÅqãÄÅîBaÅIDA!Ñ!Å‡  @4–ŸLêïMÍ˛îÕGL⁄
+L
+;HLÇ3Ä≥[#FC
+„¨ÉB¿#òÉ{ç”*GsAŸSÖ@S s0[„Kç”sï3êù3`{1ßôòº`0ƒì)ï®
+@z6†X0æ¬AÊrßA@P ` s"{—√ÇERÛJa2c)†—à.µ/0` @öj:∑°8 ,ê,[P·Çiƒ2]òH@åàç~éŸcµ’ı@S∆≠O!ÇÅêÖ BN∂êÙh X\(õ˙≠Õ-|6 Ã÷†Xª>r#8≠wGı~è˛ÄF&Å¶`ñ&Ép
+ √“ç0]#"—ô∞ÅÖ"1éx)ÖÅd∆1⁄ÃÖB®¬¯q*L†	Ã ¬¥8º:ò@@–‡‘¿ºHIBH\0ˇ˚‘dÈ˚ÏSGõ›€p     *ÕM$ow-¿  4Ä  êJ√ÇC É2  ¬¬†∆¿ÒÙÀg‹ÊÁ|∆¥ÿ ¥¿0ÙÀT»Ä<»Ç¯ƒú√êå…ì¥òƒæx’ôúôG Hô‡gñ3	∆”ƒ ·¯¡1$«!D¬≈P\¬–PƒÑ|’</±P†A≠ºKyß¨1y¢í‰¡P s›A1h`ıôcÇñ/¶!%EU≠,≈AÛ.™ÄÖÅ‹i¨3Æ¨%‡AÙ©a´á”IÅÑXPTì©–úÎê9¢˛$¬µ°£:òk-—ã´bÌÄ Ïù$M ∏í†Ã]'òπ{‘YMKÊ•KU3!Ô‰G·à*ù±0¥õó?≈ª å¿†≈π4ÃXF…(è"èƒ⁄êâÃx√a€ÃfÇl√Ä	å†«¬TÃˇlÀ<\@ƒdN∆	 `Ï¢0ñ√∞11`¿0∑c0∑0≥Ä0]cê306ì–r0 ≥êL0VSêƒ0™)3Ä.2MÛo¢—1»”B1OìQn0c
+P@Åã»dòOá!á(∂WàÅÉ‡•ò‘iÑ®Gô√twËë∂®&˝ÇMg†ÄqÃ…ÁCDí¡ÉÛ
+|?1X,`4P8<Y∆-â"@	` ,$ò†YA°PÄ:L
+D"S √c†ÛÖå@ ‡Äë(¬aî=0∏,ƒ‡q 0hñ62¡XLPñÅÊÄ »uá °È@º¿† 'L!ÄA `‡Ç hU,-bÏT÷ÉÆJÜ∫L¬ç6Ö@@P!ÖÄ%Âèìõ¬·$qIô≠’—eˆﬁ«˙§q∫“D_V]KJwˇJ¿%9.¶±ÀÈÉ°Õ¡éi—éY©" )8611|1`Ω6DL1tÑ2|1‰+ÄÃ^1|6g@°ÉÇaˇ˚‘dÌ¸⁄R∆ﬁ‚Ù     &yM(nÛ-¿  4Ä  Ç pÏ è ëòHç‡†P
+,∞Úh0ëå¬„s;çCÿ2¨»≠„?õÇÇ¥SsÉLD#0p80∞1jíîån\*ÃF0±úhÜb†⁄◊^˜ d2òá†ñbEól¿'î˚¬u)ZPAËB¿…@ B/t ∂A¡Eít@
+ $ Ì √Ã@ÿÊ@x9ı¯ú°œ£qlUÅ=À\ˆ&s{å?J¬#Ã˘Ó€  õ`V%¨ù+aÒ@∂†¸≈fX*p 6u∏Æ–ÅÄ√ ügfÿË/0µ/*πiKyÊ•h<ù„~ﬁWã'„ì¸ ç=<¡ØM∏îÕú¯ÃGçËß^Øà∆ΩZî›∆ÄÃËM¥Ëº#LPÇ0 —:åL¬œ!Ã¬™∆°ÙÀE¨Àxƒp$—≥àÕÙ<…ë@ÑÇ7]ÜçJÇ¶õ&QÜÜhÇÊ>¶
+ ÜâÜòÌÊììFaó«ˆƒºfh¶X¢¶BÄ¢‡‘2I30Qó5x!4º&3å	4êb1$ä5|Å2pÊ9fª∞#éÜ:fTÊ%Üf	Ñ&&ã£$IÉ 0lì≥p¬".Ä`&UÅ¿)JH«∑0&h¿)	õJhNÅàòŸ@«&ÿ	í÷|∆ùß&Ë%YôŒcYôrY≈¶^≥®∏Â«32M+3{X0 ê”<Fh≈»"2áüöV'm–8eE	3hLQ§Ê5!ƒ(L
+Rc¿àFÄ¥◊1ÄÉ#Qê»P`¿µE÷§,xxzúÇ˛≤Rà`¶Ën¸""/6‘æ=Ø;˛˝πx¸vW?ïÎx9”u¸óÈ˙i2˛É°µ0é1√1n0,3f≠1‘#ÄÈ77" Ï0èA3ap74Ã@!Î.LÃ˝NÃLç2L.LôLqÅ–∞ñ`DH!®`"ˇ˚‘dÛé¸PTƒ›”p     *5Kwk»  4Ä  KtCÛZêW`a `a˘÷aXz`P‹al`x<`àbaÿÿ® Ci†Ö‡C0¿Q1l0| áFÜa`>0a†4É7;£EfbX|\Ä∞1P @∆Cÿ"D´XTÄ¿«‘®&CeÃ$f,4$(2a@„!î¬¿ Xò.ÚΩx–DâÊ `!Ê:#F`∞°Äå@¶¶ÓªF%Gî9è	•p #if !defined(TORCH_STABLE_ONLY) && !defined(TORCH_TARGET_VERSION)
+#pragma once
+
+// DO NOT DEFINE STATIC DATA IN THIS HEADER!
+// See Note [Do not compile initializers with AVX]
+
+#include <ATen/cpu/vec/intrinsics.h>
+#include <ATen/cpu/vec/vec_base.h>
+#include <ATen/native/quantized/AffineQuantizerBase.h>
+
+#include <c10/util/irange.h>
+#include <c10/util/qint32.h>
+#include <c10/util/qint8.h>
+#include <c10/util/quint8.h>
+
+#include <array>
+#include <cmath>
+
+// This file defines Vectorized<> for the quantized types.
+//
+//
+// Currently, we simply use these classes as efficient converters between
+// the quantized types and Vectorized<float>, usually in bandwidth-bound cases
+// where doing the arithmetic in full-precision is acceptable (e.g.
+// elementwise operators).
+//
+//
+// Conversions are as follows:
+//  Vectorized<qint8> -> 4x Vectorized<float>
+//  Vectorized<quint8> -> 4x Vectorized<float>
+//  Vectorized<qint32> -> 1x Vectorized<float>
+//
+// The size of the returned float vector is specified by the special
+// constexpr function float_num_vecs. The type of the value returned
+// from dequantize (and expected as an argument to quantize) is
+// specified by float_vec_return_type.
+//
+// When writing kernels with these vectors, it is expected that floating-
+// point operations will be carried out in a loop over
+// Vectorized<T>::float_num_vecs iterations.
+
+namespace at {
+namespace vec {
+inline namespace CPU_CAPABILITY {
+
+#if defined(CPU_CAPABILITY_AVX512)
+
+#ifdef _MSC_VER
+__declspec(align(64)) struct Vectorizedqi {
+ protected:
+  __m512i vals;
+#else
+struct Vectorizedqi {
+ protected:
+  __m512i vals __attribute__((aligned(64)));
+#endif
+
+ public:
+  Vectorizedqi() {
+    vals = _mm512_setzero_si512();
+  }
+  Vectorizedqi(__m512i v) : vals(v) {}
+  operator __m512i() const {
+    return vals;
+  }
+};
+
+template <typename T>
+__m512i pack_saturate_and_clamp(
+    __m512i first,
+    __m512i second,
+    T min_val,
+    T max_val);
+
+template <>
+inline __m512i pack_saturate_and_clamp<int32_t>(
+    __m512i first [[maybe_unused]],
+    __m512i second [[maybe_unused]],
+    int32_t min_val [[maybe_unused]],
+    int32_t max_val [[maybe_unused]]) {
+  // This function is for linkage only, will not be used
+  TORCH_CHECK(false, "pack_saturate_and_clamp<int32_t> is not supported");
+  return __m512i{};
+}
+
+template <>
+inline __m512i pack_saturate_and_clamp<int8_t>(
+    __m512i first,
+    __m512i second,
+    int8_t min_val,
+    int8_t max_val) {
+  __m512i packed_and_sat = _mm512_packs_epi16(first, second);
+  return _mm512_max_epi8(
+      _mm512_set1_epi8(min_val),
+      _mm512_min_epi8(packed_and_sat, _mm512_set1_epi8(max_val)));
+}
+
+template <>
+inline __m512i pack_saturate_and_clamp<uint8_t>(
+    __m512i first,
+    __m512i second,
+    uint8_t min_val,
+    uint8_t max_val) {
+  __m512i packed_and_sat = _mm512_packus_epi16(first, second);
+  return _mm512_max_epu8(
+      _mm512_set1_epi8(min_val),
+      _mm512_min_epu8(packed_and_sat, _mm512_set1_epi8(max_val)));
+}
+
+template <typename T>
+typename std::enable_if_t<
+    std::is_same_v<T, uint8_t> || std::is_same_v<T, int8_t>,
+    at::vec::Vectorized<
+        float>> inline convert_int8_to_float(at::vec::Vectorized<T> src) {
+  // Note: this function only convert inputs number of elements equal to
+  // at::vec::Vectorized<float>.size() Only handle first 16*8 bits
+  __m128i input_128 = _mm512_castsi512_si128(src);
+  // Convert from 16*uint8/int8 to 16*int32
+  __m512i input_512_extended;
+  if constexpr (std::is_same_v<T, uint8_t>)
+    input_512_extended = _mm512_cvtepu8_epi32(input_128);
+  else
+    input_512_extended = _mm512_cvtepi8_epi32(input_128);
+  // Convert from 16*int32 to 16*float32
+  return _mm512_cvtepi32_ps(input_512_extended);
+}
+
+template <typename T>
+at::vec::Vectorized<T> inline convert_float_to_int8(
+    at::vec::Vectorized<float> src);
+
+template <>
+at::vec::Vectorized<int8_t> inline convert_float_to_int8(
+    at::vec::Vectorized<float> src) {
+  // Convert from float32 to int32 with truncation
+  __m512i x_values_int32 = _mm512_cvttps_epi32(src);
+
+  // Convert from int32 to int16 using signed saturation
+  __m512i xy_packed_v = _mm512_packs_epi32(x_values_int32, x_values_int32);
+
+  constexpr auto min_val = std::numeric_limits<int8_t>::min();
+  constexpr auto max_val = std::numeric_limits<int8_t>::max();
+
+  // Convert from int16 to int8 using unsigned saturation
+  __m512i xyzw_clamped_v = pack_saturate_and_clamp<int8_t>(
+      xy_packed_v, xy_packed_v, min_val, max_val);
+  __m512i permute_mask_v = _mm512_set_epi32(
+      0x0f,
+      0x0b,
+      0x07,
+      0x03,
+      0x0e,
+      0x0a,
+      0x06,
+      0x02,
+      0x0d,
+      0x09,
+      0x05,
+      0x01,
+      0x0c,
+      0x08,
+      0x04,
+      0x00);
+  return _mm512_permutexvar_epi32(permute_mask_v, xyzw_clamped_v);
+}
+
+template <>
+at::vec::Vectorized<uint8_t> inline convert_float_to_int8(
+    at::vec::Vectorized<float> src) {
+  // The type of *_val should be int32_t to ensure correct clamping behavior.
+  constexpr auto min_val = std::numeric_limits<int32_t>::min();
+  constexpr auto max_val = std::numeric_limits<int32_t>::max();
+  __m512 float32_min_val = _mm512_set1_ps(float(min_val));
+  __m512 float32_max_val = _mm512_set1_ps(float(max_val));
+  __m512 float32_src = _mm512_max_ps(src, float32_min_val);
+  float32_src = _mm512_min_ps(float32_src, float32_max_val);
+  __m512i int32_src_clamped = _mm512_cvttps_epi32(float32_src);
+  __m128i int8_src = _mm512_cvtepi32_epi8(int32_src_clamped);
+  return _mm512_castsi128_si512(int8_src);
+}
+
+template <typename T>
+__FORCE_INLINE void QuantizeAvx512(
+    const float* src,
+    T* dst,
+    int len,
+    float inverse_scale,
+    int64_t zero_point) {
+  constexpr int VLEN = 16;
+  constexpr auto min_val = std::numeric_limits<T>::min();
+  constexpr auto max_val = std::numeric_limits<T>::max();
+  const __m512i min_v = _mm512_set1_epi32(min_val);
+  const __m512i max_v = _mm512_set1_epi32(max_val);
+  // This is the largest int32 value < int32_max exactly representable in float
+  constexpr int32_t int32_float_max_val =
+      std::numeric_limits<int32_t>::max() - 127;
+  int i = 0;
+  __m512 inverse_scale_v = _mm512_set1_ps(inverse_scale);
+  // clang-format off
+  static const __m512i shuffle_mask_v = _mm512_set_epi8(
+      0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff,
+      0x0c, 0x08, 0x04, 0x00,
+      0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff,
+      0x0c, 0x08, 0x04, 0x00,
+      0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff,
+      0x0c, 0x08, 0x04, 0x00,
+      0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff,
+      0x0c, 0x08, 0x04, 0x00);
+  // clang-format on
+  __m512i permute_mask_v = _mm512_set_epi32(
+      0x0f,
+      0x0b,
+      0x07,
+      0x03,
+      0x0e,
+      0x0a,
+      0x06,
+      0x02,
+      0x0d,
+      0x09,
+      0x05,
+      0x01,
+      0x0c,
+      0x08,
+      0x04,
+      0x00);
+  __m512i permute_mask_l8_v = _mm512_set_epi32(
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x0c,
+      0x08,
+      0x04,
+      0x00);
+  int len_aligned = len / (VLEN * 4) * (VLEN * 4);
+  for (; i < len_aligned; i += 4 * VLEN) {
+    // x
+    __m512 x_vals = _mm512_load_ps(src + i);
+    __m512 x_transformed_v = _mm512_mul_ps(x_vals, inverse_scale_v);
+    // If the floating point value is greater than int32_max,
+    // _mm512_cvtps_epi32 converts them to -ve. Clip at int32_float_max_val to
+    // Clip at int32_float_max_val to avoid this.
+    x_transformed_v =
+        _mm512_min_ps(x_transformed_v, _mm512_set1_ps(int32_float_max_val));
+    // y
+    __m512 y_vals = _mm512_load_ps(src + i + VLEN);
+    __m512 y_transformed_v = _mm512_mul_ps(y_vals, inverse_scale_v);
+    y_transformed_v =
+        _mm512_min_ps(y_transformed_v, _mm512_set1_ps(int32_float_max_val));
+    // z
+    __m512 z_vals = _mm512_load_ps(src + i + 2 * VLEN);
+    __m512 z_transformed_v = _mm512_mul_ps(z_vals, inverse_scale_v);
+    z_transformed_v =
+        _mm512_min_ps(z_transformed_v, _mm512_set1_ps(int32_float_max_val));
+    // w
+    __m512 w_vals = _mm512_load_ps(src + i + 3 * VLEN);
+    __m512 w_transformed_v = _mm512_mul_ps(w_vals, inverse_scale_v);
+    w_transformed_v =
+        _mm512_min_ps(w_transformed_v, _mm512_set1_ps(int32_float_max_val));
+
+    __m512i x_rounded_v = _mm512_cvtps_epi32(x_transformed_v);
+    __m512i y_rounded_v = _mm512_cvtps_epi32(y_transformed_v);
+    __m512i z_rounded_v = _mm512_cvtps_epi32(z_transformed_v);
+    __m512i w_rounded_v = _mm512_cvtps_epi32(w_transformed_v);
+
+    // add zero point
+    x_rounded_v = _mm512_add_epi32(x_rounded_v, _mm512_set1_epi32(zero_point));
+    y_rounded_v = _mm512_add_epi32(y_rounded_v, _mm512_set1_epi32(zero_point));
+    z_rounded_v = _mm512_add_epi32(z_rounded_v, _mm512_set1_epi32(zero_point));
+    w_rounded_v = _mm512_add_epi32(w_rounded_v, _mm512_set1_epi32(zero_point));
+
+    __m512i xy_packed_v = _mm512_packs_epi32(x_rounded_v, y_rounded_v);
+    __m512i zw_packed_v = _mm512_packs_epi32(z_rounded_v, w_rounded_v);
+    __m512i xyzw_clamped_v =
+        pack_saturate_and_clamp<T>(xy_packed_v, zw_packed_v, min_val, max_val);
+
+    xyzw_clamped_v = _mm512_permutexvar_epi32(permute_mask_v, xyzw_clamped_v);
+    _mm512_storeu_si512(reinterpret_cast<__m512i*>(dst + i), xyzw_clamped_v);
+  }
+
+  // Additional 8-lane AVX512 version to take advantage when len is smaller
+  // based on fbgemm::QuantizeAvx2 (https://github.com/pytorch/FBGEMM)
+  for (; i < len / VLEN * VLEN; i += VLEN) {
+    __m512 x_vals = _mm512_load_ps(src + i);
+    __m512 x_transformed_v = _mm512_mul_ps(x_vals, inverse_scale_v);
+    x_transformed_v =
+        _mm512_min_ps(x_transformed_v, _mm512_set1_ps(int32_float_max_val));
+    __m512i x_rounded_v = _mm512_cvtps_epi32(x_transformed_v);
+    x_rounded_v = _mm512_add_epi32(x_rounded_v, _mm512_set1_epi32(zero_point));
+    __m512i x_clipped_v =
+        _mm512_max_epi32(min_v, _mm512_min_epi32(max_v, x_rounded_v));
+
+    x_clipped_v = _mm512_shuffle_epi8(x_clipped_v, shuffle_mask_v);
+    x_clipped_v = _mm512_permutexvar_epi32(permute_mask_l8_v, x_clipped_v);
+    _mm_storeu_si128(
+        reinterpret_cast<__m128i*>(dst + i),
+        _mm512_castsi512_si128(x_clipped_v));
+  }
+
+  for (; i < len; ++i) {
+    float transformed = src[i] * inverse_scale;
+
+    // Not exactly the same behavior as the vectorized code.
+    // The vectorized code above always rounds to even in halfway cases
+    // (https://software.intel.com/en-us/node/523819), but std::nearbyint
+    // does the same only when the current rounding mode is FE_TONEAREST.
+    // However, in practice, this should not be a problem because most cases
+    // use the default rounding mode FE_TONEAREST.
+    // Note that we cannot implement the same behavior as the vectorized code
+    // using std::round because it does rounding away from zero in halfway
+    // cases.
+    transformed = zero_point + std::nearbyint(transformed);
+    float clipped =
+        std::min(std::max(transformed, float(min_val)), float(max_val));
+    dst[i] = clipped;
+  }
+}
+
+template <>
+struct is_vec_specialized_for<c10::qint32> : std::bool_constant<true> {};
+
+template <>
+struct Vectorized<c10::qint32> : public Vectorizedqi {
+  using size_type = int;
+  static constexpr size_type size() {
+    return 16;
+  }
+
+  static constexpr int float_num_vecs() {
+    return 1;
+  }
+
+  static constexpr int int_num_vecs() {
+    return 1;
+  }
+
+  using float_vec_return_type = std::array<Vectorized<float>, 1>;
+  using int_vec_return_type = std::array<Vectorized<c10::qint32>, 1>;
+  using value_type = c10::qint32::underlying;
+
+ public:
+  using Vectorizedqi::Vectorizedqi;
+  Vectorized() {}
+
+  Vectorized(__m512i vals_) {
+    vals = vals_;
+  }
+
+  // Broadcast constructor
+  Vectorized(const c10::qint32& val) {
+    value_type uw = val.val_;
+    vals = _mm512_set1_epi32(uw);
+  }
+
+  void store(void* ptr, int count = size()) const {
+    if (count != size()) {
+      memcpy(ptr, &vals, count * sizeof(value_type));
+    } else {
+      _mm512_storeu_si512((__m512i*)ptr, vals);
+    }
+  }
+
+  static Vectorized<c10::qint32> loadu(const void* ptr) {
+    return Vectorized<c10::qint32>(ptr);
+  }
+
+  static Vectorized<c10::qint32> loadu(const void* ptr, int64_t count) {
+    __at_align__ value_type tmp_values[size()];
+    // Ensure uninitialized memory does not change the output value See
+    // https://github.com/pytorch/pytorch/issues/32502 for more details. We do
+    // not initialize arrays to zero using "={0}" because gcc would compile it
+    // to two instructions while a loop would be compiled to one instruction.
+    for (const auto i : c10::irange(size())) {
+      tmp_values[i] = 0;
+    }
+    std::memcpy(
+        tmp_values,
+        reinterpret_cast<const value_type*>(ptr),
+        count * sizeof(value_type));
+    return loadu(tmp_values);
+  }
+
+  float_vec_return_type dequantize(
+      Vectorized<float> scale,
+      Vectorized<float> zero_point,
+      Vectorized<float> scale_zp_premul) const {
+    __m512 float_vals = _mm512_cvtepi32_ps(vals);
+    return {vec::fmadd(scale, Vectorized<float>(float_vals), scale_zp_premul)};
+  }
+
+  float_vec_return_type dequantize(
+      Vectorized<float> scale,
+      Vectorized<float> zero_point) const {
+    __m512 float_vals = _mm512_cvtepi32_ps(vals);
+    return {(Vectorized<float>(float_vals) - zero_point) * scale};
+  }
+
+  static Vectorized<c10::qint32> quantize(
+      const float_vec_return_type& rhs,
+      float scale,
+      int32_t zero_point,
+      float inverse_scale [[maybe_unused]]) {
+    Vectorized<c10::qint32> retval;
+    auto rhs_data = (__m512)rhs[0];
+    at::native::quantize_vec<c10::qint32, /*precision=*/32>(
+        scale, zero_point, (float*)&rhs_data, (c10::qint32*)&retval.vals, 16);
+    return retval;
+  }
+
+  Vectorized<c10::qint32> maximum(Vectorized<c10::qint32> b) const {
+    return _mm512_max_epi32(vals, b.vals);
+  }
+
+  Vectorized<c10::qint32> minimum(Vectorized<c10::qint32> b) const {
+    return _mm512_min_epi32(vals, b.vals);
+  }
+
+  Vectorized<c10::qint32> relu(Vectorized<c10::qint32> zero_point) const {
+    return maximum(zero_point);
+  }
+
+  Vectorized<c10::qint32> relu6(
+      Vectorized<c10::qint32> zero_point,
+      Vectorized<c10::qint32> q_six) {
+    return _mm512_min_epi32(
+        _mm512_max_epi32(vals, zero_point.vals), q_six.vals);
+  }
+
+  int_vec_return_type widening_subtract(Vectorized<c10::qint32> b) const {
+    return {_mm512_sub_epi32(vals, b)};
+  }
+
+  static Vectorized<c10::qint32> requantize_from_int(
+      const int_vec_return_type& inp,
+      float multiplier,
+      int32_t zero_point) {
+    __m512 multiplier_v = _mm512_set1_ps(multiplier);
+    __m512i zero_point_v = _mm512_set1_epi32(zero_point);
+
+    __m512 scaled = _mm512_mul_ps(_mm512_cvtepi32_ps(inp[0]), multiplier_v);
+    __m512i rounded = _mm512_cvtps_epi32(scaled);
+    return _mm512_add_epi32(rounded, zero_point_v);
+  }
+
+ private:
+  // Load from memory constructor
+  Vectorized(const void* ptr) {
+    vals = _mm512_loadu_si512((const __m512i*)ptr);
+  }
+};
+
+template <>
+Vectorized<c10::qint32> inline maximum(
+    const Vectorized<c10::qint32>& a,
+    const Vectorized<c10::qint32>& b) {
+  return a.maximum(b);
+}
+
+template <>
+Vectorized<c10::qint32> inline operator*(
+    const Vectorized<c10::qint32>& a,
+    const Vectorized<c10::qint32>& b) {
+  return _mm512_mullo_epi32(a, b);
+}
+
+template <>
+Vectorized<c10::qint32> inline operator+(
+    const Vectorized<c10::qint32>& a,
+    const Vectorized<c10::qint32>& b) {
+  return _mm512_add_epi32(a, b);
+}
+
+/*
+ * Convert values from int32 back to int8/uint8
+ */
+template <typename T>
+__m512i RequantizeAvx512(
+    const std::array<Vectorized<c10::qint32>, 4>& inp,
+    __m512 multiplier,
+    __m512i zp) {
+  static_assert(
+      std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t>,
+      "Only int8_t/uint8_t are supported");
+  constexpr auto min_val = std::numeric_limits<T>::min();
+  constexpr auto max_val = std::numeric_limits<T>::max();
+  __m512i permute_mask_v = _mm512_set_epi32(
+      0x0f,
+      0x0b,
+      0x07,
+      0x03,
+      0x0e,
+      0x0a,
+      0x06,
+      0x02,
+      0x0d,
+      0x09,
+      0x05,
+      0x01,
+      0x0c,
+      0x08,
+      0x04,
+      0x00);
+  __m512 x_scaled_v = _mm512_mul_ps(_mm512_cvtepi32_ps(inp[0]), multiplier);
+  __m512 y_scaled_v = _mm512_mul_ps(_mm512_cvtepi32_ps(inp[1]), multiplier);
+  __m512 z_scaled_v = _mm512_mul_ps(_mm512_cvtepi32_ps(inp[2]), multiplier);
+  __m512 w_scaled_v = _mm512_mul_ps(_mm512_cvtepi32_ps(inp[3]), multiplier);
+
+  __m512i x_rounded_v = _mm512_cvtps_epi32(x_scaled_v);
+  __m512i y_rounded_v = _mm512_cvtps_epi32(y_scaled_v);
+  __m512i z_rounded_v = _mm512_cvtps_epi32(z_scaled_v);
+  __m512i w_rounded_v = _mm512_cvtps_epi32(w_scaled_v);
+
+  /* Add zero point */
+  __m512i x_v = _mm512_add_epi32(x_rounded_v, zp);
+  __m512i y_v = _mm512_add_epi32(y_rounded_v, zp);
+  __m512i z_v = _mm512_add_epi32(z_rounded_v, zp);
+  __m512i w_v = _mm512_add_epi32(w_rounded_v, zp);
+
+  /* Pack to int16_t and saturate */
+  __m512i xy_packed_v = _mm512_packs_epi32(x_v, y_v);
+  __m512i zw_packed_v = _mm512_packs_epi32(z_v, w_v);
+
+  __m512i xyzw_clamped_v =
+      pack_saturate_and_clamp<T>(xy_packed_v, zw_packed_v, min_val, max_val);
+
+  /*
+   * xyzw_clamped_v has results in the following layout so we need to
+   * permute: x0-3 y0-3 z0-3 w0-3 x4-7 y4-7 z4-7 w4-7 x8-11 y8-11 z8-11 w8-11
+   * x12-15 y12-15 z12-15 w12-15
+   */
+  xyzw_clamped_v = _mm512_permutexvar_epi32(permute_mask_v, xyzw_clamped_v);
+  return xyzw_clamped_v;
+}
+
+template <>
+struct is_vec_specialized_for<c10::qint8> : std::bool_constant<true> {};
+
+template <>
+struct Vectorized<c10::qint8> : public Vectorizedqi {
+  static constexpr int size() {
+    return 64;
+  }
+
+  static constexpr int float_num_vecs() {
+    return 4;
+  }
+
+  static constexpr int int_num_vecs() {
+    return 4;
+  }
+
+  using float_vec_return_type = std::array<Vectorized<float>, 4>;
+  using int_vec_return_type = std::array<Vectorized<c10::qint32>, 4>;
+  using value_type = c10::qint8::underlying;
+
+ public:
+  using Vectorizedqi::Vectorizedqi;
+
+  Vectorized() {}
+  Vectorized(__m512i vals_) {
+    vals = vals_;
+  }
+
+  // Broadcast constructor
+  Vectorized(const c10::qint8& val) {
+    value_type uw = val.val_;
+    vals = _mm512_set1_epi8(uw);
+  }
+
+  // This is needed because the compiler emits awful code for the default
+  // constructor for moving the enum
+  Vectorized(const Vectorized<c10::qint8>& other) : Vectorizedqi(other.vals) {}
+
+  // This is added to avoid error: definition of implicit copy assignment
+  // operator for 'Vectorized<c10::qint8>' is deprecated because it has a
+  // user-declared copy constructor [-Werror,-Wdeprecated-copy]
+  Vectorized& operator=(const Vectorized<c10::qint8>&) = default;
+
+  void store(void* ptr, int count = size()) const {
+    if (count != size()) {
+      memcpy(ptr, &vals, count * sizeof(value_type));
+    } else {
+      _mm512_storeu_si512((__m512i*)ptr, vals);
+    }
+  }
+
+  static Vectorized<c10::qint8> loadu(const void* ptr) {
+    return Vectorized<c10::qint8>(ptr);
+  }
+
+  static Vectorized<c10::qint8> loadu(const void* ptr, int64_t count) {
+    __at_align__ value_type tmp_values[size()];
+    // Ensure uninitialized memory does not change the output value See
+    // https://github.com/pytorch/pytorch/issues/32502 for more details. We do
+    // not initialize arrays to zero using "={0}" because gcc would compile it
+    // to two instructions while a loop would be compiled to one instruction.
+    for (const auto i : c10::irange(size())) {
+      tmp_values[i] = 0;
+    }
+    std::memcpy(
+        tmp_values,
+        reinterpret_cast<const value_type*>(ptr),
+        count * sizeof(value_type));
+    return loadu(tmp_values);
+  }
+
+ private:
+  __m512i cvtepi8_epi32(__m128i epi8_vals) const {
+    return _mm512_cvtepi8_epi32(epi8_vals);
+  }
+
+ public:
+  float_vec_return_type dequantize(
+      Vectorized<float> scale,
+      Vectorized<float> zero_point,
+      Vectorized<float> scale_neg_zp_premul) const {
+#if defined(_MSC_VER) && !defined(__clang__)
+    __m128i int_val0 = _mm_set_epi64x(vals.m512i_u64[1], vals.m512i_u64[0]);
+    __m128i int_val1 = _mm_set_epi64x(vals.m512i_u64[3], vals.m512i_u64[2]);
+    __m128i int_val2 = _mm_set_epi64x(vals.m512i_u64[5], vals.m512i_u64[4]);
+    __m128i int_val3 = _mm_set_epi64x(vals.m512i_u64[7], vals.m512i_u64[6]);
+#else
+    __m128i int_val0 = _mm_set_epi64x(vals[1], vals[0]);
+    __m128i int_val1 = _mm_set_epi64x(vals[3], vals[2]);
+    __m128i int_val2 = _mm_set_epi64x(vals[5], vals[4]);
+    __m128i int_val3 = _mm_set_epi64x(vals[7], vals[6]);
+#endif
+
+    __m512 float_val0 = _mm512_cvtepi32_ps(cvtepi8_epi32(int_val0));
+    __m512 float_val1 = _mm512_cvtepi32_ps(cvtepi8_epi32(int_val1));
+    __m512 float_val2 = _mm512_cvtepi32_ps(cvtepi8_epi32(int_val2));
+    __m512 float_val3 = _mm512_cvtepi32_ps(cvtepi8_epi32(int_val3));
+
+    auto val0 =
+        vec::fmadd(scale, Vectorized<float>(float_val0), scale_neg_zp_premul);
+    auto val1 =
+        vec::fmadd(scale, Vectorized<float>(float_val1), scale_neg_zp_premul);
+    auto val2 =
+        vec::fmadd(scale, Vectorized<float>(float_val2), scale_neg_zp_premul);
+    auto val3 =
+        vec::fmadd(scale, Vectorized<float>(float_val3), scale_neg_zp_premul);
+    return {val0, val1, val2, val3};
+  }
+
+  float_vec_return_type dequantize(
+      Vectorized<float> scale,
+      Vectorized<float> zero_point) const {
+#if defined(_MSC_VER) && !defined(__clang__)
+    __m128i int_val0 = _mm_set_epi64x(vals.m512i_u64[1], vals.m512i_u64[0]);
+    __m128i int_val1 = _mm_set_epi64x(vals.m512i_u64[3], vals.m512i_u64[2]);
+    __m128i int_val2 = _mm_set_epi64x(vals.m512i_u64[5], vals.m512i_u64[4]);
+    __m128i int_val3 = _mm_set_epi64x(vals.m512i_u64[7], vals.m512i_u64[6]);
+#else
+    __m128i int_val0 = _mm_set_epi64x(vals[1], vals[0]);
+    __m128i int_val1 = _mm_set_epi64x(vals[3], vals[2]);
+    __m128i int_val2 = _mm_set_epi64x(vals[5], vals[4]);
+    __m128i int_val3 = _mm_set_epi64x(vals[7], vals[6]);
+#endif
+
+    __m512 float_val0 = _mm512_cvtepi32_ps(cvtepi8_epi32(int_val0));
+    __m512 float_val1 = _mm512_cvtepi32_ps(cvtepi8_epi32(int_val1));
+    __m512 float_val2 = _mm512_cvtepi32_ps(cvtepi8_epi32(int_val2));
+    __m512 float_val3 = _mm512_cvtepi32_ps(cvtepi8_epi32(int_val3));
+
+    auto val0 = (Vectorized<float>(float_val0) - zero_point) * scale;
+    auto val1 = (Vectorized<float>(float_val1) - zero_point) * scale;
+    auto val2 = (Vectorized<float>(float_val2) - zero_point) * scale;
+    auto val3 = (Vectorized<float>(float_val3) - zero_point) * scale;
+    return {val0, val1, val2, val3};
+  }
+
+  static Vectorized<c10::qint8> quantize(
+      const float_vec_return_type& rhs,
+      float scale,
+      int32_t zero_point,
+      float inverse_scale) {
+    auto* rhs_data = (float*)rhs.data();
+    int8_t quantized_values[64];
+    QuantizeAvx512<value_type>(
+        rhs_data, quantized_values, 64, inverse_scale, zero_point);
+    return Vectorized<c10::qint8>::loadu(quantized_values);
+  }
+
+  Vectorized<c10::qint8> maximum(Vectorized<c10::qint8> b) const {
+    return _mm512_max_epi8(vals, b.vals);
+  }
+
+  Vectorized<c10::qint8> minimum(Vectorized<c10::qint8> b) const {
+    return _mm512_min_epi8(vals, b.vals);
+  }
+
+  Vectorized<c10::qint8> relu(Vectorized<c10::qint8> zero_point) const {
+    return maximum(zero_point);
+  }
+
+  Vectorized<c10::qint8> relu6(
+      Vectorized<c10::qint8> zero_point,
+      Vectorized<c10::qint8> q_six) {
+    return _mm512_min_epi8(_mm512_max_epi8(vals, zero_point.vals), q_six.vals);
+  }
+
+  int_vec_return_type widening_subtract(Vectorized<c10::qint8> b) const {
+#if defined(_MSC_VER) && !defined(__clang__)
+    __m128i int_val0 = _mm_set_epi64x(vals.m512i_u64[1], vals.m512i_u64[0]);
+    __m128i int_val1 = _mm_set_epi64x(vals.m512i_u64[3], vals.m512i_u64[2]);
+    __m128i int_val2 = _mm_set_epi64x(vals.m512i_u64[5], vals.m512i_u64[4]);
+    __m128i int_val3 = _mm_set_epi64x(vals.m512i_u64[7], vals.m512i_u64[6]);
+#else
+    __m128i int_val0 = _mm_set_epi64x(vals[1], vals[0]);
+    __m128i int_val1 = _mm_set_epi64x(vals[3], vals[2]);
+    __m128i int_val2 = _mm_set_epi64x(vals[5], vals[4]);
+    __m128i int_val3 = _mm_set_epi64x(vals[7], vals[6]);
+#endif
+
+    __m512i int32_val0 = cvtepi8_epi32(int_val0);
+    __m512i int32_val1 = cvtepi8_epi32(int_val1);
+    __m512i int32_val2 = cvtepi8_epi32(int_val2);
+    __m512i int32_val3 = cvtepi8_epi32(int_val3);
+
+#if defined(_MSC_VER) && !defined(__clang__)
+    __m128i int_b0 = _mm_set_epi64x(b.vals.m512i_u64[1], b.vals.m512i_u64[0]);
+    __m128i int_b1 = _mm_set_epi64x(b.vals.m512i_u64[3], b.vals.m512i_u64[2]);
+    __m128i int_b2 = _mm_set_epi64x(b.vals.m512i_u64[5], b.vals.m512i_u64[4]);
+    __m128i int_b3 = _mm_set_epi64x(b.vals.m512i_u64[7], b.vals.m512i_u64[6]);
+#else
+    __m128i int_b0 = _mm_set_epi64x(b.vals[1], b.vals[0]);
+    __m128i int_b1 = _mm_set_epi64x(b.vals[3], b.vals[2]);
+    __m128i int_b2 = _mm_set_epi64x(b.vals[5], b.vals[4]);
+    __m128i int_b3 = _mm_set_epi64x(b.vals[7], b.vals[6]);
+#endif
+
+    __m512i int32_b0 = cvtepi8_epi32(int_b0);
+    __m512i int32_b1 = cvtepi8_epi32(int_b1);
+    __m512i int32_b2 = cvtepi8_epi32(int_b2);
+    __m512i int32_b3 = cvtepi8_epi32(int_b3);
+
+    __m512i res_0 = _mm512_sub_epi32(int32_val0, int32_b0);
+    __m512i res_1 = _mm512_sub_epi32(int32_val1, int32_b1);
+    __m512i res_2 = _mm512_sub_epi32(int32_val2, int32_b2);
+    __m512i res_3 = _mm512_sub_epi32(int32_val3, int32_b3);
+
+    return {
+        Vectorized<c10::qint32>(res_0),
+        Vectorized<c10::qint32>(res_1),
+        Vectorized<c10::qint32>(res_2),
+        Vectorized<c10::qint32>(res_3)};
+  }
+
+  static Vectorized<c10::qint8> requantize_from_int(
+      const int_vec_return_type& inp,
+      float multiplier,
+      int32_t zero_point) {
+    __m512 multiplier_v = _mm512_set1_ps(multiplier);
+    __m512i zero_point_v = _mm512_set1_epi32(zero_point);
+    return RequantizeAvx512<value_type>(inp, multiplier_v, zero_point_v);
+  }
+
+ private:
+  // Load from memory constructor
+  Vectorized(const void* ptr) {
+    vals = _mm512_loadu_si512((const __m512i*)ptr);
+  }
+};
+
+template <>
+Vectorized<c10::qint8> inline maximum(
+    const Vectorized<c10::qint8>& a,
+    const Vectorized<c10::qint8>& b) {
+  return a.maximum(b);
+}
+
+template <>
+struct is_vec_specialized_for<c10::quint8> : std::bool_constant<true> {};
+
+template <>
+struct Vectorized<c10::quint8> : public Vectorizedqi {
+  static constexpr int size() {
+    return 64;
+  }
+
+  static constexpr int float_num_vecs() {
+    return 4;
+  }
+
+  static constexpr int int_num_vecs() {
+    return 4;
+  }
+
+  using float_vec_return_type = std::array<Vectorized<float>, 4>;
+  using int_vec_return_type = std::array<Vectorized<c10::qint32>, 4>;
+  using value_type = c10::quint8::underlying;
+
+ public:
+  using Vectorizedqi::Vectorizedqi;
+  Vectorized() {}
+
+  Vectorized(__m512i vals_) {
+    vals = vals_;
+  }
+
+  // Broadcast constructor
+  Vectorized(const c10::quint8& val) {
+    value_type uw = val.val_;
+    vals = _mm512_set1_epi8(uw);
+  }
+
+  Vectorized(const Vectorized<c10::quint8>& other) : Vectorizedqi(other.vals) {}
+
+  // This is added to avoid error: definition of implicit copy assignment
+  // operator for 'Vectorized<c10::quint8>' is deprecated because it has a
+  // user-declared copy constructor [-Werror,-Wdeprecated-copy]
+  Vectorized& operator=(const Vectorized<c10::quint8>&) = default;
+
+  void store(void* ptr, int count = size()) const {
+    if (count != size()) {
+      memcpy(ptr, &vals, count * sizeof(value_type));
+    } else {
+      _mm512_storeu_si512((__m512i*)ptr, vals);
+    }
+  }
+
+  static Vectorized<c10::quint8> loadu(const void* ptr) {
+    return Vectorized<c10::quint8>(ptr);
+  }
+
+  static Vectorized<c10::quint8> loadu(const void* ptr, int64_t count) {
+    __at_align__ value_type tmp_values[size()];
+    // Ensure uninitialized memory does not change the output value See
+    // https://github.com/pytorch/pytorch/issues/32502 for more details. We do
+    // not initialize arrays to zero using "={0}" because gcc would compile it
+    // to two instructions while a loop would be compiled to one instruction.
+    for (const auto i : c10::irange(size())) {
+      tmp_values[i] = 0;
+    }
+    std::memcpy(
+        tmp_values,
+        reinterpret_cast<const value_type*>(ptr),
+        count * sizeof(value_type));
+    return loadu(tmp_values);
+  }
+
+ private:
+  __m512i cvtepu8_epi32(__m128i epu8_vals) const {
+    return _mm512_cvtepu8_epi32(epu8_vals);
+  }
+
+ public:
+  float_vec_return_type dequantize(
+      Vectorized<float> scale,
+      Vectorized<float> zero_point,
+      Vectorized<float> scale_zp_premul) const {
+#if defined(_MSC_VER) && !defined(__clang__)
+    __m128i int_val0 = _mm_set_epi64x(vals.m512i_u64[1], vals.m512i_u64[0]);
+    __m128i int_val1 = _mm_set_epi64x(vals.m512i_u64[3], vals.m512i_u64[2]);
+    __m128i int_val2 = _mm_set_epi64x(vals.m512i_u64[5], vals.m512i_u64[4]);
+    __m128i int_val3 = _mm_set_epi64x(vals.m512i_u64[7], vals.m512i_u64[6]);
+#else
+    __m128i int_val0 = _mm_set_epi64x(vals[1], vals[0]);
+    __m128i int_val1 = _mm_set_epi64x(vals[3], vals[2]);
+    __m128i int_val2 = _mm_set_epi64x(vals[5], vals[4]);
+    __m128i int_val3 = _mm_set_epi64x(vals[7], vals[6]);
+#endif
+
+    __m512 float_val0 = _mm512_cvtepi32_ps(cvtepu8_epi32(int_val0));
+    __m512 float_val1 = _mm512_cvtepi32_ps(cvtepu8_epi32(int_val1));
+    __m512 float_val2 = _mm512_cvtepi32_ps(cvtepu8_epi32(int_val2));
+    __m512 float_val3 = _mm512_cvtepi32_ps(cvtepu8_epi32(int_val3));
+
+    auto val0 =
+        vec::fmadd(scale, Vectorized<float>(float_val0), scale_zp_premul);
+    auto val1 =
+        vec::fmadd(scale, Vectorized<float>(float_val1), scale_zp_premul);
+    auto val2 =
+        vec::fmadd(scale, Vectorized<float>(float_val2), scale_zp_premul);
+    auto val3 =
+        vec::fmadd(scale, Vectorized<float>(float_val3), scale_zp_premul);
+
+    return {val0, val1, val2, val3};
+  }
+
+  float_vec_return_type dequantize(
+      Vectorized<float> scale,
+      Vectorized<float> zero_point) const {
+#if defined(_MSC_VER) && !defined(__clang__)
+    __m128i int_val0 = _mm_set_epi64x(vals.m512i_u64[1], vals.m512i_u64[0]);
+    __m128i int_val1 = _mm_set_epi64x(vals.m512i_u64[3], vals.m512i_u64[2]);
+    __m128i int_val2 = _mm_set_epi64x(vals.m512i_u64[5], vals.m512i_u64[4]);
+    __m128i int_val3 = _mm_set_epi64x(vals.m512i_u64[7], vals.m512i_u64[6]);
+#else
+    __m128i int_val0 = _mm_set_epi64x(vals[1], vals[0]);
+    __m128i int_val1 = _mm_set_epi64x(vals[3], vals[2]);
+    __m128i int_val2 = _mm_set_epi64x(vals[5], vals[4]);
+    __m128i int_val3 = _mm_set_epi64x(vals[7], vals[6]);
+#endif
+
+    __m512 float_val0 = _mm512_cvtepi32_ps(cvtepu8_epi32(int_val0));
+    __m512 float_val1 = _mm512_cvtepi32_ps(cvtepu8_epi32(int_val1));
+    __m512 float_val2 = _mm512_cvtepi32_ps(cvtepu8_epi32(int_val2));
+    __m512 float_val3 = _mm512_cvtepi32_ps(cvtepu8_epi32(int_val3));
+
+    auto val0 = (Vectorized<float>(float_val0) - zero_point) * scale;
+    auto val1 = (Vectorized<float>(float_val1) - zero_point) * scale;
+    auto val2 = (Vectorized<float>(float_val2) - zero_point) * scale;
+    auto val3 = (Vectorized<float>(float_val3) - zero_point) * scale;
+
+    return {val0, val1, val2, val3};
+  }
+
+  static Vectorized<c10::quint8> quantize(
+      const float_vec_return_type& rhs,
+      float scale,
+      int32_t zero_point,
+      float inverse_scale) {
+    auto* rhs_data = (float*)rhs.data();
+    uint8_t quantized_values[64];
+    QuantizeAvx512<value_type>(
+        rhs_data, quantized_values, 64, inverse_scale, zero_point);
+    return Vectorized<c10::quint8>::loadu(quantized_values);
+  }
+
+  Vectorized<c10::quint8> maximum(Vectorized<c10::quint8> b) const {
+    return _mm512_max_epu8(vals, b.vals);
+  }
+
+  Vectorized<c10::quint8> minimum(Vectorized<c10::quint8> b) const {
+    return _mm512_min_epu8(vals, b.vals);
+  }
+
+  Vectorized<c10::quint8> relu(Vectorized<c10::quint8> zero_point) const {
+    return maximum(zero_point);
+  }
+
+  Vectorized<c10::quint8> relu6(
+      Vectorized<c10::quint8> zero_point,
+      Vectorized<c10::quint8> q_six) {
+    return _mm512_min_epu8(_mm512_max_epu8(vals, zero_point.vals), q_six.vals);
+  }
+
+  int_vec_return_type widening_subtract(Vectorized<c10::quint8> b) const {
+#if defined(_MSC_VER) && !defined(__clang__)
+    __m128i int_val0 = _mm_set_epi64x(vals.m512i_u64[1], vals.m512i_u64[0]);
+    __m128i int_val1 = _mm_set_epi64x(vals.m512i_u64[3], vals.m512i_u64[2]);
+    __m128i int_val2 = _mm_set_epi64x(vals.m512i_u64[5], vals.m512i_u64[4]);
+    __m128i int_val3 = _mm_set_epi64x(vals.m512i_u64[7], vals.m512i_u64[6]);
+#else
+    __m128i int_val0 = _mm_set_epi64x(vals[1], vals[0]);
+    __m128i int_val1 = _mm_set_epi64x(vals[3], vals[2]);
+    __m128i int_val2 = _mm_set_epi64x(vals[5], vals[4]);
+    __m128i int_val3 = _mm_set_epi64x(vals[7], vals[6]);
+#endif
+
+    __m512i int32_val0 = cvtepu8_epi32(int_val0);
+    __m512i int32_val1 = cvtepu8_epi32(int_val1);
+    __m512i int32_val2 = cvtepu8_epi32(int_val2);
+    __m512i int32_val3 = cvtepu8_epi32(int_val3);
+
+#if defined(_MSC_VER) && !defined(__clang__)
+    __m128i int_b0 = _mm_set_epi64x(b.vals.m512i_u64[1], b.vals.m512i_u64[0]);
+    __m128i int_b1 = _mm_set_epi64x(b.vals.m512i_u64[3], b.vals.m512i_u64[2]);
+    __m128i int_b2 = _mm_set_epi64x(b.vals.m512i_u64[5], b.vals.m512i_u64[4]);
+    __m128i int_b3 = _mm_set_epi64x(b.vals.m512i_u64[7], b.vals.m512i_u64[6]);
+#else
+    __m128i int_b0 = _mm_set_epi64x(b.vals[1], b.vals[0]);
+    __m128i int_b1 = _mm_set_epi64x(b.vals[3], b.vals[2]);
+    __m128i int_b2 = _mm_set_epi64x(b.vals[5], b.vals[4]);
+    __m128i int_b3 = _mm_set_epi64x(b.vals[7], b.vals[6]);
+#endif
+
+    __m512i int32_b0 = cvtepu8_epi32(int_b0);
+    __m512i int32_b1 = cvtepu8_epi32(int_b1);
+    __m512i int32_b2 = cvtepu8_epi32(int_b2);
+    __m512i int32_b3 = cvtepu8_epi32(int_b3);
+
+    __m512i res_0 = _mm512_sub_epi32(int32_val0, int32_b0);
+    __m512i res_1 = _mm512_sub_epi32(int32_val1, int32_b1);
+    __m512i res_2 = _mm512_sub_epi32(int32_val2, int32_b2);
+    __m512i res_3 = _mm512_sub_epi32(int32_val3, int32_b3);
+    return {
+        Vectorized<c10::qint32>(res_0),
+        Vectorized<c10::qint32>(res_1),
+        Vectorized<c10::qint32>(res_2),
+        Vectorized<c10::qint32>(res_3)};
+  }
+
+  static Vectorized<c10::quint8> requantize_from_int(
+      const int_vec_return_type& inp,
+      float multiplier,
+      int32_t zero_point) {
+    __m512 multiplier_v = _mm512_set1_ps(multiplier);
+    __m512i zero_point_v = _mm512_set1_epi32(zero_point);
+    return RequantizeAvx512<value_type>(inp, multiplier_v, zero_point_v);
+  }
+
+ private:
+  // Load from memory constructor
+  Vectorized(const void* ptr) {
+    vals = _mm512_loadu_si512((const __m512i*)ptr);
+  }
+};
+
+template <>
+Vectorized<c10::quint8> inline maximum(
+    const Vectorized<c10::quint8>& a,
+    const Vectorized<c10::quint8>& b) {
+  return a.maximum(b);
+}
+
+#else
+
+// NOTE: These are low-performance implementations that we fall back on.
+
+template <
+    typename T,
+    typename float_vec_return_type_,
+    typename int_vec_return_type_,
+    int size_>
+struct VectorizedQuantizedConverter {
+  static constexpr int size() {
+    return size_;
+  }
+
+  static constexpr int float_num_vecs() {
+    return size() / 8;
+  }
+
+  static constexpr int int_num_vecs() {
+    return size() / 8;
+  }
+
+  using float_vec_return_type = float_vec_return_type_;
+  using int_vec_return_type = int_vec_return_type_;
+
+  using value_type = typename T::underlying;
+  std::array<value_type, size_> vals;
+
+  VectorizedQuantizedConverter(T val) {
+    for (const auto i : c10::irange(size())) {
+      vals[i] = val.val_;
+    }
+  }
+
+  VectorizedQuantizedConverter(const void* ptr) {
+    memcpy(vals.data(), ptr, sizeof(value_type) * size());
+  }
+
+  void store(void* ptr, int count = size()) const {
+    memcpy(ptr, vals.data(), count * sizeof(value_type));
+  }
+
+  float_vec_return_type dequantize(
+      Vectorized<float> scale,
+      Vectorized<float> zero_point,
+      Vectorized<float> scale_zp_premul [[maybe_unused]]) const {
+    float_vec_return_type rv;
+    for (const auto i : c10::irange(float_num_vecs())) {
+      float tmp_vals[16];
+      for (const auto j : c10::irange(16)) {
+        tmp_vals[j] = at::native::dequantize_val<T>(
+            scale[j], zero_point[j], T(vals[16 * i + j]));
+      }
+      rv[i] = Vectorized<float>(
+          tmp_vals[0],
+          tmp_vals[1],
+          tmp_vals[2],
+          tmp_vals[3],
+          tmp_vals[4],
+          tmp_vals[5],
+          tmp_vals[6],
+          tmp_vals[7],
+          tmp_vals[8],
+          tmp_vals[9],
+          tmp_vals[10],
+          tmp_vals[11],
+          tmp_vals[12],
+          tmp_vals[13],
+          tmp_vals[14],
+          tmp_vals[15]);
+    }
+    return rv;
+  }
+
+  float_vec_return_type dequantize(
+      Vectorized<float> scale,
+      Vectorized<float> zero_point) const {
+    Vectorized<float> scale_zp_premul;
+    return dequantize(scale, zero_point, scale_zp_premul);
+  }
+
+ protected:
+  VectorizedQuantizedConverter() {}
+};
+
+template <>
+struct is_vec_specialized_for<c10::qint32> : std::bool_constant<true> {};
+
+template <>
+struct Vectorized<c10::qint32> : public VectorizedQuantizedConverter<
+                                     c10::qint32,
+                                     std::array<Vectorized<float>, 1>,
+                                     std::array<Vectorized<c10::qint32>, 1>,
+                                     16> {
+  Vectorized()
+      : VectorizedQuantizedConverter<
+            c10::qint32,
+            std::array<Vectorized<float>, 1>,
+            std::array<Vectorized<c10::qint32>, 1>,
+            16>() {}
+  Vectorized(c10::qint32 val)
+      : VectorizedQuantizedConverter<
+            c10::qint32,
+            std::array<Vectorized<float>, 1>,
+            std::array<Vectorized<c10::qint32>, 1>,
+            16>(val) {}
+  Vectorized(const void* ptr)
+      : VectorizedQuantizedConverter<
+            c10::qint32,
+            std::array<Vectorized<float>, 1>,
+            std::array<Vectorized<c10::qint32>, 1>,
+            16>(ptr) {}
+
+  static Vectorized<c10::qint32> loadu(const void* ptr) {
+    return Vectorized<c10::qint32>(ptr);
+  }
+
+  static Vectorized<c10::qint32> loadu(const void* ptr, int64_t count) {
+    __at_align__ value_type tmp_values[size()];
+    // Ensure uninitialized memory does not change the output value See
+    // https://github.com/pytorch/pytorch/issues/32502 for more details. We do
+    // not initialize arrays to zero using "={0}" because gcc would compile it
+    // to two instructions while a loop would be compiled to one instruction.
+    for (const auto i : c10::irange(size())) {
+      tmp_values[i] = 0;
+    }
+    std::memcpy(
+        tmp_values,
+        reinterpret_cast<const value_type*>(ptr),
+        count * sizeof(value_type));
+    return loadu(tmp_values);
+  }
+
+  static Vectorized<c10::qint32> quantize(
+      const float_vec_return_type& rhs,
+      float scale,
+      int32_t zero_point,
+      float inverse_scale [[maybe_unused]]) {
+    std::array<value_type, size()> qvals;
+    std::array<float, float_num_vecs() * 16> float_vals;
+
+    for (const auto i : c10::irange(float_num_vecs())) {
+      rhs[i].store(&float_vals[i * 16], 16);
+    }
+
+    at::native::quantize_vec<c10::qint32, /*precision=*/32>(
+        scale,
+        zero_point,
+        float_vals.data(),
+        (c10::qint32*)qvals.data(),
+        16 * float_num_vecs());
+
+    return Vectorized<c10::qint32>::loadu(qvals.data());
+  }
+
+  Vectorized<c10::qint32> maximum(Vectorized<c10::qint32> b) const {
+    Vectorized<c10::qint32> retval;
+    for (const auto i : c10::irange(size())) {
+      retval.vals[i] = std::max<value_type>(vals[i], b.vals[i]);
+    }
+    return retval;
+  }
+
+  Vectorized<c10::qint32> minimum(Vectorized<c10::qint32> b) const {
+    Vectorized<c10::qint32> retval;
+    for (const auto i : c10::irange(size())) {
+      retval.vals[i] = std::min<value_type>(vals[i], b.vals[i]);
+    }
+    return retval;
+  }
+
+  Vectorized<c10::qint32> relu(Vectorized<c10::qint32> zero_point) const {
+    return maximum(zero_point);
+  }
+
+  Vectorized<c10::qint32> relu6(
+      Vectorized<c10::qint32> zero_point,
+      Vectorized<c10::qint32> q_six) {
+    Vectorized<c10::qint32> retval;
+    for (const auto i : c10::irange(size())) {
+      retval.vals[i] = std::min<value_type>(
+          std::max<value_type>(vals[i], zero_point.vals[i]), q_six.vals[i]);
+    }
+    return retval;
+  }
+
+  int_vec_return_type widening_subtract(Vectorized<c10::qint32> b) const {
+    int_vec_return_type retval;
+    for (const auto i : c10::irange(size())) {
+      retval[0].vals[i] = vals[i] - b.vals[i];
+    }
+    return retval;
+  }
+
+  static Vectorized<c10::qint32> requantize_from_int(
+      const int_vec_return_type& inp,
+      float multiplier,
+      int32_t zero_point) {
+    Vectorized<c10::qint32> retval;
+    for (const auto i : c10::irange(size())) {
+      retval.vals[i] =
+          std::nearbyint(static_cast<float>(inp[0].vals[i]) * multiplier) +
+          zero_point;
+    }
+    return retval;
+  }
+};
+
+template <>
+Vectorized<c10::qint32> inline maximum(
+    const Vectorized<c10::qint32>& a,
+    const Vectorized<c10::qint32>& b) {
+  return a.maximum(b);
+}
+
+template <>
+Vectorized<c10::qint32> inline operator*(
+    const Vectorized<c10::qint32>& a,
+    const Vectorized<c10::qint32>& b) {
+  Vectorized<c10::qint32> retval;
+  for (const auto i : c10::irange(std::decay_t<decltype(a)>::size())) {
+    retval.vals[i] = a.vals[i] * b.vals[i];
+  }
+  return retval;
+}
+
+template <>
+Vectorized<c10::qint32> inline operator+(
+    const Vectorized<c10::qint32>& a,
+    const Vectorized<c10::qint32>& b) {
+  Vectorized<c10::qint32> retval;
+  for (const auto i : c10::irange(std::decay_t<decltype(a)>::size())) {
+    retval.vals[i] = a.vals[i] + b.vals[i];
+  }
+  return retval;
+}
+
+template <>
+struct is_vec_specialized_for<c10::qint8> : std::bool_constant<true> {};
+
+template <>
+struct Vectorized<c10::qint8> : public VectorizedQuantizedConverter<
+                                    c10::qint8,
+                                    std::array<Vectorized<float>, 4>,
+                                    std::array<Vectorized<c10::qint32>, 4>,
+                                    64> {
+  Vectorized()
+      : VectorizedQuantizedConverter<
+            c10::qint8,
+            std::array<Vectorized<float>, 4>,
+            std::array<Vectorized<c10::qint32>, 4>,
+            64>() {}
+  Vectorized(c10::qint8 val)
+      : VectorizedQuantizedConverter<
+            c10::qint8,
+            std::array<Vectorized<float>, 4>,
+            std::array<Vectorized<c10::qint32>, 4>,
+            64>(val) {}
+  Vectorized(const void* ptr)
+      : VectorizedQuantizedConverter<
+            c10::qint8,
+            std::array<Vectorized<float>, 4>,
+            std::array<Vectorized<c10::qint32>, 4>,
+            64>(ptr) {}
+
+  static Vectorized<c10::qint8> loadu(const void* ptr) {
+    return Vectorized<c10::qint8>(ptr);
+  }
+
+  static Vectorized<c10::qint8> loadu(const void* ptr, int64_t count) {
+    __at_align__ value_type tmp_values[size()];
+    // Ensure uninitialized memory does not change the output value See
+    // https://github.com/pytorch/pytorch/issues/32502 for more details. We do
+    // not initialize arrays to zero using "={0}" because gcc would compile it
+    // to two instructions while a loop would be compiled to one instruction.
+    for (const auto i : c10::irange(size())) {
+      tmp_values[i] = 0;
+    }
+    std::memcpy(
+        tmp_values,
+        reinterpret_cast<const value_type*>(ptr),
+        count * sizeof(value_type));
+    return loadu(tmp_values);
+  }
+
+  static Vectorized<c10::qint8> quantize(
+      const float_vec_return_type& rhs,
+      float scale,
+      int32_t zero_point,
+      float inverse_scale [[maybe_unused]]) {
+    std::array<value_type, size()> qvals;
+    std::array<float, float_num_vecs() * 16> float_vals;
+
+    for (const auto i : c10::irange(float_num_vecs())) {
+      rhs[i].store(&float_vals[i * 16], 16);
+    }
+
+    at::native::quantize_vec<c10::qint8>(
+        scale,
+        zero_point,
+        float_vals.data(),
+        (c10::qint8*)qvals.data(),
+        16 * float_num_vecs());
+
+    return Vectorized<c10::qint8>::loadu(qvals.data());
+  }
+
+  Vectorized<c10::qint8> maximum(Vectorized<c10::qint8> b) const {
+    Vectorized<c10::qint8> retval;
+    for (const auto i : c10::irange(size())) {
+      retval.vals[i] = std::max<value_type>(vals[i], b.vals[i]);
+    }
+    return retval;
+  }
+
+  Vectorized<c10::qint8> minimum(Vectorized<c10::qint8> b) const {
+    Vectorized<c10::qint8> retval;
+    for (const auto i : c10::irange(size())) {
+      retval.vals[i] = std::min<value_type>(vals[i], b.vals[i]);
+    }
+    return retval;
+  }
+
+  Vectorized<c10::qint8> relu(Vectorized<c10::qint8> zero_point) const {
+    return maximum(zero_point);
+  }
+
+  Vectorized<c10::qint8> relu6(
+      Vectorized<c10::qint8> zero_point,
+      Vectorized<c10::qint8> q_six) {
+    Vectorized<c10::qint8> retval;
+    for (const auto i : c10::irange(size())) {
+      retval.vals[i] = std::min<value_type>(
+          std::max<value_type>(vals[i], zero_point.vals[i]), q_six.vals[i]);
+    }
+    return retval;
+  }
+
+  int_vec_return_type widening_subtract(Vectorized<c10::qint8> b) const {
+    int_vec_return_type retval;
+    constexpr int elem_per_int_vec = size() / int_num_vecs();
+    for (const auto i : c10::irange(int_num_vecs())) {
+      for (const auto j : c10::irange(elem_per_int_vec)) {
+        retval[i].vals[j] =
+            static_cast<int32_t>(vals[i * elem_per_int_vec + j]) -
+            static_cast<int32_t>(b.vals[i * elem_per_int_vec + j]);
+      }
+    }
+    return retval;
+  }
+  static Vectorized<c10::qint8> requantize_from_int(
+      const int_vec_return_type& inp,
+      float multiplier,
+      int32_t zero_point) {
+    constexpr int elem_per_int_vec = size() / int_num_vecs();
+    constexpr auto min_val = std::numeric_limits<value_type>::min();
+    constexpr auto max_val = std::numeric_limits<value_type>::max();
+    Vectorized<c10::qint8> retval;
+    for (const auto i : c10::irange(int_num_vecs())) {
+      for (const auto j : c10::irange(elem_per_int_vec)) {
+        int32_t rounded =
+            std::nearbyint(static_cast<float>(inp[i].vals[j]) * multiplier) +
+            zero_point;
+        retval.vals[i * elem_per_int_vec + j] =
+            std::min<int32_t>(std::max<int32_t>(rounded, min_val), max_val);
+      }
+    }
+    return retval;
+  }
+};
+
+template <>
+Vectorized<c10::qint8> inline maximum(
+    const Vectorized<c10::qint8>& a,
+    const Vectorized<c10::qint8>& b) {
+  return a.maximum(b);
+}
+
+template <>
+struct is_vec_specialized_for<c10::quint8> : std::bool_constant<true> {};
+
+template <>
+struct Vectorized<c10::quint8> : public VectorizedQuantizedConverter<
+                                     c10::quint8,
+                                     std::array<Vectorized<float>, 4>,
+                                     std::array<Vectorized<c10::qint32>, 4>,
+                                     64> {
+  Vectorized()
+      : VectorizedQuantizedConverter<
+            c10::quint8,
+            std::array<Vectorized<float>, 4>,
+            std::array<Vectorized<c10::qint32>, 4>,
+            64>() {}
+  Vectorized(c10::quint8 val)
+      : VectorizedQuantizedConverter<
+            c10::quint8,
+            std::array<Vectorized<float>, 4>,
+            std::array<Vectorized<c10::qint32>, 4>,
+            64>(val) {}
+  Vectorized(const void* ptr)
+      : VectorizedQuantizedConverter<
+            c10::quint8,
+            std::array<Vectorized<float>, 4>,
+            std::array<Vectorized<c10::qint32>, 4>,
+            64>(ptr) {}
+
+  static Vectorized<c10::quint8> loadu(const void* ptr) {
+    return Vectorized<c10::quint8>(ptr);
+  }
+
+  static Vectorized<c10::quint8> loadu(const void* ptr, int64_t count) {
+    __at_align__ value_type tmp_values[size()];
+    // Ensure uninitialized memory does not change the output value See
+    // https://github.com/pytorch/pytorch/issues/32502 for more details. We do
+    // not initialize arrays to zero using "={0}" because gcc would compile it
+    // to two instructions while a loop would be compiled to one instruction.
+    for (const auto i : c10::irange(size())) {
+      tmp_values[i] = 0;
+    }
+    std::memcpy(
+        tmp_values,
+        reinterpret_cast<const value_type*>(ptr),
+        count * sizeof(value_type));
+    return loadu(tmp_values);
+  }
+
+  static Vectorized<c10::quint8> quantize(
+      const float_vec_return_type& rhs,
+      float scale,
+      int32_t zero_point,
+      float inverse_scale [[maybe_unused]]) {
+    std::array<value_type, size()> qvals;
+    std::array<float, float_num_vecs() * 16> float_vals;
+
+    for (const auto i : c10::irange(float_num_vecs())) {
+      rhs[i].store(&float_vals[i * 16], 16);
+    }
+
+    at::native::quantize_vec<c10::quint8>(
+        scale,
+        zero_point,
+        float_vals.data(),
+        (c10::quint8*)qvals.data(),
+        16 * float_num_vecs());
+
+    return Vectorized<c10::quint8>::loadu(qvals.data());
+  }
+
+  Vectorized<c10::quint8> maximum(Vectorized<c10::quint8> b) const {
+    Vectorized<c10::quint8> retval;
+    for (const auto i : c10::irange(size())) {
+      retval.vals[i] = std::max<value_type>(vals[i], b.vals[i]);
+    }
+    return retval;
+  }
+
+  Vectorized<c10::quint8> minimum(Vectorized<c10::quint8> b) const {
+    Vectorized<c10::quint8> retval;
+    for (const auto i : c10::irange(size())) {
+      retval.vals[i] = std::min<value_type>(vals[i], b.vals[i]);
+    }
+    return retval;
+  }
+
+  Vectorized<c10::quint8> relu(Vectorized<c10::quint8> zero_point) const {
+    return maximum(zero_point);
+  }
+
+  Vectorized<c10::quint8> relu6(
+      Vectorized<c10::quint8> zero_point,
+      Vectorized<c10::quint8> q_six) {
+    Vectorized<c10::quint8> retval;
+    for (const auto i : c10::irange(size())) {
+      retval.vals[i] = std::min<value_type>(
+          std::max<value_type>(vals[i], zero_point.vals[i]), q_six.vals[i]);
+    }
+    return retval;
+  }
+
+  int_vec_return_type widening_subtract(Vectorized<c10::quint8> b) const {
+    int_vec_return_type retval;
+    constexpr int elem_per_int_vec = size() / int_num_vecs();
+    for (const auto i : c10::irange(int_num_vecs())) {
+      for (const auto j : c10::irange(elem_per_int_vec)) {
+        retval[i].vals[j] =
+            static_cast<int32_t>(vals[i * elem_per_int_vec + j]) -
+            static_cast<int32_t>(b.vals[i * elem_per_int_vec + j]);
+      }
+    }
+    return retval;
+  }
+  static Vectorized<c10::quint8> requantize_from_int(
+      const int_vec_return_type& inp,
+      float multiplier,
+      int32_t zero_point) {
+    constexpr int elem_per_int_vec = size() / int_num_vecs();
+    constexpr auto min_val = std::numeric_limits<value_type>::min();
+    constexpr auto max_val = std::numeric_limits<value_type>::max();
+    Vectorized<c10::quint8> retval;
+    for (const auto i : c10::irange(int_num_vecs())) {
+      for (const auto j : c10::irange(elem_per_int_vec)) {
+        int32_t rounded =
+            std::nearbyint(static_cast<float>(inp[i].vals[j]) * multiplier) +
+            zero_point;
+        retval.vals[i * elem_per_int_vec + j] =
+            std::min<int32_t>(std::max<int32_t>(rounded, min_val), max_val);
+      }
+    }
+    return retval;
+  }
+};
+
+template <>
+Vectorized<c10::quint8> inline maximum(
+    const Vectorized<c10::quint8>& a,
+    const Vectorized<c10::quint8>& b) {
+  return a.maximum(b);
+}
+
+#endif // defined(CPU_CAPABILITY_AVX512) && !defined(MSVC)
+
+} // namespace CPU_CAPABILITY
+} // namespace vec
+} // namespace at
+
+#else
+#error "This file should not be included when either TORCH_STABLE_ONLY or TORCH_TARGET_VERSION is defined."
+#endif  // !defined(TORCH_STABLE_ONLY) && !defined(TORCH_TARGET_VERSION)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        h∫∆¶`#F“xb¢‡`c
+3!S< Üêx8@¬Ça @Éå,(XH¬åL4L√	ÇÄ
+∞¬$0¡ÑáÇãxÇ≈≤è¡X†Ì“X±•®º“∂2±eÏZ#éˆ(g?ñ⁄‡∫V¢nŸ’e¢3©BP34◊Ú342X00'	#!Åﬁ1?√1µc‡ï0ü#—∫1aN6m*2S5I∑6∂*>\Y95‹9ï
+4÷0¯20‹d3•¶ÑçBúƒ‰—Ap¬¿¿îG0Ñ0ƒU0å6ó1åf
+Ã1Ñ†xËFa(F`(–`ÄRaÿíbi(``ra–
+aX#¿†Ò	C\P∆ªL|®©  ÖÅ°¥JxE lPÑ(êS„ı:Ã∞ÛHd¿ã?mœ∑f¢0)ôCSï$…R
+Ç1ÒÕJ c≥P{¡öJ, U¿9äM¬sdÔ63LÄ3<(PÃ£2¿çxSÏ@«.|h(*U6rR@¬Ö†yä¿ CÇÀ≈N%®0
+≈DÅC4˝Ö9	Ê,ﬂfË¯ïjÑîMS§î√∞ˇ≥å!ß-€u‹+j;5^∆ †,&ÔˇˇË3dì2Xî<–V£=yä4 Cb61ì
+¬º1ç√ëQ0Të’0Û †(0ï √HóMtŸ;ˇ˚‘d”˚PQ≈›“     ,5MsM»  4Ä  ‹À £+¯)31tÃG3K$Üç‚√`®dÃÇcÇæπ0xº«g£ ,A0Ë§«iP·ôá@Ülôpòd3PîP8 1td¿9PÜi±aä≈Ü"dHX
+?Lé&=LDå\)òT *&	-Ã"ê∆î)ÅJ§Ÿè%NÃjù#1«uCôÑ^c	å1$Öä°â0fåbÁË–Ü5¿ÃI£BŒœbf '‡-!àdíJ<ÿô`]I£à*pxpSV–u¿∫S>§TÄ
+Ã†Is"!ÑiI“¶fP…h„]eaÇ"j]2•Õã∂”€h*:‡≥•–ŒªT2≠^ÅÌ^ÀïÆ-U  √(b’5€ÛB@E2è„J·I0≥s–©1°” Äò0		a–ä0ñ£00E	∞K4˛£jÖ>Gì∏;1ﬁì60tà·LT¿à§’–ÃËÃ¿–xNaÅÄ’ì,2BÛÉ<"o22£-‡	¢òA†p!ãÄë3?5ìÉ:<H CL(‰äbCDÜÖ`F
+b(8`¡d‰Åuﬁ`íÇ@xr∆!FF∫ÎD ìÑb/H•5Ø
+v :YIÈv2º—∏\dCM G‚ËÑ–ë¡tø!4êÏ	a0F©ÊQ¡“â]!fÅ†S† =z¶HÄ`†%@ Í'…H⁄™H6±"8P5‚:	D0Ä^uIÇ$ôDˆNïàôeUCÇ<`µÜtóãgiÃu·ß6Ç§Ü âTÏàoîdU≤m E&bÍ¬pê^¶Ën`ºFË`FCf	¡`º	$`:f¿6`¿ qôÙVb®—èâ'AmxcÒ (.m≥0»Ù¿‡#™L|,ë2p(t1ÿ»∆!ì1ˇ˚‘d€˙eSF€Àp     1}_OsM¿  4Ä  Çh}1‡àhaÉòdÒ±ìJÜt9ÑL0˘X–ƒsw»å¶∑2àÀD#íå/3å Ç»ÄV!<DÁ1¯∏(2P¸ƒÁ ‘‘#3√õ4ÿ—| å7kÃy≥TÁ¥8Déq@P πC>F Àò2°M¨Ëƒé4	ÄZÎÛ"d·Ò8"¿WòˆF¨9˘âbEƒPŸ≥5«à¡ú}&(•&z‹ö5√@@¡å§ì¢Ωê–ì6ÇÄOT@éà8H09Æ
+
+úh«ô“D'Ã`∞©£*`@F$»…Å6…É≥,dë/4$N@∞0"É©ÜÂŸ[†Aå˝•¶BÎ@ˆ*Á<K5‰~dvi-swºØ‘Q O◊ˆqU åì‡“6…Õ§«Ã¬ÄLªƒ≈‹®ÃE√=ÃÄ√\¬ L\¡†åº\39\"Üb´AõEÊøpölÚjÅ¡¬úÜú#å˛b∞πâÑ&3	ò8¸aÛH∞—&„LF≤ß4ò‰–E√fòLnS48ƒâ
+°åú5 p¿b”ö1ëà…§åå*\F5Å¡⁄ÑPA| ô1Äs'tπËÙ.…ë›†Y“Ií9îh8paÁÅÅgåÌå>´ï&êFÅ¿çF∏B°Æ»P#ôrn≈ògacjÉ!RT€Öé\]‘Ì3‡,0∏Å3?S4É¥`6i¸`†2¿¡É!r ZÒ‚ƒ≠Ï
+*
+3÷ñiåúh†ÉÕ"ÍÆ %™ZëkgPò[~<“+%]∆7u}5≈Vë…‚CNeq∏Ãƒ›É©ç0ê RLÏ«ävLÃM¸√‘lÃKH ¬êçå∑B≈ÙrLB∆§[ÇÄFeƒ∆°⁄e,FÅ˙d\Ê¸
+Dgäf†ÍÚcRÜI¸`¬MÊG$6c¶8F¿Xa¿&.cöˇ˚‘d‹é˙òREã‹ ˆ     4˘OO{M¿  4Ä  c2I‚1^2t9C&¿˝0—&30µ0‡0ÿ
+So0ôÉaj©ÇÄÅÇòàòo°Ñ¯^ò¢ãx8≈L9—Ã@Ï¿º&8¿ÿ	å¡ƒÑå¿‹¿h»@¿.f ¿°‚¿TsêÑ<D@ó(<⁄=2aHú¶5A”r≥õ¥ÄrÁYâXlUò"'THî#“8≠G4 à7E¬ÉBƒ1–h‡+Ñ Ñ#√õC)≥3D@Ÿ
+)Lπ#“&ºêÄÒÇ:@hVõD`"¿)Üî≤îdB	MAÑPtãHp√õ&b@ò√(d¬)aä1Ñ|0£“,æ&:Ü«ef—›}ŸïM9ƒÌR‚fOP¿*S(GE®©  Bê”F–»Ü\RL…ï\¿ ƒ≤@Ï,”Ò≈ÿ‘ÒlƒÄŒò∆@òŸ1h√AL√g$√—îë=»≠2fM?&¬3√2ûü4Ï;2ÅEñÃv;åZåI;LU*(Õ∑1Ãx¬¶à#1`î%&8í!â82S
+fé&Ñc ©ã@9É¿©í@8\(2$uS∞ZàË<∏È ª@Bó}§à@ê® æèÉ÷)ä–ñ±öz˝KÖhMwµÀˆäõMtµFñ¶¿û6j≤YfgõöﬁÜºZ§Stº!%ˆ–—B_EÉ]H”vF)Y~êñ"âéGƒùiÅRR8ºhK¥K‰ƒ‘•í:àÊµ"©.°Ip$jS¥ı0äæÆ£Mn÷"ØÏ≥íäîµÍO’ÌJëb8zF:ÜBn˙3¶N‰ÿlrD¶‰®h°ÈÊ „ƒb…¨db™:&mÇbEÊõB˙césf0°∞c˛efg@c@MFCërl‰X∆∑¬qÜÓ∆¬â¯czã∆8ÖhcﬁK?ˇ˚‘dÕ˘ S…õΩÀr     3qM/{ç¿  4Ä  °¶e‡<&)Çƒgt(&TÏm|;∆s™piÙ~ÜD‚@cŒV¶!¿Úd:B· ¿b /Ê`Çc*#f`*a‚ ¬@¶b*f/!Çd‘&5!˙a∏0FÄ `îÜa`~&@ú ≥ –É†  ê∞L yÄ»FÄxfì¡€ë∆õ»õ§ûdì»ÒÈhÄCÊòT
+Ñ §Îò0Üb9∞™#òLJ \#2ÄÇ)l5÷ºC0x<«!‡q \0(`¿° Pl
+GSàà¿@b`#Ü±T0V@+ÿ(`iR&™ÄÜRb¨lB†Ä"?´ùßj™8Ë∂ÿZ®ê!ÑµDõ≤∆ùïÛBﬁ≤∏ÕÏfËÈ®_Ï?:kyìoÀØ÷<˚®˘›© å@»¡QCå_»H¿P,åÑCË¬å?å´V¡,tL(‚¥∆∏áL§√hÃ…,≈ ≈IÃ¿å L(Ü¨ LC¯Ã/åNA42eÃ(‹÷\cL: ¨∆¸⁄Åx¿±ÃED√lSÃiÇ<¿‡¢úî«`‚ëî∆ 5™√‡¬| Ã¬»¡ÑFÑ`8, l8°b£∞n1C–r2k cê31Gì7Xàe¢å$LÇâ ‰TÑ$"0ÿ“Aì-è\3 Õ¨äòP,* ÷±€08aT88:B#CÏ°/ 
+A ç(“A %‘\ƒ8çÅeó/ 5/‚≠ ¬‡q 8^à `*]ß*öö√Hí—_ √†éñ†˙RÆÁ`‹≈~]ÜiUØ≈ö$>˛Øe€ª2'ﬁ
+dè”ÀpÜhyévM1›rßˇˆ˙ÄzYÅÅÿ√F aÄ®u≈#if !defined(TORCH_STABLE_ONLY) && !defined(TORCH_TARGET_VERSION)
+#pragma once
+#include <ATen/cpu/vec/intrinsics.h>
+#include <ATen/cpu/vec/vec_base.h>
+#include <c10/macros/Macros.h>
+#include <cstdint>
+
+#if defined(__clang__)
+typedef __vector __bool char vbool8;
+typedef __vector __bool short vbool16;
+typedef __vector __bool int vbool32;
+typedef __vector __bool long long vbool64;
+using vint8 = __attribute__((vector_size(16))) signed char;
+using vint16 = __attribute__((vector_size(16))) signed short;
+using vint32 = __attribute__((vector_size(16))) signed int;
+using vint64 = __attribute__((vector_size(16))) signed long long;
+using vuint8 = __attribute__((vector_size(16))) unsigned char;
+using vuint16 = __attribute__((vector_size(16))) unsigned short;
+using vuint32 = __attribute__((vector_size(16))) unsigned int;
+using vuint64 = __attribute__((vector_size(16))) unsigned long long;
+using vfloat32 = __attribute__((vector_size(16))) float;
+using vfloat64 = __attribute__((vector_size(16))) double;
+#else
+using vbool8 =
+    __attribute__((altivec(vector__))) __attribute__((altivec(bool__))) char;
+using vbool16 =
+    __attribute__((altivec(vector__))) __attribute__((altivec(bool__))) short;
+using vbool32 =
+    __attribute__((altivec(vector__))) __attribute__((altivec(bool__))) int;
+using vbool64 = __attribute__((altivec(vector__)))
+__attribute__((altivec(bool__))) long long;
+using vint8 = __attribute__((altivec(vector__))) signed char;
+using vint16 = __attribute__((altivec(vector__))) signed short;
+using vint32 = __attribute__((altivec(vector__))) signed int;
+using vint64 = __attribute__((altivec(vector__))) signed long long;
+using vuint8 = __attribute__((altivec(vector__))) unsigned char;
+using vuint16 = __attribute__((altivec(vector__))) unsigned short;
+using vuint32 = __attribute__((altivec(vector__))) unsigned int;
+using vuint64 = __attribute__((altivec(vector__))) unsigned long long;
+using vfloat32 = __attribute__((altivec(vector__))) float;
+using vfloat64 = __attribute__((altivec(vector__))) double;
+#endif
+
+inline auto make_vuint(vint8 v) {
+  return reinterpret_cast<vuint8>(v);
+}
+inline auto make_vuint(vint16 v) {
+  return reinterpret_cast<vuint16>(v);
+}
+inline auto make_vuint(vint32 v) {
+  return reinterpret_cast<vuint32>(v);
+}
+inline auto make_vuint(vint64 v) {
+  return reinterpret_cast<vuint64>(v);
+}
+
+#if !defined(vec_float)
+C10_ALWAYS_INLINE vfloat32 vec_float(const vint32& vec_in) {
+  vfloat32 vec_out;
+  __asm__("xvcvsxwsp %x0,%x1" : "=wf"(vec_out) : "wa"(vec_in));
+  return vec_out;
+}
+#endif
+
+#if !defined(vec_signed)
+C10_ALWAYS_INLINE vint32 vec_signed(const vfloat32& vec_in) {
+  vint32 vec_out;
+  __asm__("xvcvspsxws %x0,%x1" : "=wa"(vec_out) : "wf"(vec_in));
+  return vec_out;
+}
+
+C10_ALWAYS_INLINE vint64 vec_signed(const vfloat64& vec_in) {
+  vint64 vec_out;
+  __asm__("xvcvdpsxds %x0,%x1" : "=wa"(vec_out) : "wd"(vec_in));
+  return vec_out;
+}
+#endif
+
+#if !defined(vec_neg)
+C10_ALWAYS_INLINE vfloat32 vec_neg(const vfloat32& vec_in) {
+  vfloat32 vec_out;
+  __asm__("xvnegsp %x0,%x1" : "=wf"(vec_out) : "wf"(vec_in));
+  return vec_out;
+}
+
+C10_ALWAYS_INLINE vfloat64 vec_neg(const vfloat64& vec_in) {
+  vfloat64 vec_out;
+  __asm__("xvnegdp %x0,%x1" : "=wd"(vec_out) : "wd"(vec_in));
+  return vec_out;
+}
+
+C10_ALWAYS_INLINE vint16 vec_neg(const vint16& vec_in) {
+  vint16 vint0 = {0, 0, 0, 0, 0, 0, 0, 0};
+  return vec_vsubuhm(vint0, vec_in);
+}
+
+C10_ALWAYS_INLINE vint32 vec_neg(const vint32& vec_in) {
+  vint32 vint0 = {0, 0, 0, 0};
+  return vec_vsubuwm(vint0, vec_in);
+}
+
+C10_ALWAYS_INLINE vint64 vec_neg(const vint64& vec_in) {
+  return -vec_in;
+}
+#endif
+
+#if !defined(vec_sldw)
+template <unsigned int C>
+C10_ALWAYS_INLINE vfloat32
+vec_sldw_aux(const vfloat32& vec_in0, const vfloat32& vec_in1) {
+  vfloat32 vec_out;
+  __asm("xxsldwi %x0, %x1, %x2, %3 "
+        : "=wa"(vec_out)
+        : "wa"(vec_in0), "wa"(vec_in1), "I"(C));
+  return vec_out;
+}
+
+#define vec_sldw(a, b, c) vec_sldw_aux<c>(a, b)
+#endif
+
+#define vec_not(a) vec_nor(a, a)
+#if defined(__clang__) && !defined(vec_splats)
+C10_ALWAYS_INLINE vint64 vec_splats(const int64_t& a) {
+  return vec_splats(a);
+}
+#endif
+// Vectorized min/max which return a if any operand is nan
+template <class T>
+C10_ALWAYS_INLINE T vec_min_nan(const T& a, const T& b) {
+  return vec_min(a, b);
+}
+template <class T>
+C10_ALWAYS_INLINE T vec_max_nan(const T& a, const T& b) {
+  return vec_max(a, b);
+}
+
+// Specializations for float/double taken from Eigen
+template <>
+C10_ALWAYS_INLINE vfloat32
+vec_min_nan<vfloat32>(const vfloat32& a, const vfloat32& b) {
+  // NOTE: about 10% slower than vec_min, but consistent with std::min and SSE
+  // regarding NaN
+  vfloat32 ret;
+  __asm__("xvcmpgesp %x0,%x1,%x2\n\txxsel %x0,%x1,%x2,%x0"
+          : "=&wa"(ret)
+          : "wa"(a), "wa"(b));
+  return ret;
+}
+// Specializations for float/double taken from Eigen
+template <>
+C10_ALWAYS_INLINE vfloat32
+vec_max_nan<vfloat32>(const vfloat32& a, const vfloat32& b) {
+  // NOTE: about 10% slower than vec_max, but consistent with std::min and SSE
+  // regarding NaN
+  vfloat32 ret;
+  __asm__("xvcmpgtsp %x0,%x2,%x1\n\txxsel %x0,%x1,%x2,%x0"
+          : "=&wa"(ret)
+          : "wa"(a), "wa"(b));
+  return ret;
+}
+
+template <>
+C10_ALWAYS_INLINE vfloat64
+vec_min_nan<vfloat64>(const vfloat64& a, const vfloat64& b) {
+  // NOTE: about 10% slower than vec_min, but consistent with std::min and SSE
+  // regarding NaN
+  vfloat64 ret;
+  __asm__("xvcmpgedp %x0,%x1,%x2\n\txxsel %x0,%x1,%x2,%x0"
+          : "=&wa"(ret)
+          : "wa"(a), "wa"(b));
+  return ret;
+}
+template <>
+C10_ALWAYS_INLINE vfloat64
+vec_max_nan<vfloat64>(const vfloat64& a, const vfloat64& b) {
+  // NOTE: about 10% slower than vec_max, but consistent with std::max and SSE
+  // regarding NaN
+  vfloat64 ret;
+  __asm__("xvcmpgtdp %x0,%x2,%x1\n\txxsel %x0,%x1,%x2,%x0"
+          : "=&wa"(ret)
+          : "wa"(a), "wa"(b));
+  return ret;
+}
+
+// Vectorizes min/max function which returns nan if any side is nan
+#define C10_VSX_VEC_NAN_PROPAG(name, type, btype, func)       \
+  C10_ALWAYS_INLINE type name(const type& a, const type& b) { \
+    type tmp = func(a, b);                                    \
+    btype nan_a = vec_cmpne(a, a);                            \
+    btype nan_b = vec_cmpne(b, b);                            \
+    tmp = vec_sel(tmp, a, nan_a);                             \
+    return vec_sel(tmp, b, nan_b);                            \
+  }
+
+C10_VSX_VEC_NAN_PROPAG(vec_min_nan2, vfloat32, vbool32, vec_min)
+C10_VSX_VEC_NAN_PROPAG(vec_max_nan2, vfloat32, vbool32, vec_max)
+C10_VSX_VEC_NAN_PROPAG(vec_min_nan2, vfloat64, vbool64, vec_min)
+C10_VSX_VEC_NAN_PROPAG(vec_max_nan2, vfloat64, vbool64, vec_max)
+
+#undef C10_VSX_VEC_NAN_PROPAG
+
+#define DEFINE_MEMBER_UNARY_OP(op, op_type, func)         \
+  Vectorized<op_type> C10_ALWAYS_INLINE op() const {      \
+    return Vectorized<op_type>{func(_vec0), func(_vec1)}; \
+  }
+
+#define DEFINE_MEMBER_OP(op, op_type, func)                                  \
+  Vectorized<op_type> C10_ALWAYS_INLINE op(const Vectorized<op_type>& other) \
+      const {                                                                \
+    return Vectorized<op_type>{                                              \
+        func(_vec0, other._vec0), func(_vec1, other._vec1)};                 \
+  }
+
+#define DEFINE_MEMBER_BITWISE_OP(op, op_type, func)                          \
+  Vectorized<op_type> C10_ALWAYS_INLINE op(const Vectorized<op_type>& other) \
+      const {                                                                \
+    return Vectorized<op_type>{                                              \
+        func(_vecb0, other._vecb0), func(_vecb1, other._vecb1)};             \
+  }
+
+#define DEFINE_MEMBER_TERNARY_OP(op, op_type, func)                       \
+  Vectorized<op_type> C10_ALWAYS_INLINE op(                               \
+      const Vectorized<op_type>& b, const Vectorized<op_type>& c) const { \
+    return Vectorized<op_type>{                                           \
+        func(_vec0, b._vec0, c._vec0), func(_vec1, b._vec1, c._vec1)};    \
+  }
+
+#define DEFINE_MEMBER_EMULATE_BINARY_OP(op, op_type, binary_op)          \
+  Vectorized<op_type> C10_ALWAYS_INLINE op(const Vectorized<op_type>& b) \
+      const {                                                            \
+    Vectorized<op_type>::vec_internal_type ret_0;                        \
+    Vectorized<op_type>::vec_internal_type ret_1;                        \
+    for (int i = 0; i < Vectorized<op_type>::size() / 2; i++) {          \
+      ret_0[i] = _vec0[i] binary_op b._vec0[i];                          \
+      ret_1[i] = _vec1[i] binary_op b._vec1[i];                          \
+    }                                                                    \
+    return Vectorized<op_type>{ret_0, ret_1};                            \
+  }
+
+#define DEFINE_MEMBER_OP_AND_ONE(op, op_type, func)                          \
+  Vectorized<op_type> C10_ALWAYS_INLINE op(const Vectorized<op_type>& other) \
+      const {                                                                \
+    using vvtype = Vectorized<op_type>::vec_internal_type;                   \
+    const vvtype v_one = vec_splats(static_cast<op_type>(1.0));              \
+    vvtype ret0 = (vvtype)func(_vec0, other._vec0);                          \
+    vvtype ret1 = (vvtype)func(_vec1, other._vec1);                          \
+    return Vectorized<op_type>{vec_and(ret0, v_one), vec_and(ret1, v_one)};  \
+  }
+
+#define DEFINE_CLAMP_FUNCS(operand_type)                                       \
+  template <>                                                                  \
+  Vectorized<operand_type> C10_ALWAYS_INLINE clamp(                            \
+      const Vectorized<operand_type>& a,                                       \
+      const Vectorized<operand_type>& min,                                     \
+      const Vectorized<operand_type>& max) {                                   \
+    return Vectorized<operand_type>{                                           \
+        vec_min_nan(vec_max_nan(a.vec0(), min.vec0()), max.vec0()),            \
+        vec_min_nan(vec_max_nan(a.vec1(), min.vec1()), max.vec1())};           \
+  }                                                                            \
+  template <>                                                                  \
+  Vectorized<operand_type> C10_ALWAYS_INLINE clamp_min(                        \
+      const Vectorized<operand_type>& a,                                       \
+      const Vectorized<operand_type>& min) {                                   \
+    return Vectorized<operand_type>{                                           \
+        vec_max_nan(a.vec0(), min.vec0()), vec_max_nan(a.vec1(), min.vec1())}; \
+  }                                                                            \
+  template <>                                                                  \
+  Vectorized<operand_type> C10_ALWAYS_INLINE clamp_max(                        \
+      const Vectorized<operand_type>& a,                                       \
+      const Vectorized<operand_type>& max) {                                   \
+    return Vectorized<operand_type>{                                           \
+        vec_min_nan(a.vec0(), max.vec0()), vec_min_nan(a.vec1(), max.vec1())}; \
+  }
+
+#define DEFINE_REINTERPRET_CAST_FUNCS(                                 \
+    first_type, cast_type, cast_inner_vector_type)                     \
+  template <>                                                          \
+  C10_ALWAYS_INLINE Vectorized<cast_type> cast<cast_type, first_type>( \
+      const Vectorized<first_type>& src) {                             \
+    return Vectorized<cast_type>{                                      \
+        (cast_inner_vector_type)src.vec0(),                            \
+        (cast_inner_vector_type)src.vec1()};                           \
+  }
+
+#define DEFINE_REINTERPRET_CAST_TO_ALL_FUNCS(first_type)      \
+  DEFINE_REINTERPRET_CAST_FUNCS(first_type, double, vfloat64) \
+  DEFINE_REINTERPRET_CAST_FUNCS(first_type, float, vfloat32)  \
+  DEFINE_REINTERPRET_CAST_FUNCS(first_type, int64_t, vint64)  \
+  DEFINE_REINTERPRET_CAST_FUNCS(first_type, int32_t, vint32)  \
+  DEFINE_REINTERPRET_CAST_FUNCS(first_type, int16_t, vint16)
+
+// it can be used to emulate blend faster
+constexpr int blendChoice(
+    uint32_t mask,
+    uint32_t half1 = 0xF,
+    uint32_t half2 = 0xF0) {
+  uint32_t none = 0;
+  uint32_t both = half1 | half2;
+  // clamp it between 0 and both
+  mask = mask & both;
+  // return  (a._vec0, a._vec1)
+  if (mask == none)
+    return 0;
+  // return (b._vec0,b._vec1)
+  else if (mask == both)
+    return 1;
+  // return  (b._vec0,a._vec1)
+  else if (mask == half1)
+    return 2;
+  // return  (a._vec0,b._vec1)
+  else if (mask == half2)
+    return 3;
+  // return  (*_vec0,a._vec1)
+  else if (mask > 0 && mask < half1)
+    return 4;
+  // return  (*_vec0,b._vec1)
+  else if ((mask & half2) == half2)
+    return 5;
+  // return (a._vec0,*_vec1)
+  else if ((mask & half1) == 0 && mask > half1)
+    return 6;
+  // return (b._vec0,*_vec1)
+  else if ((mask & half1) == half1 && mask > half1)
+    return 7;
+  // return (*_vec0,*_vec1)
+  return 8;
+}
+
+// it can be used to emulate blend faster
+constexpr int blendChoiceDbl(uint32_t mask) {
+  // clamp it 0 and 0xF
+  return blendChoice(mask, 0x3, 0xC);
+}
+
+constexpr vbool32 VsxMask1(uint32_t mask) {
+  uint32_t g0 = (mask & 1) * 0xffffffff;
+  uint32_t g1 = ((mask & 2) >> 1) * 0xffffffff;
+  uint32_t g2 = ((mask & 4) >> 2) * 0xffffffff;
+  uint32_t g3 = ((mask & 8) >> 3) * 0xffffffff;
+  return (vbool32){g0, g1, g2, g3};
+}
+
+constexpr vbool32 VsxMask2(uint32_t mask) {
+  uint32_t mask2 = (mask & 0xFF) >> 4;
+  return VsxMask1(mask2);
+}
+
+constexpr vbool64 VsxDblMask1(uint32_t mask) {
+  uint64_t g0 = (mask & 1) * 0xffffffffffffffff;
+  uint64_t g1 = ((mask & 2) >> 1) * 0xffffffffffffffff;
+  return (vbool64){g0, g1};
+}
+
+constexpr vbool64 VsxDblMask2(uint32_t mask) {
+  uint32_t mask2 = (mask & 0xF) >> 2;
+  return VsxDblMask1(mask2);
+}
+
+constexpr int maskForComplex(uint32_t mask) {
+  mask = mask & 0xF;
+  int complex_mask = 0;
+  if (mask & 1)
+    complex_mask |= 3;
+  if (mask & 2)
+    complex_mask |= (3 << 2);
+  if (mask & 4)
+    complex_mask |= (3 << 4);
+  if (mask & 8)
+    complex_mask |= (3 << 6);
+  return complex_mask;
+}
+
+constexpr int maskForComplexDbl(uint32_t mask) {
+  mask = mask & 0x3;
+  int complex_mask = 0;
+  if (mask & 1)
+    complex_mask |= 3;
+  if (mask & 2)
+    complex_mask |= (3 << 2);
+  return complex_mask;
+}
+
+constexpr int blendChoiceComplex(uint32_t mask) {
+  return blendChoice(maskForComplex(mask));
+}
+
+constexpr int blendChoiceComplexDbl(uint32_t mask) {
+  return blendChoiceDbl(maskForComplexDbl(mask));
+}
+
+constexpr vbool32 VsxComplexMask1(uint32_t mask) {
+  return VsxMask1(maskForComplex(mask));
+}
+
+constexpr vbool32 VsxComplexMask2(uint32_t mask) {
+  uint32_t mask2 = (mask & 0xF) >> 2;
+  return VsxMask1(maskForComplex(mask2));
+}
+
+constexpr vbool64 VsxComplexDblMask1(uint32_t mask) {
+  return VsxDblMask1(mask);
+}
+
+constexpr vbool64 VsxComplexDblMask2(uint32_t mask) {
+  uint32_t mask2 = (mask & 0xF) >> 2;
+  return VsxDblMask1(mask2);
+}
+
+// constants
+namespace at {
+namespace vec {
+// See Note [CPU_CAPABILITY namespace]
+inline namespace CPU_CAPABILITY {
+//
+constexpr int offset0 = 0;
+constexpr int offset16 = 16;
+
+// #Constants
+const vuint8 mask_zero_bits = vuint8{
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    96,
+    64,
+    32,
+    0};
+
+const vuint8 swap_mask =
+    vuint8{4, 5, 6, 7, 0, 1, 2, 3, 12, 13, 14, 15, 8, 9, 10, 11};
+
+const vint32 v0x7f = vec_splats(0x7f);
+const vint32 vi_0 = vec_splats((int)(0));
+const vint32 vi_1 = vec_splats((int)1);
+const vint32 vi_2 = vec_splats((int)2);
+const vint32 vi_4 = vec_splats((int)4);
+const vint32 vi_inv1 = vec_splats((int)~1);
+const vuint32 vu_29 = vec_splats(29u);
+const vuint32 vu_23 = vec_splats(23u);
+
+const vbool32 inv_mant_mask = (vbool32)vec_splats((unsigned int)~0xff800000);
+const vbool32 sign_mask = (vbool32)vec_splats((int)0x80000000);
+const vbool32 real_mask = vbool32{0xFFFFFFFF, 0x0, 0xFFFFFFFF, 0x0};
+const vbool32 imag_mask = vbool32{0x0, 0xFFFFFFFF, 0x0, 0xFFFFFFFF};
+const vbool32 isign_mask = vbool32{0x0, 0x80000000, 0x0, 0x80000000};
+const vbool32 rsign_mask = vbool32{0x80000000, 0x0, 0x80000000, 0x0};
+
+const vbool64 vd_sign_mask = vbool64{0x8000000000000000, 0x8000000000000000};
+const vbool64 vd_imag_mask = vbool64{0x0, 0xFFFFFFFFFFFFFFFF};
+const vbool64 vd_real_mask = vbool64{0xFFFFFFFFFFFFFFFF, 0x0};
+const vbool64 vd_isign_mask = vbool64{0x0, 0x8000000000000000};
+const vbool64 vd_rsign_mask = vbool64{0x8000000000000000, 0x0};
+
+const vfloat32 zero = vec_splats(0.f);
+const vfloat32 half = vec_splats(0.5f);
+const vfloat32 one = vec_splats(1.f);
+const vfloat32 two = vec_splats(2.0f);
+const vfloat32 _4div_pi = vec_splats(1.27323954473516f);
+const vfloat32 v_inf = (vfloat32)vec_splats(0x7f800000u);
+const vfloat32 v_minus_inf =
+    vfloat32{0xff800000u, 0xff800000u, 0xff800000u, 0xff800000u};
+const vfloat32 v_nan = (vfloat32)vec_splats(0x7fffffff);
+const vfloat32 log10e_inv = vec_splats(0.43429448190325176f);
+const vfloat32 log2e_inv = vec_splats(1.4426950408889634f);
+const vfloat32 log2eB_inv = vec_splats(1.442695036924675f);
+const vfloat32 cephes_SQRTHF = vec_splats(0.707106781186547524f);
+const vfloat32 coscof_p0 = vec_splats(2.443315711809948E-005f);
+const vfloat32 coscof_p1 = vec_splats(-1.388731625493765E-003f);
+const vfloat32 coscof_p2 = vec_splats(4.166664568298827E-002f);
+const vfloat32 exp_hi = vec_splats(104.f);
+const vfloat32 exp_lo = vec_splats(-104.f);
+const vfloat32 exp_p0 = vec_splats(0.000198527617612853646278381f);
+const vfloat32 exp_p1 = vec_splats((0.00139304355252534151077271f));
+const vfloat32 exp_p2 = vec_splats(0.00833336077630519866943359f);
+const vfloat32 exp_p3 = vec_splats(0.0416664853692054748535156f);
+const vfloat32 exp_p4 = vec_splats(0.166666671633720397949219f);
+const vfloat32 exp_p5 = vec_splats(0.5f);
+const vfloat32 log_p0 = vec_splats(7.0376836292E-2f);
+const vfloat32 log_p1 = vec_splats(-1.1514610310E-1f);
+const vfloat32 log_p2 = vec_splats(1.1676998740E-1f);
+const vfloat32 log_p3 = vec_splats(-1.2420140846E-1f);
+const vfloat32 log_p4 = vec_splats(+1.4249322787E-1f);
+const vfloat32 log_p5 = vec_splats(-1.6668057665E-1f);
+const vfloat32 log_p6 = vec_splats(+2.0000714765E-1f);
+const vfloat32 log_p7 = vec_splats(-2.4999993993E-1f);
+const vfloat32 log_p8 = vec_splats(+3.3333331174E-1f);
+const vfloat32 log_q1 = vec_splats(-2.12194440e-4f);
+const vfloat32 log_q2 = vec_splats(0.693359375f);
+const vfloat32 max_logf = vec_splats(88.02969187150841f);
+const vfloat32 max_numf =
+    vec_splats(1.7014117331926442990585209174225846272e38f);
+const vfloat32 min_inf = (vfloat32)vec_splats(0xff800000u);
+const vfloat32 min_norm_pos = (vfloat32)vec_splats(0x0800000u);
+const vfloat32 minus_cephes_dp1 = vec_splats(-0.78515625f);
+const vfloat32 minus_cephes_dp2 = vec_splats(-2.4187564849853515625e-4f);
+const vfloat32 minus_cephes_dp3 = vec_splats(-3.77489497744594108e-8f);
+const vfloat32 negln2f_hi = vec_splats(-0.693145751953125f);
+const vfloat32 negln2f_lo = vec_splats(-1.428606765330187045e-06f);
+const vfloat32 p0 = vec_splats(2.03721912945E-4f);
+const vfloat32 p1 = vec_splats(8.33028376239E-3f);
+const vfloat32 p2 = vec_splats(1.66667160211E-1f);
+const vfloat32 sincof_p0 = vec_splats(-1.9515295891E-4f);
+const vfloat32 sincof_p1 = vec_splats(8.3321608736E-3f);
+const vfloat32 sincof_p2 = vec_splats(-1.6666654611E-1f);
+const vfloat32 tanh_0p625 = vec_splats(0.625f);
+const vfloat32 tanh_half_max = vec_splats(44.014845935754205f);
+const vfloat32 tanh_p0 = vec_splats(-5.70498872745E-3f);
+const vfloat32 tanh_p1 = vec_splats(2.06390887954E-2f);
+const vfloat32 tanh_p2 = vec_splats(-5.37397155531E-2f);
+const vfloat32 tanh_p3 = vec_splats(1.33314422036E-1f);
+const vfloat32 tanh_p4 = vec_splats(-3.33332819422E-1f);
+const vfloat32 vcheck = vec_splats((float)(1LL << 24));
+const vfloat32 imag_one = vfloat32{0.f, 1.f, 0.f, 1.f};
+const vfloat32 imag_half = vfloat32{0.f, 0.5f, 0.f, 0.5f};
+const vfloat32 sqrt2_2 = vfloat32{
+    0.70710676908493042f,
+    0.70710676908493042,
+    0.70710676908493042,
+    0.70710676908493042};
+const vfloat32 pi_2 = vfloat32{M_PI / 2, 0.0, M_PI / 2, 0.0};
+const vfloat32 vf_89 = vfloat32{89.f, 89.f, 89.f, 89.f};
+const vfloat64 vd_one = vec_splats(1.0);
+const vfloat64 vd_zero = vec_splats(0.0);
+const vfloat64 vd_log10e_inv = vec_splats(0.43429448190325176);
+const vfloat64 vd_log2e_inv = vec_splats(1.4426950408889634);
+const vfloat64 vd_imag_one = vfloat64{0.0, 1.0};
+const vfloat64 vd_imag_half = vfloat64{0.0, 0.5};
+const vfloat64 vd_sqrt2_2 = vfloat64{0.70710678118654757, 0.70710678118654757};
+const vfloat64 vd_pi_2 = vfloat64{M_PI / 2.0, 0.0};
+
+template <typename T>
+Vectorized<T> VsxShiftRightArith(
+    const Vectorized<T>& a,
+    const Vectorized<T>& b) {
+  const Vectorized<T> max_shift(sizeof(T) * CHAR_BIT - std::is_signed_v<T>);
+  const auto mask = (b < Vectorized<T>(0)) | (b >= max_shift);
+  const auto shift = Vectorized<T>::blendv(b, max_shift, mask);
+  return Vectorized<T>{
+      vec_sra(a.vec0(), make_vuint(shift.vec0())),
+      vec_sra(a.vec1(), make_vuint(shift.vec1()))};
+}
+
+template <typename T>
+Vectorized<T> VsxShiftLeftArith(
+    const Vectorized<T>& a,
+    const Vectorized<T>& b) {
+  const Vectorized<T> max_shift(sizeof(T) * CHAR_BIT);
+  const auto mask = (b < Vectorized<T>(0)) | (b >= max_shift);
+  Vectorized<T> ret(
+      vec_sl(a.vec0(), make_vuint(b.vec0())),
+      vec_sl(a.vec1(), make_vuint(b.vec1())));
+  return Vectorized<T>::blendv(ret, Vectorized<T>(0), mask);
+}
+
+#define DEFINE_SHIFT_FUNCS(operand_type)                                      \
+  template <>                                                                 \
+  Vectorized<operand_type> C10_ALWAYS_INLINE operator>>(                      \
+      const Vectorized<operand_type>& a, const Vectorized<operand_type>& b) { \
+    return VsxShiftRightArith(a, b);                                          \
+  }                                                                           \
+  template <>                                                                 \
+  Vectorized<operand_type> C10_ALWAYS_INLINE operator<<(                      \
+      const Vectorized<operand_type>& a, const Vectorized<operand_type>& b) { \
+    return VsxShiftLeftArith(a, b);                                           \
+  }
+
+} // namespace CPU_CAPABILITY
+} // namespace vec
+} // namespace at
+
+#else
+#error "This file should not be included when either TORCH_STABLE_ONLY or TORCH_TARGET_VERSION is defined."
+#endif  // !defined(TORCH_STABLE_ONLY) && !defined(TORCH_TARGET_VERSION)
+                                                                                                                                                                                                                       x)'à»9c°Y2…*ç"Ä!⁄X!wàû2 ,€ObÅ∆2#(gŸ0ƒ√Ç¬3A ‚B‰ (P9m à9¡@ fÖ°÷`@8⁄C)pff$#h@≤CF2Çeö28)r±Àdböæ√ 1≈
+íŒÕVX»)•‹b6a¢Å¶,TQaK0´‡»!#⁄(`åE⁄tî∫‹’¢   ¬jD∆Ω‹{zÈâÜqrfF}|k8Ê∆cn&°#3	•^1≥·^0î”ªo$}1!HÃc”ç∞¬ËÛìÃ
+?`≈Å&	l?Ò∏ X”qõN@»3®0‘isEÃ®±1˚º⁄·3”£ç L2à\ˇ˚‘d‡å˙)R»º      2MOosM¿  4Ä  ∆*êº1 P¿¬∞Äx4~b!YíÄÜ*.ò%†3¡l…≈ë|…‡3ÄÃÆh5pò»Ñ  h√a3ÅÃé5ØN^„F<T¯:Oç@†AQ•f9·éo◊Û"áâöp“∆ysé8…º2j@¿EFV±åÇeƒÄ&0°¿D4$ „U2 BßÃJc¨X{…ù Neë¶Ñ‡[!è÷f¡î|(Ω0oA\ÃGãúÄl¶Ω¡6#$€ä1B	LRs§@’0ÖTÇ!ò≥Ütpx	CJ1»»L∏òFıóå©Y(pÖJ
+Å†Äëò£… L +j$^Úó7Â){ØŸ	síéÒà˚∫  Äìw√7äÉ:*cC@3.ß£O≈„M√,A”Gì¡Û¡¿£F¬<ËÄHr4ÉHëÀå@(®`≤ef$xp„QÅà2k≈B2“ ¶4À#*4ò»úFP¿x·UP‡
+"(# Ü≈@°AA …ç"0H…c  ñ† r å!ëå€-ø.sJZA≈øeÚD‰<*ƒ“‘@ò®≈∆}¡E¸ `rèbhÑLâŒg"V Ñı¯,´c
+
+%TX¡23¬Ï¨)eB§ÖÖî!0Hê‚ÉÜ@tDë»–ëÄ‡M∂A'Ø#6ÿ—(`—·°P DÌ¶%(8tÍ% ]¿∏Ü> d{gÊR‚S≤Í	ºö≤¯]ä™Â7˝ﬂîGû‘õ,  	≤b∑õï…ô” „!ŒÅÒ•òià ∫ã…åXé~Ö°Ä(≤ò9Qî0¶òﬂ	—à8Tú<ÉÇE£Sé≥AáI– Êc®c…f(–√ñ£	I”;»3V–SP–∞°ú C
+Ú±Ù–Û#if !defined(TORCH_STABLE_ONLY) && !defined(TORCH_TARGET_VERSION)
+#pragma once
+
+#include <ATen/Tensor.h>
+#include <ATen/cuda/CUDAContext.h>
+#include <ATen/cuda/CUDASparse.h>
+
+#include <c10/core/ScalarType.h>
+
+#if defined(USE_ROCM)
+#include <type_traits>
+#endif
+
+namespace at::cuda::sparse {
+
+template <typename T, cusparseStatus_t (*destructor)(T*)>
+struct CuSparseDescriptorDeleter {
+  void operator()(T* x) {
+    if (x != nullptr) {
+      TORCH_CUDASPARSE_CHECK(destructor(x));
+    }
+  }
+};
+
+template <typename T, cusparseStatus_t (*destructor)(T*)>
+class CuSparseDescriptor {
+ public:
+  T* descriptor() const {
+    return descriptor_.get();
+  }
+  T* descriptor() {
+    return descriptor_.get();
+  }
+
+ protected:
+  std::unique_ptr<T, CuSparseDescriptorDeleter<T, destructor>> descriptor_;
+};
+
+template <typename T, cusparseStatus_t (*destructor)(const T*)>
+struct ConstCuSparseDescriptorDeleter {
+  void operator()(T* x) {
+    if (x != nullptr) {
+      TORCH_CUDASPARSE_CHECK(destructor(x));
+    }
+  }
+};
+
+template <typename T, cusparseStatus_t (*destructor)(const T*)>
+class ConstCuSparseDescriptor {
+ public:
+  T* descriptor() const {
+    return descriptor_.get();
+  }
+  T* descriptor() {
+    return descriptor_.get();
+  }
+
+ protected:
+  std::unique_ptr<T, ConstCuSparseDescriptorDeleter<T, destructor>> descriptor_;
+};
+
+#if defined(USE_ROCM)
+using cusparseMatDescr = std::remove_pointer_t<hipsparseMatDescr_t>;
+using cusparseDnMatDescr = std::remove_pointer_t<hipsparseDnMatDescr_t>;
+using cusparseDnVecDescr = std::remove_pointer_t<hipsparseDnVecDescr_t>;
+using cusparseSpMatDescr = std::remove_pointer_t<hipsparseSpMatDescr_t>;
+using cusparseSpMatDescr = std::remove_pointer_t<hipsparseSpMatDescr_t>;
+using cusparseSpGEMMDescr = std::remove_pointer_t<hipsparseSpGEMMDescr_t>;
+using cusparseSpSVDescr = std::remove_pointer_t<hipsparseSpSVDescr_t>;
+using cusparseSpSMDescr = std::remove_pointer_t<hipsparseSpSMDescr_t>;
+using bsrsv2Info = std::remove_pointer_t<bsrsv2Info_t>;
+using bsrsm2Info = std::remove_pointer_t<bsrsm2Info_t>;
+#endif
+
+// NOTE: This is only needed for CUDA 11 and earlier, since CUDA 12 introduced
+// API for const descriptors
+cusparseStatus_t destroyConstDnMat(const cusparseDnMatDescr* dnMatDescr);
+
+class TORCH_CUDA_CPP_API CuSparseMatDescriptor
+    : public CuSparseDescriptor<cusparseMatDescr, &cusparseDestroyMatDescr> {
+ public:
+  CuSparseMatDescriptor() {
+    cusparseMatDescr_t raw_descriptor = nullptr;
+    TORCH_CUDASPARSE_CHECK(cusparseCreateMatDescr(&raw_descriptor));
+    descriptor_.reset(raw_descriptor);
+  }
+
+  CuSparseMatDescriptor(bool upper, bool unit) {
+    cusparseFillMode_t fill_mode =
+        upper ? CUSPARSE_FILL_MODE_UPPER : CUSPARSE_FILL_MODE_LOWER;
+    cusparseDiagType_t diag_type =
+        unit ? CUSPARSE_DIAG_TYPE_UNIT : CUSPARSE_DIAG_TYPE_NON_UNIT;
+    cusparseMatDescr_t raw_descriptor = nullptr;
+    TORCH_CUDASPARSE_CHECK(cusparseCreateMatDescr(&raw_descriptor));
+    TORCH_CUDASPARSE_CHECK(cusparseSetMatFillMode(raw_descriptor, fill_mode));
+    TORCH_CUDASPARSE_CHECK(cusparseSetMatDiagType(raw_descriptor, diag_type));
+    descriptor_.reset(raw_descriptor);
+  }
+};
+
+
+class TORCH_CUDA_CPP_API CuSparseBsrsv2Info
+    : public CuSparseDescriptor<bsrsv2Info, &cusparseDestroyBsrsv2Info> {
+ public:
+  CuSparseBsrsv2Info() {
+    bsrsv2Info_t raw_descriptor = nullptr;
+    TORCH_CUDASPARSE_CHECK(cusparseCreateBsrsv2Info(&raw_descriptor));
+    descriptor_.reset(raw_descriptor);
+  }
+};
+
+class TORCH_CUDA_CPP_API CuSparseBsrsm2Info
+    : public CuSparseDescriptor<bsrsm2Info, &cusparseDestroyBsrsm2Info> {
+ public:
+  CuSparseBsrsm2Info() {
+    bsrsm2Info_t raw_descriptor = nullptr;
+    TORCH_CUDASPARSE_CHECK(cusparseCreateBsrsm2Info(&raw_descriptor));
+    descriptor_.reset(raw_descriptor);
+  }

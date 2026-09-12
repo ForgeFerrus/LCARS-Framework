@@ -1,0 +1,57 @@
+{
+  "ui": {
+    "theme": "lcars",
+    "window_width": 1920,
+    "window_height": 1080,
+    "default_faction": "Federation",
+    "default_era": "25th",
+    "hotkeys": {
+      "toggle_lock": "Ctrl+L",
+      "open_console": "Ctrl+`",
+      "launch_engineering": "Ctrl+E"
+    },
+    "colors": {
+      "alert_normal": "#FF9900",
+      "alert_yellow": "#FFCC33",
+      "alert_red": "#CC0000"
+    }
+  },
+  "agent": {
+    "allow_host_access": false,
+    "host_whitelist": []
+  },
+  "system": {
+    "isolinear": {
+      "factions": {
+        "Federation": {
+          "storage_type": "Isolinear Chip",
+          "capacity_tq": 1000,
+          "backup_system": "Bioneural Gel Packs"
+        },
+        "Cardassian": {
+          "storage_type": "Optolythic Data Rod",
+          "capacity_tq": 850,
+          "backup_system": "Isomagnetic Spools"
+        },
+        "Romulan": {
+          "storage_type": "Memory Crystal",
+          "capacity_tq": 1200,
+          "backup_system": "Singularity Tap Buffers"
+        },
+        "Klingon": {
+          "storage_type": "Data Cylinders",
+          "capacity_tq": 900,
+          "backup_system": "Redundant Core Drives"
+        }
+      },
+      "active_modules_path": "data/isolinear_cores",
+      "cache_enabled": true
+    }
+  }
+  ,
+  "autostart": {
+    "programs": [
+      "programs/learning/English.py"
+    ]
+  }
+}

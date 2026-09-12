@@ -1,0 +1,19 @@
+Metadata:
+  Id: 00-0001
+  Name: LCARS BIOS Core & POST Table
+  Category: '00'
+  Version: 5.0.0
+  Faction: Federation
+  Type: system
+  Status: nominal
+Specs:
+  Capacity: 2048
+  ColorCode: '#FF9900'
+  SecurityLevel: 10
+  Bus: ODN-00
+Paths:
+  DatabaseFile: lcars/data/00/00-0001-bios-core.db
+Entrypoints:
+  Main: lcars.system.bios:BIOSCore
+Description: Прошивка базової системи вводу-виводу (BIOS) ядра, перевірки POST та
+  завантажувальні записи.

@@ -1,0 +1,29 @@
+name: integrator
+id: plugins.UIntegration
+version: 0.1.0
+entrypoint: plugins:SetupUi
+license: MIT
+author: LCARS Framework
+
+description: "AI UI Factory та інтеграція компонентів. Генератор QML та Vision Tools."
+
+tags:
+  - ui
+  - factory
+  - vision
+
+config:
+  type: object
+  properties:
+    outputDir:
+      type: string
+      default: "lcars/qml/generated"
+    enableVision:
+      type: boolean
+      default: false
+      description: "AI аналіз зображень для генерації UI"
+  additionalProperties: false
+
+security:
+  importTimeDisk: false
+  requireExplicitEnable: true

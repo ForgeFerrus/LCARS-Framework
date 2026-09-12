@@ -1,0 +1,62 @@
+# ◤ ISOLINEAR CHIP — SUBSPACE NETWORK & UPLINK OPERATIONS
+# Опис: Управління мережевими інтерфейсами, підпросторовими релеями та безпечними з'єднаннями
+# Призначення: Мережевий хаб, дозволені домени, шифровані канали, збір мережевих метрик
+# Категорія: 06-0020 — Network & Communications
+
+Metadata:
+  Id: 06-0020
+  Name: Subspace Network & Uplink Operations Array
+  Version: 3.2.0
+  Faction: Federation
+  Type: network
+  Status: nominal
+
+Specs:
+  Capacity: 2048
+  ColorCode: '#336699'
+  SecurityLevel: 6
+  Priority: 2
+
+Entrypoints:
+  Manager: lcars.modules.net:NetworkManager
+  Hub: lcars.modules.hub:LCARSNetworkHub
+  Connector: lcars.modules.connector:NetworkConnector
+
+Config:
+  Protocols:
+    - ODNv3
+    - SubspaceCarrier
+    - TcpIpTls
+  DefaultAllowlist:
+    - google.com
+    - startpage.com
+    - starfleet.federation.int
+
+Paths:
+  NetworkPath: lcars/modules/net.py
+  DatabaseFile: lcars/data/06/06-0020-network-operations.db
+
+Interfaces:
+  - NetworkManagerAPI
+  - SubspaceUplinkAPI
+  - FirewallAllowlistAPI
+
+Boot:
+  Sequence:
+    - InitSubspaceAdapters
+    - ApplyFirewallRules
+    - StartBandwidthTelemetry
+  DefaultState: active
+
+Description: |
+  Модуль управління підпросторовими комунікаціями та зовнішньою мережею LCARS.
+  Забезпечує захищені канали зв'язку, фільтрацію трафіку з білими списками
+  та інтеграцію з хмарними AI-провайдерами через шифровані TLS-протоколи.
+
+Tags:
+  - network
+  - subspace
+  - comm
+  - uplink
+  - security
+

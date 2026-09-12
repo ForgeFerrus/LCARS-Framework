@@ -1,0 +1,7 @@
+{
+  "kind": "python_app",
+  "source": "scripts\\runner.py",
+  "bundle": "programs\\lcars_studio\\compiled\\runner.pyz",
+  "stardate": "74659.32",
+  "hash": "05729fedf719bcb8d5b64c964bb0bcea7c7788edcae4df5efd89591d0716e0e6"
+}

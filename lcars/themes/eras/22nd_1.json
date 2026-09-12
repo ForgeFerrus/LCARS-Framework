@@ -1,0 +1,44 @@
+[
+  {
+    "id": "chronometer_label",
+    "type": "label",
+    "text": "CHRONOMETER",
+    "color_role": "text",
+    "width": 220,
+    "height": 20,
+    "dynamic": { "fn": "stardate_label", "period_ms": 500, "start": -3755.53415, "step": 0.001, "format": "{:.5f}" }
+  },
+  {
+    "id": "stardate_display",
+    "type": "label",
+    "text": "-3755.53415",
+    "color_role": "text",
+    "width": 220,
+    "height": 44,
+    "dynamic": { "fn": "stardate_label", "period_ms": 300, "start": -3755.53415, "step": 0.01, "format": "{:.5f}" }
+  },
+  {
+    "id": "left_strip",
+    "type": "panel",
+    "text": "",
+    "color_role": "panel",
+    "width": 220,
+    "height": 340,
+    "children": [
+      { "id": "swatch_top", "type": "panel", "width": 56, "height": 56, "x": 80, "y": 8, "color_role": "primary" },
+      { "id": "swatch_mid", "type": "panel", "width": 56, "height": 56, "x": 80, "y": 84, "color_role": "accent" },
+      { "id": "swatch_bot", "type": "panel", "width": 56, "height": 56, "x": 80, "y": 160, "color_role": "secondary" }
+    ]
+  },
+  { "id": "nav_v_scn", "type": "button", "text": "SCN", "color_role": "primary", "width": 48, "height": 36 },
+  { "id": "nav_v_nav", "type": "button", "text": "NAV", "color_role": "secondary", "width": 48, "height": 36 },
+  { "id": "nav_v_sen", "type": "button", "text": "SEN", "color_role": "accent", "width": 48, "height": 36 },
+  { "id": "main_big_display", "type": "panel", "text": "", "color_role": "background", "width": 640, "height": 340 },
+  { "id": "main_big_button", "type": "button", "layout": "big-two", "text": "MAIN", "footer_text": "04", "color_role": "primary", "width": 360, "height": 140, "indicator": true },
+  { "id": "control_engage", "type": "button", "layout": "top-main-bottom", "text": "ENGAGE", "color_role": "primary", "width": 120, "height": 36 },
+  { "id": "control_standby", "type": "button", "layout": "top-main-bottom", "text": "STANDBY", "color_role": "secondary", "width": 120, "height": 36 },
+  { "id": "logo_panel", "type": "panel", "text": "", "color_role": "panel", "width": 520, "height": 160 },
+  { "id": "swatch_a", "type": "panel", "text": "", "color_role": "primary", "width": 120, "height": 24 },
+  { "id": "swatch_b", "type": "panel", "text": "", "color_role": "accent", "width": 120, "height": 24 },
+  { "id": "swatch_c", "type": "panel", "text": "", "color_role": "secondary", "width": 120, "height": 24 }
+]

@@ -1,0 +1,19 @@
+Metadata:
+  Id: 08-0002
+  Name: Virtual File System (VFS) Mount Table
+  Category: 08
+  Version: 5.0.0
+  Faction: Federation
+  Type: storage
+  Status: nominal
+Specs:
+  Capacity: 4096
+  ColorCode: '#9999CC'
+  SecurityLevel: 6
+  Bus: ODN-08
+Paths:
+  DatabaseFile: lcars/data/08/08-0002-vfs.db
+Entrypoints:
+  Main: lcars.modules.storage:StorageManager
+Description: Таблиця монтування точок віртуальної файлової системи зорельота (/sys,
+  /data, /bin).

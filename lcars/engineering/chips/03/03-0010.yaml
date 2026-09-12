@@ -1,0 +1,58 @@
+# ◤ ISOLINEAR CHIP — STARFLEET COMMAND & VESSEL REGISTRY DB
+# Опис: База даних Зоряного Флоту — реєстр зорельотів, капітанів та технічних специфікацій
+# Призначення: Ідентифікація кораблів, звірка серійних номерів, протоколи сумісності
+# Категорія: 03-0010 — Starfleet Databases
+
+Metadata:
+  Id: 03-0010
+  Name: Starfleet Command & Vessel Registry Database
+  Version: 24.1.0
+  Faction: Federation
+  Type: database
+  Status: nominal
+
+Specs:
+  Capacity: 4096
+  ColorCode: '#FF6600'
+  SecurityLevel: 8
+  Priority: 2
+
+Entrypoints:
+  Library: lcars.modules.library:IsolinearBank
+
+Config:
+  TableNames:
+    - starships
+    - ShipClasses
+    - CommandingOfficers
+    - TacticalSpecifications
+  PrimaryRegistry: NCC-74205
+  Sector: Sector 001 (Sol)
+
+Paths:
+  DatabaseFile: lcars/data/03/03-0010-starfleet-registry.db
+
+Interfaces:
+  - StarfleetRegistryAPI
+  - VesselLookupAPI
+
+Boot:
+  Sequence:
+    - MountSqliteBank
+    - VerifyRegistryChecksums
+    - IndexVesselRecords
+  DefaultState: active
+
+Description: |
+  Офіційний реєстр Зоряного Флоту Об'єднаної Федерації Планет.
+  Містить повні дані про флагмани Федерації (USS Enterprise, USS Defiant,
+  USS Voyager, USS Prometheus), класи суден (Sovereign, Galaxy, Intrepid, Defiant)
+  та їхні енергетичні і тактичні параметри.
+
+Tags:
+  - database
+  - starfleet
+  - registry
+  - starships
+  - federation
+

@@ -1,0 +1,69 @@
+# ◤ ISOLINEAR CHIP — BOARD COMPUTER CORE & MANUAL
+# Опис: Головне квантово-ізолінійне ядро бортового комп'ютера зорельота та інструкції системи LCARS
+# Призначення: Керування підсистемами, тактичні тривоги, синтез інтерфейсів, голосовий двигун
+# Категорія: 00-0020 — Sovereign-Class Starship Core
+
+Metadata:
+  Id: 00-0020
+  Name: LCARS Sovereign Board Computer Core
+  Version: 5.0.0
+  Faction: Federation
+  Type: core
+  Status: nominal
+
+Specs:
+  Capacity: 4096
+  ColorCode: '#FF9900'
+  SecurityLevel: 10
+  Priority: 1
+
+Entrypoints:
+  Main: lcars.core.computer:BoardComputer
+  Access: lcars.core.computer:ComputerAccess
+  Agent: lcars.core.computer:LCARSAgent
+
+Config:
+  ShipClass: Sovereign-Class Starship Core
+  ShipRegistry: NCC-74205
+  DefaultMode: QUANTUM
+  AlertLevels:
+    - NORMAL
+    - YELLOW
+    - RED
+  VoiceEngine:
+    Enabled: true
+    Language: Ukrainian
+
+Paths:
+  SystemRoot: lcars/core
+  ComputerPath: lcars/core/computer.py
+  DatabaseFile: lcars/data/00/00-0020-board-computer-manual.db
+
+Interfaces:
+  - BoardComputerAPI
+  - AlertSystemAPI
+  - VoiceDirectiveAPI
+  - SubsystemSynthesizerAPI
+
+Boot:
+  Sequence:
+    - InitQuantumCore
+    - InitAlertSystem
+    - InitOdnChannels
+    - MountSubsystems
+    - ActivateVoiceEngine
+  DefaultState: active
+
+Description: |
+  Центральне квантово-ізолінійне ядро бортового комп'ютера LCARS.
+  Забезпечує моніторинг усіх підсистем зорельота, реакцію на тактичні
+  тривоги (Condition Red/Yellow/Normal), синтез інтерфейсів на ізолінійні чіпи
+  та маршрутизацію директив до агентного шару Copilot.
+
+Tags:
+  - core
+  - BoardComputer
+  - sovereign
+  - starfleet
+  - quantum
+

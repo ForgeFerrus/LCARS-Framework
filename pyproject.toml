@@ -1,0 +1,23 @@
+[tool.pyright]
+include = ["lcars", "programs"]
+extraPaths = [".", "lcars", "programs"]
+typeCheckingMode = "off"
+reportMissingImports = false
+reportMissingModuleSource = false
+reportUndefinedVariable = false
+reportGeneralTypeIssues = false
+reportOptionalMemberAccess = false
+reportAttributeAccessIssue = false
+
+[tool.pylance]
+typeCheckingMode = "off"
+reportMissingImports = "none"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["archive", ".venv", "demo", "data", "scripts", "build", "dist", ".devin"]
+python_files = ["Nova.py", "Terminal.py", "Desktop.py", "Control.py", "Network.py"]
+python_classes = ["*Suite"]
+python_functions = ["Verify*"]
+
+

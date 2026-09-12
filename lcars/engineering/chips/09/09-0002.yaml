@@ -1,0 +1,18 @@
+Metadata:
+  Id: 09-0002
+  Name: Quantum Computing & OpenQASM Circuit Registry
+  Category: 09
+  Version: 5.0.0
+  Faction: Federation
+  Type: simulation
+  Status: nominal
+Specs:
+  Capacity: 16384
+  ColorCode: '#CC6699'
+  SecurityLevel: 7
+  Bus: ODN-09
+Paths:
+  DatabaseFile: lcars/data/09/09-0002-quantum.db
+Entrypoints:
+  Main: lcars.engineering.laboratory:EngineeringLaboratory
+Description: Квантові обчислювальні схеми, реєстр кубітів та симуляція квантових алгоритмів.

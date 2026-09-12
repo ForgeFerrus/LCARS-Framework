@@ -1,0 +1,5 @@
+[
+  { "id": "title", "type": "label", "text": "LCARS — 25TH", "color_role": "accent", "height": 36 },
+  { "id": "nav_1", "type": "button", "text": "MAIN", "color_role": "primary", "width": 140, "height": 36 },
+  { "id": "info_panel", "type": "panel", "text": "SYSTEM PANEL", "color_role": "panel", "height": 220 }
+]

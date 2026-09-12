@@ -1,0 +1,5 @@
+{
+  "superdesign.apiKey": "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",
+  "superdesign.apiUrl": "https://api.groq.com/openai/v1",
+  "superdesign.model": "llama3-8b-8192"
+}

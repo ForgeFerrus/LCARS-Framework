@@ -1,0 +1,7 @@
+{
+  "name": "ENX01",
+  "description": "Proxy wrapper exposing the Geant4 ENX01 program under LCARS programs/",
+  "path": "programs/ENX01",
+  "entry": "run.bat",
+  "build": "build.bat"
+}

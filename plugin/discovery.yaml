@@ -1,0 +1,25 @@
+﻿name: project_discovery
+id: plugins.project_discovery
+version: 0.1.0
+entrypoint: plugins.project_discovery:setup
+license: MIT
+author: LCARS Framework
+
+description: "Scans workspace for Geant4 projects and provides simple metadata discovery."
+
+tags:
+  - discovery
+  - projects
+
+config_schema:
+  type: object
+  properties:
+    root:
+      type: string
+      default: .
+  additionalProperties: false
+
+dependencies: []
+security:
+  import_time_disk: true
+  require_explicit_enable: true

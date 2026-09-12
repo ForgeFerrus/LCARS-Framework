@@ -1,0 +1,19 @@
+Metadata:
+  Id: 03-0003
+  Name: Federation Chronometer & Mission Timers
+  Category: '03'
+  Version: 5.0.0
+  Faction: Federation
+  Type: data
+  Status: nominal
+Specs:
+  Capacity: 4096
+  ColorCode: '#FFCC00'
+  SecurityLevel: 5
+  Bus: ODN-03
+Paths:
+  DatabaseFile: lcars/data/03/03-0003-chronometer.db
+Entrypoints:
+  Main: lcars.service.chronometer:Chronometer
+Description: Розрахунок Зоряної Дати (Stardate), синхронізація часу місії та таймери
+  подій.

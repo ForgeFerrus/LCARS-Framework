@@ -1,0 +1,79 @@
+from __future__ import annotations
+import random
+from typing import Optional
+
+# Re-export era and factions
+from lcars.base.types import LCARSEra, FactionEra
+
+# Compatibility alias when other modules do `from lcars.themes.palette import LCARSEra`
+Era = LCARSEra
+
+# Import theme helpers for font aliasing
+from lcars.themes.theme import get_lcars_font_style
+
+# Універсальні кольори для всіх LCARS ер
+UNIVERSAL_BACKGROUND = '#000000'
+UNIVERSAL_TEXT = '#FFFFFF'
+BACKGROUND = UNIVERSAL_BACKGROUND
+
+
+# Primary palettes (kept small and readable)
+ERA_COLOR_PALETTES = {
+    LCARSEra.COMS_22ND: {
+        'panel_border': '#444444',
+        'button_colors': ['#FFE600', '#269EEE', '#5C5C5C', '#27F8FF', '#018D76', '#FFBB00', '#00A35F', '#2062EE', '#CE6363', '#9EFFB5'],
+        'alert_colors': ['#FFBB00', '#CE6363', '#D80000'],
+        'border_radius': '0px'
+    },
+    LCARSEra.PCARS_23RD: {
+        'panel_border': '#D3A200',
+        'button_colors': ['#FFFF00', '#FF0000', '#00FF00', '#FA7B13', '#66FF66', '#FFAE00', '#E60000', '#003819', '#156B15', '#FFFF99'],
+        'alert_colors': ['#FFAE00', '#E60000'],
+        'border_radius': '5px'
+    },
+    LCARSEra.LCARS_24TH: {
+        'panel_border': '#664466',
+        'button_colors': ['#FFCC66', '#FF9900', '#9999FF', '#B1957A', '#EEC222', '#3399FF', '#CD6363', '#646DCC', '#99CCFF', '#FFFF9C'],
+        'alert_colors': ['#F9CA00', '#A30E2A'],
+        'border_radius': '15px'
+    },
+    LCARSEra.LCARS_25TH: {
+        'panel_border': '#2F3749',
+        'button_colors': ['#2F3749', '#52596E', '#6D748C', '#9EA5BA', '#E7442A', '#FF6753', '#FF977B', '#FFBB00', '#2A7193', '#37A6D1', '#4BBEBF', '#7FF3FF'],
+        'alert_colors': ['#3B111D', '#A80F00', '#E7442A', '#FF6753', '#FF977B', '#E5960C'],
+        'border_radius': '20px'
+    },
+    LCARSEra.TCARS_29TH: {
+        'panel_border': '#2A4B5A',
+        'button_colors': ['#31C9F4', '#72E2E4', '#20788C', '#24BEB2', '#A656C5', '#D19FAE'],
+        'alert_colors': ['#CC6633', '#CC0000'],
+        'border_radius': '8px'
+    }
+}
+
+
+def get_era_palette(era: LCARSEra) -> dict:
+    pal = ERA_COLOR_PALETTES.get(era)
+    if pal is None:
+        try:
+            pal = ERA_COLOR_PALETTES[LCARSEra(era)]
+        except Exception:
+            return {'panel_border':'#444444','button_colors':['#99CCFF','#FF9900'],'alert_colors':['#FFBB00','#D80000'],'border_radius':'4px'}
+    return dict(pal)
+
+
+def get_faction_palette(faction: Optional[FactionEra]):
+    return get_era_palette(LCARSEra.LCARS_25TH)
+
+
+def get_random_button_color(era: Optional[LCARSEra] = None, faction: Optional[FactionEra] = None, index: Optional[int] = None) -> str:
+    pal = get_era_palette(era or LCARSEra.LCARS_25TH)
+    colors = pal.get('button_colors') or ['#99CCFF', '#FF9900']
+    if index is not None:
+        return colors[index % len(colors)]
+    rnd = random.Random(str(era))
+    return rnd.choice(colors)
+
+
+def get_lcars_font_style(size: int = 14, weight: str = 'normal', faction: Optional[str] = None, era: Optional[str] = None, lang: Optional[str] = None) -> str:
+    return get_lcars_font_style(size, weight, faction, era, lang)

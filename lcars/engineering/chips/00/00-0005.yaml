@@ -1,0 +1,19 @@
+Metadata:
+  Id: 00-0005
+  Name: LCARS Subsystem States & Tactical Alerts
+  Category: '00'
+  Version: 5.0.0
+  Faction: Federation
+  Type: system
+  Status: nominal
+Specs:
+  Capacity: 4096
+  ColorCode: '#FF9900'
+  SecurityLevel: 8
+  Bus: ODN-00
+Paths:
+  DatabaseFile: lcars/data/00/00-0005-system-state.db
+Entrypoints:
+  Main: lcars.core.system:SystemManager
+Description: Моніторинг станів усіх бортових підсистем та історія перемикання рівнів
+  тривоги (Condition Red/Yellow).

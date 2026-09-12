@@ -1,0 +1,347 @@
+// Аналіз детектора з LCARS Script
+// ================================
+
+// Конфігурація аналізу
+detector_name: "ATLAS"
+input_file: "detector_data.root"
+output_dir: "analysis_results"
+energy_range: [0.5 GeV, 10 GeV]
+
+// Функції обробки даних
+FUNCTION load_detector_data(filename) -> array {
+    log("Loading detector data from: " + filename)
+    
+    // Симуляція завантаження даних
+    data = []
+    FOR i FROM 1 TO 10000 {
+        energy = 0.5 + random() * 9.5  // 0.5-10 GeV
+        theta = random() * pi           // 0-π рад
+        phi = random() * 2 * pi         // 0-2π рад
+        
+        // Перетворення в декартові координати
+        px = energy * sin(theta) * cos(phi)
+        py = energy * sin(theta) * sin(phi)
+        pz = energy * cos(theta)
+        
+        data.append({
+            event_id: i,
+            energy: energy,
+            momentum: [px, py, pz],
+            theta: theta,
+            phi: phi,
+            detector_layer: int(random() * 4) + 1,
+            time: random() * 100  // ns
+        })
+    }
+    
+    log("Loaded " + len(data) + " events")
+    return data
+}
+
+FUNCTION calculate_efficiency_layer(data, layer) -> float {
+    layer_events = [event for event in data if event.detector_layer == layer]
+    
+    IF len(layer_events) == 0 return 0.0
+    
+    // Симуляція ефективності залежно від шару
+    base_efficiency = 0.95
+    layer_penalty = layer * 0.02
+    
+    efficiency = base_efficiency - layer_penalty
+    return max(0.0, efficiency)
+}
+
+FUNCTION create_resolution_histogram(data) -> object {
+    histogram = create_histogram("energy_resolution", 100, 0, 2.0)
+    
+    FOREACH event IN data {
+        // Симуляція розширення детектора
+        measured_energy = event.energy * (1.0 + random_normal(0, 0.05))
+        resolution = measured_energy / event.energy
+        
+        histogram.fill(resolution)
+    }
+    
+    return histogram
+}
+
+FUNCTION analyze_spatial_distribution(data) -> object {
+    // Аналіз просторового розподілу
+    x_positions = []
+    y_positions = []
+    z_positions = []
+    
+    FOREACH event IN data {
+        x = event.momentum[0] / event.energy * 1000  // mm
+        y = event.momentum[1] / event.energy * 1000  // mm
+        z = event.momentum[2] / event.energy * 1000  // mm
+        
+        x_positions.append(x)
+        y_positions.append(y)
+        z_positions.append(z)
+    }
+    
+    return {
+        x_mean: mean(x_positions),
+        y_mean: mean(y_positions),
+        z_mean: mean(z_positions),
+        x_std: std(x_positions),
+        y_std: std(y_positions),
+        z_std: std(z_positions)
+    }
+}
+
+// Детектор для аналізу
+DETECTOR atlas_detector {
+    NAME detector_name
+    TYPE "general_purpose"
+    
+    LAYERS [
+        {
+            name: "Pixel",
+            radius: 50 mm,
+            length: 200 mm,
+            resolution: 10 μm,
+            material: "silicon"
+        },
+        {
+            name: "SCT",
+            radius: 150 mm,
+            length: 500 mm,
+            resolution: 20 μm,
+            material: "silicon"
+        },
+        {
+            name: "TRT",
+            radius: 300 mm,
+            length: 1000 mm,
+            resolution: 130 μm,
+            material: "straw_tube"
+        },
+        {
+            name: "Calorimeter",
+            radius: 1000 mm,
+            length: 2000 mm,
+            resolution: 100 μm,
+            material: "liquid_argon"
+        }
+    ]
+    
+    MAGNETIC_FIELD 2.0 T
+    TEMPERATURE -20°C
+    
+    ON HIT(hit) {
+        process_hit(hit)
+        emit("detector:hit_processed", hit)
+    }
+}
+
+// Аналізатор детектора
+ANALYZER detector_performance {
+    INPUT input_file
+    DETECTOR atlas_detector
+    
+    PROCESS {
+        log("Starting detector performance analysis...")
+        
+        // Завантаження даних
+        data = load_detector_data(input_file)
+        log("Total events: " + len(data))
+        
+        // Аналіз ефективності по шарах
+        layer_efficiencies = []
+        FOR layer FROM 1 TO 4 {
+            eff = calculate_efficiency_layer(data, layer)
+            layer_efficiencies.append(eff)
+            log("Layer " + layer + " efficiency: " + eff + "%")
+        }
+        
+        // Аналіз роздільної здатності
+        resolution_hist = create_resolution_histogram(data)
+        resolution_fit = fit_gaussian(resolution_hist)
+        
+        // Просторовий аналіз
+        spatial_analysis = analyze_spatial_distribution(data)
+        
+        // Аналіз часових характеристик
+        times = [event.time for event in data]
+        time_resolution = std(times)
+        
+        // Енергетичний спектр
+        energy_spectrum = create_histogram("energy_spectrum", 100, 0.5, 10)
+        FOREACH event IN data {
+            energy_spectrum.fill(event.energy)
+        }
+        
+        // Кутовий розподіл
+        theta_spectrum = create_histogram("theta_spectrum", 50, 0, pi)
+        phi_spectrum = create_histogram("phi_spectrum", 50, 0, 2 * pi)
+        
+        FOREACH event IN data {
+            theta_spectrum.fill(event.theta)
+            phi_spectrum.fill(event.phi)
+        }
+        
+        // Статистика по шарах
+        layer_stats = {}
+        FOR layer FROM 1 TO 4 {
+            layer_data = [event for event in data if event.detector_layer == layer]
+            layer_stats["layer_" + layer] = {
+                count: len(layer_data),
+                efficiency: layer_efficiencies[layer - 1],
+                mean_energy: mean([event.energy for event in layer_data])
+            }
+        }
+        
+        // Загальні результати
+        results = {
+            detector: detector_name,
+            total_events: len(data),
+            layer_efficiencies: layer_efficiencies,
+            overall_efficiency: mean(layer_efficiencies),
+            energy_resolution: resolution_fit.sigma,
+            time_resolution: time_resolution,
+            spatial_distribution: spatial_analysis,
+            layer_statistics: layer_stats,
+            analysis_timestamp: current_time()
+        }
+        
+        // Експорт результатів
+        export(output_dir + "/detector_performance.json", results)
+        export_plot(resolution_hist, output_dir + "/energy_resolution.png")
+        export_plot(energy_spectrum, output_dir + "/energy_spectrum.png")
+        export_plot(theta_spectrum, output_dir + "/theta_distribution.png")
+        export_plot(phi_spectrum, output_dir + "/phi_distribution.png")
+        
+        // Генерувати звіт
+        generate_detector_report(results)
+        
+        log("Detector analysis completed!")
+        log("Overall efficiency: " + results.overall_efficiency + "%")
+        log("Energy resolution: " + results.energy_resolution)
+        
+        emit("analysis:complete", results)
+    }
+}
+
+// Візуалізація результатів
+VISUALIZE detector_layout {
+    TYPE "2d_schematic"
+    SOURCE atlas_detector
+    STYLE "technical"
+    
+    OPTIONS {
+        show_layers: true,
+        show_hits: true,
+        color_scheme: "atlas_blue",
+        scale: "mm"
+    }
+    
+    EXPORT output_dir + "/detector_layout.png"
+    
+    ON READY {
+        show_in_ui("detector_viewer")
+        emit("visualization:ready", {
+            type: "detector_layout",
+            file: output_dir + "/detector_layout.png"
+        })
+    }
+}
+
+VISUALIZE performance_dashboard {
+    TYPE "dashboard"
+    DATA "detector_performance.json"
+    
+    OPTIONS {
+        layout: "grid",
+        charts: ["efficiency", "resolution", "timing"],
+        style: "lcars_tng"
+    }
+    
+    EXPORT output_dir + "/performance_dashboard.html"
+    
+    ON READY {
+        show_in_ui("dashboard_viewer")
+        emit("visualization:ready", {
+            type: "dashboard",
+            file: output_dir + "/performance_dashboard.html"
+        })
+    }
+}
+
+// Допоміжні функції
+FUNCTION generate_detector_report(results) {
+    report_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>""" + results.detector + """ Performance Report</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { background-color: #001f3f; color: white; padding: 20px; }
+            .section { margin: 20px 0; }
+            .metric { display: inline-block; margin: 10px; padding: 10px; border: 1px solid #ccc; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>""" + results.detector + """ Detector Performance Report</h1>
+            <p>Generated: """ + results.analysis_timestamp + """</p>
+        </div>
+        
+        <div class="section">
+            <h2>Overall Performance</h2>
+            <div class="metric">Total Events: """ + results.total_events + """</div>
+            <div class="metric">Overall Efficiency: """ + results.overall_efficiency + """%</div>
+            <div class="metric">Energy Resolution: """ + results.energy_resolution + """</div>
+            <div class="metric">Time Resolution: """ + results.time_resolution + """ ns</div>
+        </div>
+        
+        <div class="section">
+            <h2>Layer Performance</h2>
+    """
+    
+    FOR layer FROM 1 TO 4 {
+        layer_key = "layer_" + layer
+        IF layer_key IN results.layer_statistics {
+            stats = results.layer_statistics[layer_key]
+            report_html = report_html + """
+            <div class="metric">Layer """ + layer + """: """ + stats.efficiency + """%</div>
+            """
+        }
+    }
+    
+    report_html = report_html + """
+        </div>
+    </body>
+    </html>
+    """
+    
+    export(output_dir + "/detector_report.html", report_html)
+    log("HTML report generated: " + output_dir + "/detector_report.html")
+}
+
+// Основна програма аналізу
+log("=== LCARS Detector Analysis ===")
+log("Analyzing detector: " + detector_name)
+log("Input file: " + input_file)
+log("Output directory: " + output_dir)
+
+// Перевірка наявності даних
+IF NOT file_exists(input_file) {
+    log("Warning: Input file not found, using simulated data")
+    input_file = "simulated_data.root"
+}
+
+// Створення вихідної директорії
+create_directory(output_dir)
+
+// Запуск аналізу
+detector_performance.analyze()
+
+// Показати візуалізації
+detector_layout.show()
+performance_dashboard.show()
+
+log("Detector analysis completed successfully!")
+log("Results saved to: " + output_dir)

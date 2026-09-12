@@ -1,0 +1,18 @@
+Metadata:
+  Id: 01-0007
+  Name: Registered System Components
+  Category: '01'
+  Version: 5.0.0
+  Faction: Federation
+  Type: base
+  Status: nominal
+Specs:
+  Capacity: 2048
+  ColorCode: '#CC6699'
+  SecurityLevel: 5
+  Bus: ODN-01
+Paths:
+  DatabaseFile: lcars/data/01/01-0007-components.db
+Entrypoints:
+  Main: lcars.base.component:ComponentRegistry
+Description: Каталог активних компонентів та модулів фреймворку.

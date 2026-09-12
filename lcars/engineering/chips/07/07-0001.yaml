@@ -1,0 +1,19 @@
+Metadata:
+  Id: 07-0701
+  Name: LCARS Graphical Eras & Color Palettes
+  Category: '07'
+  Version: 5.0.0
+  Faction: Federation
+  Type: interface
+  Status: nominal
+Specs:
+  Capacity: 2048
+  ColorCode: '#FF9900'
+  SecurityLevel: 3
+  Bus: ODN-07
+Paths:
+  DatabaseFile: lcars/data/07/07-0001-themes.db
+Entrypoints:
+  Main: lcars.ui.theme:ThemeManager
+Description: Кольорові палітри інтерфейсів усіх історичних ер (TNG, Sovereign, NX,
+  TOS).

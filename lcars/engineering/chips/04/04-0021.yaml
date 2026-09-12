@@ -1,0 +1,68 @@
+# ◤ ISOLINEAR CHIP — AI PROVIDER MANAGER & UNIFIED SUBSYSTEM
+# Опис: Менеджер та маршрутизатор нейронних моделей (QVAC, LocalLLM, Groq, Mistral)
+# Призначення: Перемикання бекендів, взаємодія з мостом (Bridge/Proxy), чат-генерація
+# Категорія: 04-0021 — AI Models & Providers
+
+Metadata:
+  Id: 04-0021
+  Name: LCARS AI Provider Manager Subsystem
+  Version: 5.0.0
+  Faction: Federation
+  Type: ProviderRouter
+  Status: nominal
+
+Specs:
+  Capacity: 2048
+  ColorCode: '#9999FF'
+  SecurityLevel: 7
+  Priority: 2
+
+Entrypoints:
+  Main: lcars.service.provider:AIProviderManager
+  Wrapper: lcars.service.provider:AIProvider
+
+Config:
+  SupportedBackends:
+    - Qvac:
+        BridgeKey: Bridge.AI.Provider.QVAC
+        DefaultModel: meta-llama/Llama-3.2-1B-Instruct
+    - Localllm:
+        BridgeKey: Bridge.AI.Model.Transformers
+        DefaultModel: Qwen/Qwen2.5-0.5B-Instruct
+    - Groqwen:
+        BridgeKey: Bridge.AI.Provider.Groq
+        DefaultModel: qwen/qwen3.6-27b
+    - Mistral:
+        BridgeKey: Bridge.AI.Provider.Mistral
+        DefaultModel: codestral-latest
+
+Paths:
+  ProviderPath: lcars/service/provider.py
+  DatabaseFile: lcars/data/04/04-0021-ai-providers.db
+
+Interfaces:
+  - AIProviderAPI
+  - ModelSwitchAPI
+  - ProviderTelemetryAPI
+
+Boot:
+  Sequence:
+    - ProbeBridgeProviders
+    - SelectActiveBackend
+    - RegisterTelemetryStream
+  DefaultState: active
+
+Description: |
+  Уніфікований хаб штучного інтелекту LCARS.
+  Маршрутизує запити до доступних нейромережевих бекендів:
+  нашої Нови/QVAC, локальних моделей на CPU/GPU, надшвидкого Groq
+  або інженерного Mistral Codestral.
+
+Tags:
+  - ai
+  - provider
+  - qvac
+  - groq
+  - mistral
+  - transformers
+

@@ -1,0 +1,18 @@
+Metadata:
+  Id: 09-0001
+  Name: Geant4 Particle Physics & Radiation Simulator
+  Category: 09
+  Version: 5.0.0
+  Faction: Federation
+  Type: simulation
+  Status: nominal
+Specs:
+  Capacity: 16384
+  ColorCode: '#CC6699'
+  SecurityLevel: 6
+  Bus: ODN-09
+Paths:
+  DatabaseFile: lcars/data/09/09-0001-geant4.db
+Entrypoints:
+  Main: lcars.modules.geant4:Geant4Simulator
+Description: Фізичне моделювання взаємодії елементарних частинок, детектори випромінювання.

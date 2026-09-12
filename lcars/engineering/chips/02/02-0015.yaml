@@ -1,0 +1,18 @@
+Metadata:
+  Id: 02-0015
+  Name: Environmental Control & Primary Life Support
+  Category: '02'
+  Version: 5.0.0
+  Faction: Federation
+  Type: engineering
+  Status: nominal
+Specs:
+  Capacity: 4096
+  ColorCode: '#00CC99'
+  SecurityLevel: 8
+  Bus: ODN-02
+Paths:
+  DatabaseFile: lcars/data/02/02-0015-lifesupport.db
+Entrypoints:
+Description: Керування атмосферою зорельота, кисневими резервами, клімат-контролем
+  та гравітацією.

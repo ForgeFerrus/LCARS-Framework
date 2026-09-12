@@ -1,0 +1,38 @@
+6 rep 117	% radical
+Comment Extensible 119 top 126 mid 0 bot 127 rep 119	% Updownarrow
+Comment Extensible 120 top 120 mid 0 bot 0 rep 63	% uparrow
+Comment Extensible 121 top 0 mid 0 bot 121 rep 63	% downarrow
+Comment Extensible 126 top 126 mid 0 bot 0 rep 119	% Uparrow
+Comment Extensible 127 top 0 mid 0 bot 127 rep 119	% Downarrow
+StartCharMetrics 129
+C 0 ; WX 458.333 ; N parenleftbig ; B 152 -1159 413 40 ; 
+C 1 ; WX 458.333 ; N parenrightbig ; B 44 -1159 305 40 ; 
+C 2 ; WX 416.667 ; N bracketleftbig ; B 202 -1159 394 40 ; 
+C 3 ; WX 416.667 ; N bracketrightbig ; B 22 -1159 214 40 ; 
+C 4 ; WX 472.222 ; N floorleftbig ; B 202 -1159 449 40 ; 
+C 5 ; WX 472.222 ; N floorrightbig ; B 22 -1159 269 40 ; 
+C 6 ; WX 472.222 ; N ceilingleftbig ; B 202 -1159 449 40 ; 
+C 7 ; WX 472.222 ; N ceilingrightbig ; B 22 -1159 269 40 ; 
+C 8 ; WX 583.333 ; N braceleftbig ; B 113 -1159 469 40 ; 
+C 9 ; WX 583.333 ; N bracerightbig ; B 113 -1159 469 40 ; 
+C 10 ; WX 472.222 ; N angbracketleftbig ; B 98 -1160 393 40 ; 
+C 11 ; WX 472.222 ; N angbracketrightbig ; B 78 -1160 373 40 ; 
+C 12 ; WX 333.333 ; N vextendsingle ; B 145 -621 188 21 ; 
+C 13 ; WX 555.556 ; N vextenddouble ; B 145 -621 410 21 ; 
+C 14 ; WX 577.778 ; N slashbig ; B 56 -1159 521 40 ; 
+C 15 ; WX 577.778 ; N backslashbig ; B 56 -1159 521 40 ; 
+C 16 ; WX 597.222 ; N parenleftBig ; B 180 -1759 560 40 ; 
+C 17 ; WX 597.222 ; N parenrightBig ; B 36 -1759 416 40 ; 
+C 18 ; WX 736.111 ; N parenleftbigg ; B 208 -2359 700 40 ; 
+C 19 ; WX 736.111 ; N parenrightbigg ; B 35 -2359 527 40 ; 
+C 20 ; WX 527.778 ; N bracketleftbigg ; B 250 -2359 513 40 ; 
+C 21 ; WX 527.778 ; N bracketrightbigg ; B 14 -2359 277 40 ; 
+C 22 ; WX 583.333 ; N floorleftbigg ; B 250 -2359 568 40 ; 
+C 23 ; WX 583.333 ; N floorrightbigg ; B 14 -2359 332 40 ; 
+C 24 ; WX 583.333 ; N ceilingleftbigg ; B 250 -2359 568 40 ; 
+C 25 ; WX 583.333 ; N ceilingrightbigg ; B 14 -2359 332 40 ; 
+C 26 ; WX 750 ; N braceleftbigg ; B 131 -2359 618 40 ; 
+C 27 ; WX 750 ; N bracerightbigg ; B 131 -2359 618 40 ; 
+C 28 ; WX 750 ; N angbracketleftbigg ; B 125 -2359 652 40 ; 
+C 29 ; WX 750 ; N angbracketrightbigg ; B 97 -2359 624 40 ; 
+C 30 ; WX 1044.44 ; N slashb

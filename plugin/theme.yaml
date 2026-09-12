@@ -1,0 +1,28 @@
+name: theme
+id: plugins.theme
+version: 0.1.0
+entrypoint: plugins:SetupTheme
+license: MIT
+author: LCARS Framework
+
+description: "Provides LCARS 25TH palette and theme preset manager."
+
+tags:
+  - theme
+  - ui
+  - palette
+  - default
+
+config:
+  type: object
+  properties:
+    defaultPreset:
+      type: string
+      default: defaultPalette
+  additionalProperties: false
+
+dependencies: []
+
+security:
+  importTimeDisk: false
+  requireExplicitEnable: true

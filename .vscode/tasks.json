@@ -1,0 +1,71 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "🔍 Diagnose: System Startup",
+			"type": "shell",
+			"command": "python",
+			"args": ["test_startup.py"],
+			"group": {"kind": "test", "isDefault": true},
+			"presentation": {"echo": true, "reveal": "always", "panel": "shared"},
+			"problemMatcher": []
+		},
+		{
+			"label": "🧪 Test: Current File",
+			"type": "shell",
+			"command": "python",
+			"args": ["${file}"],
+			"group": {"kind": "test"},
+			"presentation": {"echo": true, "reveal": "always", "panel": "shared"}
+		},
+		{
+			"label": "🐍 Run: Current File",
+			"type": "shell",
+			"command": "python",
+			"args": ["${file}"],
+			"presentation": {"echo": true, "reveal": "always", "panel": "shared"}
+		},
+		{
+			"label": "📚 Check: Registry",
+			"type": "shell",
+			"command": "python",
+			"args": ["-c", "from lcars.base.register import registry; items = sorted(registry.List()); print(f'Registered: {len(items)} items\\n'); [print(f'  {i}') for i in items[:30]]; print(f'  ... and {len(items)-30} more')"],
+			"presentation": {"echo": true, "reveal": "always"}
+		},
+		{
+			"label": "🔧 Test: Kernel",
+			"type": "shell",
+			"command": "python",
+			"args": ["-c", "from lcars.core.kernel import Kernel; k = Kernel(); k.Boot(); print('✅ Kernel ready'); print(f'State: {k.CurrentState}')"],
+			"presentation": {"echo": true, "reveal": "always"}
+		},
+		{
+			"label": "📋 Format: Current File",
+			"type": "shell",
+			"command": "black",
+			"args": ["${file}"],
+			"presentation": {"echo": true, "reveal": "always"}
+		},
+		{
+			"label": "✅ Lint: Current File",
+			"type": "shell",
+			"command": "pylint",
+			"args": ["${file}", "--disable=C0111,C0103"],
+			"presentation": {"echo": true, "reveal": "always"}
+		},
+		{
+			"label": "📦 Install: Requirements",
+			"type": "shell",
+			"command": "pip",
+			"args": ["install", "-q", "-r", "requirements.txt"],
+			"presentation": {"echo": true, "reveal": "always"}
+		},
+		{
+			"label": "🚀 Run: Tests",
+			"type": "shell",
+			"command": "python",
+			"args": ["-m", "pytest", "tests", "-v"],
+			"presentation": {"echo": true, "reveal": "always"}
+		}
+	]
+}

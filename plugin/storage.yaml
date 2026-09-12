@@ -1,0 +1,26 @@
+name: storage
+id: plugins.storage
+version: 0.1.0
+entrypoint: plugins:SetupStorage
+license: MIT
+author: LCARS Framework
+
+description: "Storage plugin providing a JSON file adapter for persisting project metadata."
+
+tags:
+  - storage
+  - data
+  - persistence
+
+config:
+  type: object
+  properties:
+    root:
+      type: string
+      default: data/projects
+  additionalProperties: false
+
+dependencies: []
+security:
+  importTimeDisk: true
+  requireExplicitEnable: true

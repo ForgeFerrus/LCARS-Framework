@@ -1,0 +1,24 @@
+{
+  "name": "25th Century Theme",
+  "era": "LCARS_25TH",
+  "colors": {
+    "background": "#000000",
+    "text": "#99CCFF", 
+    "primary": "#FF9900",
+    "secondary": "#3366CC",
+    "panel": "#1A1A2E",
+    "accent1": "#FFCC66",
+    "accent2": "#CC9966",
+    "alert_colors": ["#FF6666", "#FFFF66", "#66FF66"]
+  },
+  "button_colors": [
+    "#FF9900", "#CC6600", "#996600", "#663300"
+  ],
+  "fonts": {
+    "primary": "Courier New",
+    "secondary": "Arial", 
+    "size_small": 10,
+    "size_medium": 12,
+    "size_large": 16
+  }
+}

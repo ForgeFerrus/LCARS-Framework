@@ -1,0 +1,44 @@
+{
+  "version": "1.0",
+  "era": "LCARS_25TH", 
+  "name": "Example Control Panel",
+  "description": "Basic LCARS control panel layout",
+  "components": [
+    {
+      "type": "LCARSPanel",
+      "name": "main_panel",
+      "x": 20,
+      "y": 20,
+      "width": 400,
+      "height": 300,
+      "text": "MAIN CONTROL"
+    },
+    {
+      "type": "LCARSButton", 
+      "name": "power_button",
+      "x": 50,
+      "y": 60,
+      "width": 120,
+      "height": 50,
+      "text": "POWER"
+    },
+    {
+      "type": "LCARSButton",
+      "name": "reset_button", 
+      "x": 200,
+      "y": 60,
+      "width": 120,
+      "height": 50,
+      "text": "RESET"
+    },
+    {
+      "type": "LCARSLabel",
+      "name": "status_label",
+      "x": 50,
+      "y": 140,
+      "width": 270,
+      "height": 30,
+      "text": "System Status: Online"
+    }
+  ]
+}

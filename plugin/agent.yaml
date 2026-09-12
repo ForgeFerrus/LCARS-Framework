@@ -1,0 +1,40 @@
+﻿name: agentAI
+id: plugins.agent
+version: 0.1.0
+entrypoint: plugins:SetupAgent
+license: MIT
+author: LCARS Framework
+
+description: "Shim plugin exposing the local `lcars.agent` to the core. Shell execution disabled by default."
+
+tags:
+  - agent
+  - automation
+
+config:
+  type: object
+  properties:
+    allowShell:
+      type: boolean
+      default: false
+      description: "Дозволити Copilot виконувати shell команди"
+    nova:
+      type: object
+      properties:
+        useSdk:
+          type: boolean
+          default: false
+          description: "Використовувати реальний Nova Act SDK"
+        autoConnect:
+          type: boolean
+          default: false
+          description: "Автопідключення Nova Act"
+        apiKey:
+          type: string
+          description: "API ключ для Nova Act (опціонально)"
+  additionalProperties: false
+
+dependencies: []
+security:
+  allowShellPolicy: false
+  requireExplicitEnable: true

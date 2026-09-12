@@ -1,0 +1,1745 @@
+﻿#include <origin.h>
+#include <GetNBox.h>
+#include <xfutils.h>
+
+//////////////// Modification Log //////////////////////
+//----- CPY 11/4/07 LOCALIZATION_NEEDED
+////////////////////////////////////////////////////////
+
+#include <okocUtils.h>
+//------ Folger 08/24/07 USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+#include <../OriginLab/TemplateOrganizer.h>
+#include <../Originlab/WksColLabels.h>	///------ Tony 10/20/2015 ORG-13209-S7 TEMPLATE_SAVEAS_LT_IMPROVE
+
+#define STR_INVALID_SAVE_PATH	_L("System Folder or Group Folder")
+
+//static int s_nGetNDialog = 0;
+
+///Jasmine 02/10/09 CHANCE_TO_MAKE_CHANGE_IF_FILE_EXIST
+static bool s_bAskIfExist;
+///End CHANCE_TO_MAKE_CHANGE_IF_FILE_EXIST
+///------ Tony 08/07/2015 ORG-13209-S5 NOT_ALLOW_SAME_TEMPLATE_NAME
+static bool s_bSameNameTempNeedCheck = true;
+///------ End NOT_ALLOW_SAME_TEMPLATE_NAME
+
+//#define STR_SYSTEM_PATH 	okutil_get_origin_path(ORIGIN_PATH_SYSTEM, NULL, TRUE)
+//#define STR_USER_PATH 		okutil_get_origin_path(ORIGIN_PATH_USER, NULL, TRUE)
+//#define STR_TEMPLATE_XML	STR_USER_PATH + "template.xml"
+//------ End USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+
+/*
+*  Folger 04/16/07 REPLACE_BY_OKOC_OUT_MSG
+*	Jasmine 06/05/07 TEMPLATE_CHANGE_UNASSIGNED_TO_AUTO
+*	Jasmine 07/04/07 ALLOW_SAVE_TO_DIFFERENT_PATH_AND_UPDATE_ATTRIBUTE_IN_ORGANIZER
+*	Jasmine 07/04/07 ADD_PATH_TRACK
+*	Folger 08/01/07 TEMPLATE_CAN_ONLY_SAVED_IN_ONE_CATEGORY
+*	Folger 08/01/07 INIT_DLG_NO_MATTER_WITH_OR_WITHOUT_DLG
+*	Jasmine 08/15/07 QA80-10155 NO_MODIFICATION_TO_GROUP_FOLDER_FILE
+*	Sophy 10/28/08 QA80-12442 SHOW_WARNING_WHEN_SAVE_READ_ONLY_FILE
+*	Jasmine 01/24/09 #4259 ADD_LOAD_SYSTEM_THEME_CHECK_BOX
+*	Jasmine 02/03/09 #4259 ADD_HINT_FOR_LOAD_SYSTEM_THEME_CHECK_BOX
+*	Jasmine 02/04/09 EXTENSION_IS_ADDED_IN_BRANCH_LABEL
+*	Jasmine 02/04/09 QA80-13028 SHOW_USER_DEFIND_CATEGORY_INSTEAD_OF_BUILT_IN_CATEGORY_WHEN_SAVING
+*	Kyle 02/04/2009 #4259 ADD_HINT_FOR_MESSAGE_FOR_BUILT_IN_TEMPLATE
+*	Jasmine 02/04/09 MAX_ASK_SHOW_BUILT_IN_TEMPLATE_HINT_IN_ERRMSG
+*	Jasmine 02/06/09 CP_ASK_TURN_OFF_LOADSYS_CHECKBOX_IF_SAVE_BUILTIN_TEMPLATE
+*	Jasmine 02/06/09 USE_REMINDER_MSG_FOR_BUILT_IN_TEMPLATE
+*	Jasmine 02/09/09 REMOVE_OPTION_BRANCH
+*	Jasmine 02/10/09 CHANCE_TO_MAKE_CHANGE_IF_FILE_EXIST
+*	Jasmine 02/17/09 SHOW_BUILT_IN_MEG_FOR_ALL_TEMPLATE_IN_EXE_FOLDER
+*	Jasmine 02/24/09 PROTECT_LOCALIZATION_FOLDER
+*	Jasmine 03/30/09 SHOW_DESCRIPTION_STORED_IN_TEMPLATE
+*	Jasmine 08/12/09 HARD_CODE_TO_GET_FILE_EXTENSION
+*	Kit 11/09/2010 ORG-1388-S1 SHOW_FILE_IN_TEMPLATE_CATEGORY
+*	Kit 11/25/2010 ORG-1388-P1 DROPDOWN_NAME_CAN_NOT_SHOW_FULLY
+*	Tony 06/12/2012 ORG-5622-P1 DEFAULT_PATH_OF_SAVING_TEMPLATE_INCORRECT
+*/ 
+
+///------ Tony 07/28/2015 ORG-13209-S4 IMPROVE_SAVE_TEMPLATE_DLG
+/////------ Tony 07/01/2015 ORG-13209-S1 MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE
+//#define CLONE_MATCH_COMBO _L("Column Index|Short Name|Long Name")
+//
+//enum
+//{
+	//CLONE_MATCH_COLUMN_INDEX = 0,
+	//CLONE_MATCH_SHORT_NAME,
+	//CLONE_MATCH_LONG_NAME,
+//};
+/////------ End MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE
+
+#define MATCH_BY_COMBO _L("Index|Short Name|Long Name")
+
+enum
+{
+	MATCH_BY_INDEX = 0,
+	MATCH_BY_SHORT_NAME,
+	MATCH_BY_LONG_NAME,
+};
+
+///------ Tony 10/27/2015 ORG-13734-S1 BETTER_TEMPLATE_NAME_ERROR_CHECKING
+static bool _is_str_valid_for_template(const string& strTemplate)
+{
+	if(!is_str_valid_for_filename(strTemplate))
+	{
+		return false;
+	}
+	else
+	{
+		strTemplate.TrimLeft();
+		strTemplate.TrimRight();
+		if ( strTemplate.IsEmpty() )
+			return false;
+		
+		if( strTemplate.FindOneOf("$") != -1 )
+			return false;
+	}
+	
+	return true;
+}
+///------ End BETTER_TEMPLATE_NAME_ERROR_CHECKING
+
+///Kyle 09/01/2015 ORG-13327-S2 TEMPLATE_SAVE_AS_CLONE_MATCH_CONTROL_CLEANUP
+static DWORD	_combine_match_ctrls(int nMatchData, int nMatchSheet, DWORD dwCloneMatch)
+{
+	DWORD dwMatchData = 0;
+	switch( nMatchData )
+	{
+	default:
+		ASSERT(FALSE);	// fall down
+	case MATCH_BY_INDEX:
+		dwMatchData = PCBMatch_Data_Index;
+		break;
+
+	case MATCH_BY_SHORT_NAME:
+		dwMatchData = PCBMatch_Data_ShortName;
+		break;
+		
+	case MATCH_BY_LONG_NAME:
+		dwMatchData = PCBMatch_Data_LongName;
+		break;
+	}
+	O_SET_NBITS(dwCloneMatch, PCBMatch_Data_Mask, dwMatchData);
+
+	if( nMatchSheet >= 0 )
+	{
+		DWORD dwMatchSheet = 0;
+		switch( nMatchSheet )
+		{
+		case MATCH_BY_INDEX:
+			dwMatchSheet = PCBMatch_Sheet_Index;
+			break;
+
+		case MATCH_BY_SHORT_NAME:
+			dwMatchSheet = PCBMatch_Sheet_ShortName;
+			break;
+		
+		case MATCH_BY_LONG_NAME:
+			dwMatchSheet = PCBMatch_Sheet_LongName;
+			break;
+		}
+		O_SET_NBITS(dwCloneMatch, PCBMatch_Sheet_Mask, dwMatchSheet);
+	}
+
+	return dwCloneMatch;
+}
+
+static void _split_match_ctrls(DWORD dwCloneMatch, int& nMatchData, int& nMatchSheet)
+{
+	switch( dwCloneMatch & PCBMatch_Data_Mask )
+	{
+	case PCBMatch_Data_Index:
+		nMatchData = MATCH_BY_INDEX;
+		break;
+
+	case PCBMatch_Data_ShortName:
+		nMatchData = MATCH_BY_SHORT_NAME;
+		break;
+		
+	case PCBMatch_Data_LongName:
+		nMatchData = MATCH_BY_LONG_NAME;
+		break;
+		
+	default:
+		nMatchData = -1;
+	}
+
+	switch( dwCloneMatch & PCBMatch_Sheet_Mask )
+	{
+	case PCBMatch_Sheet_Index:
+		nMatchSheet = MATCH_BY_INDEX;
+		break;
+
+	case PCBMatch_Sheet_ShortName:
+		nMatchSheet = MATCH_BY_SHORT_NAME;
+		break;
+		
+	case PCBMatch_Sheet_LongName:
+		nMatchSheet = MATCH_BY_LONG_NAME;
+		break;
+		
+	default:
+		nMatchSheet = -1;
+	}
+}
+
+static void _init_cloneable_settings(TreeNode& trGetN, Page pg, int nGetNDialog, DWORD dwCntrl)
+{
+	ASSERT( is_xf_startup(nGetNDialog, dwCntrl) );
+
+	if( EXIST_PLOT != pg.GetType() )
+	{
+		trGetN.clone.Show = false;
+		trGetN.clone.Use = false;
+		return;
+	}
+
+	DWORD dwFlags;
+	GraphPage gp = pg;
+	trGetN.clone.Show = gp.IsCloneableEnabled(&dwFlags);
+	if( !trGetN.clone.Show )
+	{
+		trGetN.clone.Use = false;
+		return;
+	}
+
+	bool bCloneable = false;
+	bool bShowMatchSheet = dwFlags & PCloneableFlg_SrcCrossSheet;
+	
+	///------ Tony 10/14/2015 ORG-13209-S1 MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE 
+	//int nMatchData, nMatchSheet;
+	int nMatchData = trGetN.clone.matchcol.nVal;
+	int nMatchSheet = trGetN.clone.matchsheet.nVal;
+	///------ End MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE 
+	// read graph settings
+	{
+		double dCtrl;
+		if(pg.LT_get_var("page.cntrl", &dCtrl))
+			bCloneable = O_QUERY_BOOL((int)dCtrl, PPDWCNTRL_MARK_AS_CLONEABLE_TEMPLATE);
+
+		double match = 0.0;
+		pg.LT_get_var("page.clonematch", &match);
+		_split_match_ctrls((DWORD)match, nMatchData, nMatchSheet);
+	}
+
+	// init from data if graph has plots and this dialog is open
+	if( (dwCntrl & LTXF_SHOW_DIALOG) && !(dwFlags & PCloneableFlg_StyleHolderHasSrcInfos) )
+	{
+		int nLayerHasPlot = 0;
+		bool bOneGroup = true;
+		_get_info_from_graph_page(pg, nLayerHasPlot, bOneGroup);
+		ASSERT( nLayerHasPlot > 0 );
+
+		if(dwFlags & PCloneableFlg_SrcModiLabelUnreliable)
+			bCloneable = false;
+		else if(!bCloneable)
+		{
+			//When all data plots in one layer of the graph page, and these plots area all in one group, or un group, bCloneable = false
+			if(!bOneGroup || nLayerHasPlot > 1)
+				bCloneable = true;
+		}
+
+		if( nMatchData < 0 )
+			nMatchData = MATCH_BY_INDEX;
+		if( nMatchSheet < 0 )
+			nMatchSheet = MATCH_BY_INDEX;
+	
+		//if not all col has long name, then set PCBMatch_Data_Index
+		bool bColLongNameReliable = dwFlags & PCloneableFlg_SrcDataLongNameReliable;
+		if(bColLongNameReliable)
+			nMatchData = MATCH_BY_LONG_NAME;
+		else if(MATCH_BY_LONG_NAME == nMatchData )
+			nMatchData = MATCH_BY_INDEX;
+
+		bool bSheetLongNameReliable = dwFlags & PCloneableFlg_SrcSheetLongNameReliable;
+		if(bSheetLongNameReliable)
+			nMatchSheet = MATCH_BY_LONG_NAME;
+		else if(MATCH_BY_LONG_NAME == nMatchSheet)
+			nMatchSheet = MATCH_BY_INDEX;
+	}
+	///------ Tony 10/14/2015 ORG-13209-S1 MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE 
+	//if( nMatchData < 0 )
+		//nMatchData = MATCH_BY_INDEX;
+	//if( nMatchSheet < 0 )
+		//nMatchSheet = MATCH_BY_INDEX;
+	//
+	//trGetN.clone.Use				= bCloneable;
+	//trGetN.clone.matchcol.nVal		= nMatchData;
+	//trGetN.clone.matchsheet.Show	= bShowMatchSheet;
+	//trGetN.clone.matchsheet.nVal	= nMatchSheet;
+	trGetN.clone.matchsheet.Show	= bShowMatchSheet;
+	if( dwCntrl & LTXF_SHOW_DIALOG)
+	{
+		if( nMatchData < 0  )
+			nMatchData = MATCH_BY_INDEX;
+		if( nMatchSheet < 0 )
+			nMatchSheet = MATCH_BY_INDEX;
+		
+		trGetN.clone.Use				= bCloneable;
+		trGetN.clone.matchcol.nVal		= nMatchData;
+		trGetN.clone.matchsheet.nVal	= nMatchSheet;
+	}
+	else
+	{
+		if( nMatchData < 0  )
+		{
+			trGetN.clone.matchcol.nVal = MATCH_BY_INDEX;
+		}
+		if( nMatchSheet < 0 )
+		{
+			trGetN.clone.matchsheet.nVal = MATCH_BY_INDEX;
+		}
+	}
+	///------ End MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE 
+}
+///End TEMPLATE_SAVE_AS_CLONE_MATCH_CONTROL_CLEANUP
+
+///------ Tony 09/14/2015 ORG-13209-S8 SHOW_WARNING_MESSAGE_FOR_UNRELIABLE_LN_AND_LABEL_ROW
+static bool _check_show_unreliable_message(string& strErrMsg, bool& bOKEnable, Page& pg, TreeNode& trGetN)
+{
+	if( EXIST_PLOT != pg.GetType() || !trGetN.clone || trGetN.clone.Show == false
+		|| !trGetN.clone.matchcol || !trGetN.clone.matchsheet || !trGetN.matchModifiers)
+	{
+		return false;
+	}
+	
+	bool bCloneableMark = trGetN.clone.Use;
+	int nMatchData = trGetN.clone.matchcol.nVal;
+	int nMatchSheet = trGetN.clone.matchsheet.nVal;
+
+	///------ Tony 10/20/2015 ORG-13209-S7 TEMPLATE_SAVEAS_LT_IMPROVE
+	/////------ Tony 10/10/2015 ORG-13209-S7 MATCH_MODIFIER_USE_STRING
+	////int nMatchModifiers = trGetN.matchModifiers.nVal;
+	//string strMatchModifiers = trGetN.matchModifiers.strVal;
+	//int nMatchModifiers = s_vsMatchByCombo.Find(strMatchModifiers);
+	//if(nMatchModifiers == -1)
+		//nMatchModifiers = PMMT_OFFSET;
+	/////------ End MATCH_MODIFIER_USE_STRING
+	string strMatchModifiers = trGetN.matchModifiers.strVal;
+	int nModifierType = _get_modifier_type(pg, strMatchModifiers);
+	///------ End TEMPLATE_SAVEAS_LT_IMPROVE
+
+	GraphPage gp = pg;
+	//set match modifiers
+	TreeNode tr = gp.GetFormat(FPB_OTHER, FOB_OTHER, true, true);
+	//save the old ones in order to get the dwFlags(PCloneableFlg_SrcModiLabelUnreliable), must restore them after done
+	int nOldMatchBy = tr.Root.Misc.MatchBy.nVal;
+	string strOldMatchUDL = tr.Root.Misc.MatchUDL.strVal;
+	///------ Tony 10/20/2015 ORG-13209-S7 TEMPLATE_SAVEAS_LT_IMPROVE
+	//tr.Root.Misc.MatchBy.nVal = nMatchModifiers;
+	//if (nMatchModifiers >= PMMT_USERPARAM && nMatchModifiers < PMMT_USERPARAM_END)
+	//{
+		//tr.Root.Misc.MatchUDL.strVal = s_vsMatchByCombo[nMatchModifiers];
+	//}		
+	///Kyle 09/23/2016 ORG-15294-P1 TEMPLATE_SAVE_AS_PREVENT_APPLY_PANEL_COLUMNS
+	/*
+	tr.Root.Misc.MatchBy.nVal = nModifierType;
+	if (nModifierType >= PMMT_USERPARAM && nModifierType < PMMT_USERPARAM_END)
+	{
+		tr.Root.Misc.MatchUDL.strVal = strMatchModifiers;
+	}
+	*/
+	Tree trFormat;
+	trFormat.Root.Misc.MatchBy.nVal = nModifierType;
+	if (nModifierType >= PMMT_USERPARAM && nModifierType < PMMT_USERPARAM_END)
+	{
+		trFormat.Root.Misc.MatchUDL.strVal = strMatchModifiers;
+	}
+	///End TEMPLATE_SAVE_AS_PREVENT_APPLY_PANEL_COLUMNS
+	///------ End TEMPLATE_SAVEAS_LT_IMPROVE
+	///Kyle 09/23/2016 ORG-15294-P1 TEMPLATE_SAVE_AS_PREVENT_APPLY_PANEL_COLUMNS
+	//pg.ApplyFormat(tr, true, true);
+	pg.UpdateThemeIDs(trFormat.Root);
+	pg.ApplyFormat(trFormat, true, true);
+	///End TEMPLATE_SAVE_AS_PREVENT_APPLY_PANEL_COLUMNS
+	
+	DWORD dwFlags;
+	bool bCloneEnabled = gp.IsCloneableEnabled(&dwFlags);
+	
+	//restore
+	///Kyle 09/23/2016 ORG-15294-P1 TEMPLATE_SAVE_AS_PREVENT_APPLY_PANEL_COLUMNS
+	/*
+	tr.Root.Misc.MatchBy.nVal = nOldMatchBy;
+	tr.Root.Misc.MatchUDL.strVal = strOldMatchUDL;
+	pg.ApplyFormat(tr, true, true);
+	*/
+	trFormat.Root.Misc.MatchBy.nVal = nOldMatchBy;
+	trFormat.Root.Misc.MatchUDL.strVal = strOldMatchUDL;
+	pg.UpdateThemeIDs(trFormat.Root);
+	pg.ApplyFormat(trFormat, true, true);
+	///End TEMPLATE_SAVE_AS_PREVENT_APPLY_PANEL_COLUMNS
+	
+	if( bCloneEnabled && !(dwFlags & PCloneableFlg_StyleHolderHasSrcInfos) )
+	{
+		if(!(PCloneableFlg_SrcDataLongNameReliable & dwFlags) && bCloneableMark && MATCH_BY_LONG_NAME == nMatchData)
+		{
+			strErrMsg = XFWARN_EMPTY_DUPLICATE_COLUMN_LONG_NAME;
+			bOKEnable = false;
+			return true;
+		}
+		
+		if(!(PCloneableFlg_SrcSheetLongNameReliable & dwFlags) && bCloneableMark && MATCH_BY_LONG_NAME == nMatchSheet)
+		{
+			strErrMsg = XFWARN_EMPTY_DUPLICATE_SHEET_LONG_NAME;
+			bOKEnable = false;
+			return true;
+		}
+		
+		
+		if(PCloneableFlg_SrcModiLabelUnreliable & dwFlags)
+		{
+			strErrMsg = XFWARN_EMPTY_DUPLICATE_MODIFIER_LABEL;
+			bOKEnable = false;
+			return true;
+		}
+	}
+	
+	return false;
+}
+///------ End SHOW_WARNING_MESSAGE_FOR_UNRELIABLE_LN_AND_LABEL_ROW
+
+
+/// ML 06/02/2017 ORG-15165-P1 template_saveas_USE_NEW_TEMPLATE_EXTENSIONS
+static	string	s_strPathNameForSaving;		// I don't know how else to do this
+/// end template_saveas_USE_NEW_TEMPLATE_EXTENSIONS	
+
+///------ End IMPROVE_SAVE_TEMPLATE_DLG
+///Jasmine 02/24/09 PROTECT_LOCALIZATION_FOLDER
+static string _get_localization_folder()
+{
+	string strLocalization = okutil_get_language_path(true);
+	strLocalization = GetAppPath(true) + strLocalization.GetToken(0, OFSEP) + OFSEPS;
+	strLocalization.MakeUpper();
+	
+	return strLocalization;
+}
+///End PROTECT_LOCALIZATION_FOLDER
+
+///Jasmine 02/17/09 SHOW_BUILT_IN_MEG_FOR_ALL_TEMPLATE_IN_EXE_FOLDER
+static bool _override_exe_folder(LPCSTR lpcszFile)
+{
+	string strFolder = GetFilePath(lpcszFile);
+	if(lstrcmpi(strFolder, STR_USER_PATH) == 0 || lstrcmpi(strFolder, STR_SYSTEM_PATH) == 0)
+	{
+		string strExeFile = STR_SYSTEM_PATH + GetFileName(lpcszFile);
+		if( strExeFile.IsFile() )
+			return true;
+		
+		///Jasmine 02/24/09 PROTECT_LOCALIZATION_FOLDER
+		string strLocalization = _get_localization_folder();
+		char szTemp[MAXFULLPATH];
+		lstrcpy(szTemp, strLocalization);
+		if(FindFile(GetFileName(lpcszFile), szTemp) == true) 
+			return true;
+		///End PROTECT_LOCALIZATION_FOLDER
+	}
+
+	return false;
+}
+///End SHOW_BUILT_IN_MEG_FOR_ALL_TEMPLATE_IN_EXE_FOLDER
+
+///Jasmine 01/24/09 #4259 ADD_LOAD_SYSTEM_THEME_CHECK_BOX
+static bool _is_load_system_theme(Page& page)
+{	
+	///Jasmine 02/06/09 CP_ASK_TURN_OFF_LOADSYS_CHECKBOX_IF_SAVE_BUILTIN_TEMPLATE
+	string strCurrentFile = page_get_template_name(page);
+	///Jasmine 02/17/09 SHOW_BUILT_IN_MEG_FOR_ALL_TEMPLATE_IN_EXE_FOLDER
+	//if( is_built_in_template(page.GetType(), GetFileName(strCurrentFile, true), strCurrentFile) )
+	///Jasmine 02/24/09 PROTECT_LOCALIZATION_FOLDER
+	//if(lstrcmpi( GetFilePath(strCurrentFile), STR_SYSTEM_PATH) == 0)
+	string strCurrentPath = GetFilePath(strCurrentFile);
+	if(lstrcmpi(STR_SYSTEM_PATH, strCurrentPath) == 0 || strCurrentPath.Find( _get_localization_folder() )>= 0 )
+		return false;
+	///End SHOW_BUILT_IN_MEG_FOR_ALL_TEMPLATE_IN_EXE_FOLDER
+	///End CP_ASK_TURN_OFF_LOADSYS_CHECKBOX_IF_SAVE_BUILTIN_TEMPLATE
+	
+	string strLT;
+	strLT.Format("%s!page.cntrl", page.GetName());
+	double dd;
+	LT_get_var(strLT, &dd);
+	DWORD dwCntrl = dd;
+	return !(dwCntrl & PPDWCNTRL_IGNORE_SYSTEM_THEME);
+}
+
+static void _set_load_system_theme(Page& page, bool bLoad)
+{
+	string strLT;
+	strLT.Format("%s!page.cntrl", page.GetName());
+	double dd;
+	LT_get_var(strLT, &dd);
+	DWORD dwCntrl = dd;
+	
+	if(bLoad)
+		dwCntrl &= ~PPDWCNTRL_IGNORE_SYSTEM_THEME;
+	else
+		dwCntrl |= PPDWCNTRL_IGNORE_SYSTEM_THEME;
+	
+	strLT.Format("page.cntrl = %d", dwCntrl);	
+	page.LT_execute(strLT);
+}
+///End ADD_LOAD_SYSTEM_THEME_CHECK_BOX
+	
+//------ Folger 08/24/07 USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+//static bool	_find_template(TreeNode& trBranch, string strTemplate, string& strFile, string& strCate)
+//{
+	//TreeNode tr;
+	//if(trBranch.IsValid())
+		//tr = trBranch.FindNodeByAttribute(STR_LABEL_ATTRIB, strTemplate);
+	//if(!tr.IsValid() || !tr.Parent().IsValid())
+		//return false;
+	//tr.GetAttribute(STR_FILENAME_ATTRIB, strFile);
+	//tr = tr.Parent();
+	//tr.GetAttribute(STR_LABEL_ATTRIB, strCate);
+	//if(!lstrlen(strCate))
+		//strCate = tr.tagName;
+	//return true;
+//}
+//------ End USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+
+//------ Folger 09/29/07 NEW_DISIGN_FOR_SAVING_TEMPLATE_XML
+static void _remove_template_label_attribue(TreeNode &tr)
+{
+	foreach(TreeNode trBranch in tr.Children)
+	{
+		foreach(TreeNode trCategory in trBranch.Children)
+		{
+			octree_remove_attribute(&trCategory, STR_LABEL_ATTRIB);
+		}
+	}
+}
+//------ End NEW_DISIGN_FOR_SAVING_TEMPLATE_XML
+
+static void _set_category_default_value(TreeNode& trGetN, int nType, string strCategory)
+{
+	///Jasmine 02/04/09 QA80-13028 SHOW_USER_DEFIND_CATEGORY_INSTEAD_OF_BUILT_IN_CATEGORY_WHEN_SAVING
+	//if(!lstrlen(strCategory))
+	if( !lstrlen(strCategory) || 0 == strCategory.CompareNoCase(STR_BUILT_IN_CATEGORY) )
+	{		
+		strCategory = "UserDefined";		
+	}
+	///End SHOW_USER_DEFIND_CATEGORY_INSTEAD_OF_BUILT_IN_CATEGORY_WHEN_SAVING
+	
+	if( !lstrlen(trGetN.category.strVal) || PDS_AUTO == okutil_cvt_str_to_predefined_type(trGetN.category.strVal) )
+		trGetN.category.strVal = strCategory;
+	
+	vector<string> vsCategories;
+	//------ Folger 10/10/07 FIX_BUGS_ABOUT_TEMPLATE_CATEGORY
+	//okutil_get_template_categories(STR_TEMPLATE_XML, &vsCategories, nType);
+	/// Iris 2/2/2015 ORG-12578-S1 NOT_ALLOW_SAVE_USER_TEMPLATE_INTO_BUILDIN_CATEGORY
+	//if (okutil_get_template_categories(STR_TEMPLATE_XML, &vsCategories, nType) == 0)
+		//okutil_get_template_categories(STR_SYSTEM_TEMPLATE_XML, &vsCategories, nType);
+	okutil_get_template_categories(STR_TEMPLATE_XML, &vsCategories, nType);
+	///End NOT_ALLOW_SAVE_USER_TEMPLATE_INTO_BUILDIN_CATEGORY
+	//------ End FIX_BUGS_ABOUT_TEMPLATE_CATEGORY
+	///Sophy 11/13/2015 ORG-13757-P8 PROPER_CHECK_UNTITLED_CATEGORY
+	if ( trGetN.category.strVal.CompareNoCase(STR_UNTITLED_CATEGORY_LABEL) == 0 )
+	{
+		trGetN.category.strVal = "UserDefined";
+	}
+	int nIndex = vsCategories.Find(STR_UNTITLED_CATEGORY_LABEL);
+	if ( nIndex >= 0 )
+		vsCategories.RemoveAt(nIndex);
+	///end PROPER_CHECK_UNTITLED_CATEGORY
+	if(-1 == vsCategories.Find(strCategory))
+		vsCategories.Add(strCategory);	
+	if(-1 == vsCategories.Find("UserDefined"))
+		vsCategories.Add("UserDefined");	
+	string strList;
+	strList.SetTokens(vsCategories, '|');	
+	
+	trGetN.category.SetAttribute(STR_COMBO_ATTRIB, "|" + strList);
+	trGetN.category.SetAttribute(STR_OCNTRL_OPTNS, OCNTRLPARAM1_NOT_LOCALIZED);		//------ Folger 11/09/07 COMBO_TEXT_NO_NEEDED_LOCALIZE
+}
+
+///-----Kit 11/09/2010 ORG-1388-S1 SHOW_FILE_IN_TEMPLATE_CATEGORY
+static bool _get_page( LPCTSTR lpcszPageName, Page &pg )
+{
+	string strPageName( lpcszPageName );
+	strPageName.TrimLeft('[');
+	strPageName.TrimRight(']');
+	Page pgTemp( strPageName );
+	
+	if( !pgTemp.IsValid() )
+		return false;
+	
+	pg = pgTemp;
+	
+	return true;
+}
+
+///-----Kit 11/25/2010 ORG-1388-P1 DROPDOWN_NAME_CAN_NOT_SHOW_FULLY
+static bool	_check_need_resize_combo_box( const vector<string> &vsComboContent, int nSelFileNameLen )
+{
+	int nMaxComboContentLen = 0;
+	for( int ii=0; ii<vsComboContent.GetSize(); ++ii )
+	{
+		if( nMaxComboContentLen < vsComboContent[ii].GetLength() )
+			nMaxComboContentLen = vsComboContent[ii].GetLength();
+	}
+	
+	return nSelFileNameLen > nMaxComboContentLen;
+}
+
+static bool _resize_combo_box( TreeNode &trResizeCtrl, int nNewLen )
+{
+	if( !trResizeCtrl.IsValid() )
+		return false;
+	
+	string strWidth = "";
+	strWidth.Format( "%d-%d", nNewLen, nNewLen );
+	trResizeCtrl.SetAttribute( STR_ATTRIB_EDIT_DISPLAY_WIDTH_RANGE, strWidth );
+	return true;
+}
+///-----End DROPDOWN_NAME_CAN_NOT_SHOW_FULLY
+
+static bool _set_template_combobox_values( Tree &trGetN, const TreeNode &tnAllCategory, LPCTSTR lpcszSelTemplateFileName )
+{
+	/// Iris 2/2/2015 ORG-12578-S1 NOT_ALLOW_SAVE_USER_TEMPLATE_INTO_BUILDIN_CATEGORY
+	//TreeNode tnCurrentSelectedCategory = tnAllCategory.FindNodeByAttribute( STR_LABEL_ATTRIB, trGetN.category.strVal );
+	TreeNode tnCurrentSelectedCategory;
+	if( tnAllCategory )
+		tnCurrentSelectedCategory = tnAllCategory.FindNodeByAttribute( STR_LABEL_ATTRIB, trGetN.category.strVal );
+	///End NOT_ALLOW_SAVE_USER_TEMPLATE_INTO_BUILDIN_CATEGORY
+
+	string strList = "";
+	if( tnCurrentSelectedCategory.IsValid() )	
+	{
+		vector<string> vsTemplateNamesExt;
+		tree_get_attributes( tnCurrentSelectedCategory, vsTemplateNamesExt, STR_NAME_ATTRIB );
+		
+		///------ Tony 08/26/2015 ORG-13203-P4 USE_FILENAME_IF_NO_NAME_ATTRIBUTE
+		vector<string> vsFileNamesExt;
+		tree_get_attributes( tnCurrentSelectedCategory, vsFileNamesExt, STR_FILENAME_ATTRIB );
+		///------ End USE_FILENAME_IF_NO_NAME_ATTRIBUTE
+
+		string strCategory = trGetN.category.strVal;		
+		bool bUserDefinedName = ( strCategory.CompareNoCase( "UserDefined" ) == 0 );		
+		vector<string> vsTemplateNames;
+		
+		for( int ii=0; ii<vsTemplateNamesExt.GetSize(); ii++ )
+		{
+			string strFileName = GetFileName( vsTemplateNamesExt[ii], true );
+			///------ Tony 08/26/2015 ORG-13203-P4 USE_FILENAME_IF_NO_NAME_ATTRIBUTE
+			if(strFileName.IsEmpty())
+			{
+				strFileName = GetFileName( vsFileNamesExt[ii], true );
+				if(strFileName.IsEmpty())
+					continue;
+			}
+			///------ End USE_FILENAME_IF_NO_NAME_ATTRIBUTE
+			if( bUserDefinedName )
+			{
+				if( -1 == vsTemplateNames.Find( strFileName ) )
+					vsTemplateNames.Add( strFileName );
+			}
+			else
+				vsTemplateNames.Add( strFileName );
+		}
+	
+		strList.SetTokens( vsTemplateNames, '|' ); 
+		  
+		///-----Kit 11/25/2010 ORG-1388-P1 DROPDOWN_NAME_CAN_NOT_SHOW_FULLY	
+		#define	DROPDOWN_BUTTON_NEED_MORE_GAP	2
+		if( _check_need_resize_combo_box( vsTemplateNames, lstrlen( lpcszSelTemplateFileName ) ) )
+		{
+			_resize_combo_box( trGetN.template, lstrlen( lpcszSelTemplateFileName ) + DROPDOWN_BUTTON_NEED_MORE_GAP ); 
+		}
+		///-----End DROPDOWN_NAME_CAN_NOT_SHOW_FULLY
+	}
+	
+	trGetN.template.SetAttribute( STR_COMBO_ATTRIB, "|" + strList );
+	///------ Folger 06/24/2015 ORG-13209-S2 TEMPLATE_SAVEAS_INITIAL_FOCUS_ON_TEMPLATE_EDIT
+	//trGetN.template.SetAttribute( STR_OCNTRL_OPTNS, OCNTRLPARAM1_NOT_LOCALIZED);
+	trGetN.template.SetAttribute( STR_OCNTRL_OPTNS, OCNTRLPARAM1_NOT_LOCALIZED | OCNTRLPARAM1_DEFAULT_FOCUS );
+	///------ End TEMPLATE_SAVEAS_INITIAL_FOCUS_ON_TEMPLATE_EDIT
+	
+	return true;
+}
+///-----End SHOW_FILE_IN_TEMPLATE_CATEGORY
+
+///------ Tony 08/11/2015 ORG-13209-P1 SHORT_LONG_NAME_COMBO_LOAD
+#define DLG_NAME	"template_saveas"
+#define SHORT_NAME_LIST "ShortName List"
+#define LONG_NAME_LIST "LongName List"
+#define MAX_LIST_SIZE 20
+static void _save_name_combo_list(TreeNode& trName, const string& strListName)
+{
+	string strCombo;
+	trName.GetAttribute(STR_COMBO_ATTRIB, strCombo);
+	if( !trName.strVal.IsEmpty() && strCombo.FindToken( trName.strVal, '|' ) < 0 )
+	{
+		vector<string> vsComboTokens;
+		//>>..User
+		//:
+		//<auto>
+		int nAutoOffset = 3;
+		if(strCombo.GetTokens( vsComboTokens, '|') && vsComboTokens.GetSize() >= MAX_LIST_SIZE + nAutoOffset)
+		{
+			vsComboTokens.RemoveAt(nAutoOffset);
+			strCombo.SetTokens(vsComboTokens, '|');
+		}
+			
+		strCombo = strCombo + "|" + trName.strVal;		
+	}
+	dlg_save_to_registry(DLG_NAME, strListName, strCombo);		
+}
+
+static void _load_name_combo_list(TreeNode& trName, const string& strListName)
+{
+	string strCombo;
+	if(dlg_load_registry(DLG_NAME, strListName, strCombo))
+	{
+		trName.SetAttribute(STR_COMBO_ATTRIB, strCombo);
+	}
+	else
+	{
+		string str = ">>.."+ "User" + "|:|" + STR_AUTO;
+		trName.SetAttribute(STR_COMBO_ATTRIB, str);
+	}
+}
+///------ End SHORT_LONG_NAME_COMBO_LOAD
+
+///-----Kit 11/15/2010 ORG-1483-P3 NO_NEED_POPUP_CONFIRM_MSG_WHEN_TEMPLATE_HAVE_IN_USER_FOLDER
+static bool _is_in_system_folder_not_in_user_folder( LPCTSTR lpcszFullFileName )
+{	
+	string strFullFileName = lpcszFullFileName;
+	ASSERT( !strFullFileName.IsPath() );
+	string strSystemFile = STR_SYSTEM_PATH + GetFileName( lpcszFullFileName );
+
+	if( strSystemFile.IsFile() && !strFullFileName.IsFile() )
+		return true;
+	
+	return false;
+}
+///-----End NO_NEED_POPUP_CONFIRM_MSG_WHEN_TEMPLATE_HAVE_IN_USER_FOLDER
+
+//------ Folger 08/24/07 USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+bool _is_path_allow_saving(string strPath)
+{
+	vector<string> vsPaths;
+	vsPaths.Add(okutil_get_origin_path(ORIGIN_PATH_SYSTEM, NULL, TRUE));
+	vsPaths.Add(okutil_get_origin_path(ORIGIN_PATH_GROUP, NULL, TRUE));
+	for (int ii=0; ii<vsPaths.GetSize(); ii++)
+	{
+		if (strPath.CompareNoCase(vsPaths[ii]) == 0)
+			return false;
+	}
+	//------ Folger 09/29/07 NOT_ALLOW_SAVE_IN_LOCALIZATION_FOLDER
+	///Jasmine 02/24/09 PROTECT_LOCALIZATION_FOLDER
+	////hard code, need to clean up later
+	//string strLocalization = okutil_get_language_path(true);
+	//strLocalization.Delete(strLocalization.GetLength() - 2, 2);
+	//strLocalization.Insert(0, GetAppPath(true));
+	//strLocalization.MakeUpper();
+	string strLocalization = _get_localization_folder();
+	///End PROTECT_LOCALIZATION_FOLDER
+	///------ Tony 06/12/2012 ORG-5622-P1 DEFAULT_PATH_OF_SAVING_TEMPLATE_INCORRECT
+	///if (strPath.Find(strLocalization) == 0)
+	if (strPath.Find(strLocalization, 0, FALSE) == 0)
+	///------ End DEFAULT_PATH_OF_SAVING_TEMPLATE_INCORRECT	
+	return false;
+	//------ End NOT_ALLOW_SAVE_IN_LOCALIZATION_FOLDER
+	
+	return true;
+}
+///------ Tony 07/01/2015 ORG-13209-S1 MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE
+///------ Tony 07/28/2015 ORG-13209-S4 IMPROVE_SAVE_TEMPLATE_DLG
+//static void _get_info_from_graph_page(Page& pg, int& nLayerHasPlot, bool& bOneGroup, bool& bFromSameBook, bool& bAllColHasLongName)
+///Kyle 08/31/2015 ORG-13327-S2 UNCHECK_CLONEABLE_BY_DEFAULT_IF_MODI_DATA_COULD_NOT_MATCH
+//static void _get_info_from_graph_page(Page& pg, int& nLayerHasPlot, bool& bOneGroup, bool& bFromSameBook, bool& bFromSameSheet, bool& bAllColHasLongName, bool& bAllSheetHasLongName)
+///Kyle 09/01/2015 ORG-13327-S2 TEMPLATE_SAVE_AS_CLONE_MATCH_CONTROL_CLEANUP
+//static void _get_info_from_graph_page(Page& pg, int& nLayerHasPlot, bool& bOneGroup, bool& bFromSameBook, bool& bFromSameSheet, bool& bAllColHasLongName, bool& bAllSheetHasLongName, bool& bDefCloneable)
+static void _get_info_from_graph_page(Page& pg, int& nLayerHasPlot, bool& bOneGroup)
+///End TEMPLATE_SAVE_AS_CLONE_MATCH_CONTROL_CLEANUP
+///End UNCHECK_CLONEABLE_BY_DEFAULT_IF_MODI_DATA_COULD_NOT_MATCH
+///------ End IMPROVE_SAVE_TEMPLATE_DLG
+{
+	GraphPage gp = pg;
+	if(!gp)
+		return;
+	///Kyle 09/01/2015 ORG-13327-S2 TEMPLATE_SAVE_AS_CLONE_MATCH_CONTROL_CLEANUP
+	/*
+	///Kyle 08/21/2015 ORG-13327-S1 MOVE_DETECTION_OF_DEFAULT_CLONEABLE_OPTIONS_TO_VC
+	DWORD dwFlags;
+	bFromSameBook			= gp.IsCloneableEnabled(&dwFlags);
+	bFromSameSheet			= !(dwFlags & PCloneableFlg_SrcCrossSheet);
+	bAllColHasLongName		= dwFlags & PCloneableFlg_SrcDataLongNameReliable;
+	bAllSheetHasLongName	= dwFlags & PCloneableFlg_SrcSheetLongNameReliable;
+	///End MOVE_DETECTION_OF_DEFAULT_CLONEABLE_OPTIONS_TO_VC
+	///Kyle 08/31/2015 ORG-13327-S2 UNCHECK_CLONEABLE_BY_DEFAULT_IF_MODI_DATA_COULD_NOT_MATCH
+	bDefCloneable			= !(dwFlags & PCloneableFlg_SrcModiLabelUnreliable);
+	///End UNCHECK_CLONEABLE_BY_DEFAULT_IF_MODI_DATA_COULD_NOT_MATCH
+	
+	Page pgSrc;
+	Datasheet sheetSrc;	///------ Tony 07/28/2015 ORG-13209-S4 IMPROVE_SAVE_TEMPLATE_DLG
+	*/
+	nLayerHasPlot = 0;
+	bOneGroup = true;
+	///End TEMPLATE_SAVE_AS_CLONE_MATCH_CONTROL_CLEANUP
+	foreach(GraphLayer gl in gp.Layers)
+	{
+		if(gl.DataPlots.Count() > 0)
+			nLayerHasPlot++;
+		
+		if(bOneGroup && gl.GetGroupPlotsCount() > 1)
+		{
+			bOneGroup = false;
+		}
+		
+		///Kyle 08/21/2015 ORG-13327-S1 MOVE_DETECTION_OF_DEFAULT_CLONEABLE_OPTIONS_TO_VC
+		/*
+		if(bFromSameBook || bAllColHasLongName)
+		{
+			foreach(DataPlot dp in gl.DataPlots)
+			{
+				DataRange dr;
+				if(dp.GetDataRange(dr))
+				{
+					for(int nn = 0; nn < dr.GetNumRanges(); nn++)
+					{
+						Datasheet dsTmp;
+						int c1, c2;
+						if(dr.GetRange(dsTmp, c1, c2, nn))
+						{
+							if(dsTmp)
+							{
+								if(bFromSameBook)
+								{
+									Page pgTmp = dsTmp.GetPage();
+									if(!pgSrc)
+									{
+										pgSrc = pgTmp;
+									}
+									else
+									{
+										if(pgSrc != pgTmp)
+										{
+											bFromSameBook = false;
+										}
+									}
+								}
+								///------ Tony 07/28/2015 ORG-13209-S4 IMPROVE_SAVE_TEMPLATE_DLG
+								if(bFromSameSheet)
+								{
+									if(!sheetSrc)
+									{
+										sheetSrc = dsTmp;
+									}
+									else
+									{
+										if(!is_same_layer(sheetSrc, dsTmp))
+										{
+											bFromSameSheet = false;
+										}
+									}
+								}
+								
+								if(bAllSheetHasLongName)
+								{
+									string strLongName = dsTmp.GetLongName();
+									if(strLongName.IsEmpty())
+									{
+										bAllSheetHasLongName = false;
+									}
+								}
+								///------ End IMPROVE_SAVE_TEMPLATE_DLG
+								if(bAllColHasLongName)
+								{
+									Worksheet wks = dsTmp;
+									if(wks)
+									{
+										for(int nCol = c1; nCol <= c2; nCol ++)
+										{
+											Column col = wks.Columns(nCol);
+											if(col)
+											{
+												string strLongName = col.GetLongName();
+												if(strLongName.IsEmpty())
+												{
+													bAllColHasLongName = false;
+												}
+											}
+										}
+									}
+									
+									MatrixLayer ml = dsTmp;
+									if(ml)
+									{
+										for(int nCol = c1; nCol <= c2; nCol ++)
+										{
+											MatrixObject mo = ml.MatrixObjects(nCol); 
+											if(mo)
+											{
+												string strLongName = mo.GetLongName();
+												if(strLongName.IsEmpty())
+												{
+													bAllColHasLongName = false;
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					
+				}
+			}
+
+		}
+		*/
+		///End MOVE_DETECTION_OF_DEFAULT_CLONEABLE_OPTIONS_TO_VC
+	}
+}
+///------ End MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE
+
+///------ Tony 10/20/2015 ORG-13209-S7 TEMPLATE_SAVEAS_LT_IMPROVE
+static int _get_modifier_type(Page& pg, string& strLabel)
+{
+	GraphPage gp = pg;
+	if(!gp || strLabel.IsEmpty())
+		return PMMT_OFFSET;
+	
+	int nRCLTType = RCLT_INVALID;
+	vector<string> vsUDLs;
+	gp.GetCommonUPL(&vsUDLs);
+	int nOffset = vsUDLs.Find(strLabel);
+	if ( nOffset >= 0 )
+	{
+		nRCLTType = RCLT_UDL + nOffset;
+	}
+	else
+	{
+		Worksheet wks;
+		nRCLTType = get_label_type_by_name_or_indentifier(wks, strLabel);
+	}
+	
+	int nType = PMMT_OFFSET;
+	switch(nRCLTType)
+	{
+	case RCLT_SHORT_NAME:
+		nType = PMMT_SNAME;
+		break;
+	
+	case RCLT_LONG_NAME:
+		nType = PMMT_LNAME;
+		break;
+		
+	case RCLT_UNIT:
+		nType = PMMT_UNIT;
+		break;
+		
+	case RCLT_COMMENT:
+		nType = PMMT_COMMENT;
+		break;
+		
+	default:
+		if(nRCLTType >= RCLT_PARAM && nRCLTType < RCLT_SAMPLE_RATE)
+		{
+			nType = nRCLTType - RCLT_PARAM + PMMT_PARAM;
+		}
+		else if(nRCLTType >= RCLT_UDL && nRCLTType <= RCLT_MAX_UDL)
+		{
+			nType = nRCLTType - RCLT_UDL + PMMT_USERPARAM;
+		}
+	
+	}
+	
+	return nType;
+}
+
+
+///------ End TEMPLATE_SAVEAS_LT_IMPROVE
+
+//------ End USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+static bool _init_dlg(TreeNode& trGetN)
+{
+	if(!trGetN.IsValid())
+		return false;	
+	//////page//////
+	///-----Kit 11/09/2010 ORG-1388-S1 SHOW_FILE_IN_TEMPLATE_CATEGORY
+	//string strPage = trGetN.pg.strVal;
+	//strPage.TrimLeft('[');
+	//strPage.TrimRight(']');
+	//Page pg(strPage);
+	//if(!pg.IsValid())
+		//return error_report("Error! Page is invalid!");
+	Page pg;
+	if( !_get_page( trGetN.pg.strVal, pg ) )
+		return error_report("Error! Page is invalid!");
+	///-----End SHOW_FILE_IN_TEMPLATE_CATEGORY
+	
+	//---- CPY 8/17/06 QA70-8428 ADD_SAVE_AS_OPTION
+	trGetN.pg.Enable = ENABLE_READ_ONLY;
+	//----
+	
+	//---- Jake 04/06/07 ADD_SAVE_TEMPLATE_AS_OPTION
+	trGetN.savetemplate.Enable = ENABLE_READ_ONLY;
+	//---- end ADD_SAVE_TEMPLATE_AS_OPTION
+	
+	int nType = pg.GetType();
+	/// Kenny 3/14/2017 ORG-14896-S1 ORIGIN_SUPPORT_SHELL_THUMBNAIL_AND_PREVIEW
+	//string strExt = page_get_template_ext(nType);
+	string strExt = page_get_template_ext(nType, NULL, TEMPL_EXT_FLAG_NEW_TYPE);
+	/// End ORIGIN_SUPPORT_SHELL_THUMBNAIL_AND_PREVIEW
+	string	strFileDlgAllExts = page_get_template_FileDlg_exts(nType);	/// ML 06/02/2017 ORG-15165-P1 template_saveas_USE_NEW_TEMPLATE_EXTENSIONS
+
+	////////Template Name////////
+	string strTemplate = trGetN.template.strVal, strFileCurrent;
+	if(!lstrlen(strTemplate) || PDS_AUTO == okutil_cvt_str_to_predefined_type(strTemplate))	///Jasmine 06/05/07 TEMPLATE_CHANGE_UNASSIGNED_TO_AUTO
+	{
+		strFileCurrent = page_get_template_name(pg);
+		///------ Tony 08/07/2015 ORG-13209-S5 NOT_ALLOW_SAME_TEMPLATE_NAME
+		////------ Folger 08/01/07 TEMPLATE_CAN_ONLY_SAVED_IN_ONE_CATEGORY
+		////strTemplate = GetFileName(strFileCurrent, true);
+		////trGetN.template.strVal = strTemplate;
+		//strTemplate = okutil_composite_name_from_file_path(strFileCurrent, "Templates");	//find the proper template name
+		//trGetN.template.strVal = GetFileName(strFileCurrent, true);		//name show in dialog is without "(User)" when user-defined
+		////------ End TEMPLATE_CAN_ONLY_SAVED_IN_ONE_CATEGORY
+		strTemplate = GetFileName(strFileCurrent, true);
+		trGetN.template.strVal = strTemplate;
+		///------ End NOT_ALLOW_SAME_TEMPLATE_NAME
+	}
+	
+	///Jasmine 03/30/09 SHOW_DESCRIPTION_STORED_IN_TEMPLATE
+	string strDesc = trGetN.desc.strVal;	
+	if( !lstrlen(strDesc) || PDS_AUTO == okutil_cvt_str_to_predefined_type(strDesc) )
+	{
+		strDesc.Empty();
+		okutil_get_Origin_file_comment(strFileCurrent, &strDesc);
+		trGetN.desc.strVal = strDesc;	
+	}
+	///End SHOW_DESCRIPTION_STORED_IN_TEMPLATE
+	
+	////////Category////////
+	//------ Folger 08/24/07 USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	//Tree trXML;
+	//load_template_tree(trXML);//trXML.Load(STR_TEMPLATE_XML);
+	//TreeNode trBranch = tree_get_node_by_id(trXML, nType);
+	//string strFile, strCate;
+	//_find_template(trBranch, strTemplateSuffix, strFile, strCate);
+	
+	TemplateOrganizer to;
+	Tree trXML;
+	/// Iris 2/2/2015 ORG-12578-S1 NOT_ALLOW_SAVE_USER_TEMPLATE_INTO_BUILDIN_CATEGORY
+	//to.GetTemplateListFile(trXML);
+	to.GetTemplateListFile(trXML, true);
+	///End NOT_ALLOW_SAVE_USER_TEMPLATE_INTO_BUILDIN_CATEGORY
+	TreeNode trBranch = tree_get_node_by_id(trXML, nType);
+	TreeNode trTemplate, trCategory;	
+	to.FindTemplate(trBranch, strTemplate, trTemplate, trCategory);
+	string strFile, strCate;
+	if (trTemplate)
+		trTemplate.GetAttribute(STR_FILENAME_ATTRIB, strFile);
+	if (trCategory)
+		trCategory.GetAttribute(STR_LABEL_ATTRIB, strCate);
+	//------ End USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	
+	_set_category_default_value(trGetN, nType, strCate);
+	
+	_set_template_combobox_values( trGetN, trBranch, trGetN.template.strVal ); ///-----Kit 11/09/2010 ORG-1388-S1 SHOW_FILE_IN_TEMPLATE_CATEGORY
+	//---- Jake 04/06/07 ADD_SAVE_TEMPLATE_AS_OPTION
+	string strTemplateType;
+	if(trBranch)
+		trBranch.GetAttribute(STR_LABEL_ATTRIB, strTemplateType);
+	//---Jasmine 02/04/09 EXTENSION_IS_ADDED_IN_BRANCH_LABEL, brach label used to be "Graph" and now it's "Graph Template (*.otp)"
+	//trGetN.savetemplate.strVal=strTemplateType+" Template [*"+strExt+"]";
+	trGetN.savetemplate.strVal = strTemplateType;
+	//---end
+	//---- end ADD_SAVE_TEMPLATE_AS_OPTION
+	
+	///Jasmine 01/24/09 #4259 ADD_LOAD_SYSTEM_THEME_CHECK_BOX
+	if( EXIST_PLOT == nType )
+	{
+		trGetN.loadsys.Show = true;
+	
+		if( PDS_AUTO == okutil_cvt_str_to_predefined_type(trGetN.loadsys.strVal) )
+			trGetN.loadsys.nVal = _is_load_system_theme(pg);
+		
+		///------ Tony 09/10/2015 ORG-13209-S7 SHOW_MATCH_MODIFIER_TO_SAVE_TEMPLATE
+		if(trGetN.matchModifiers)
+		{
+			trGetN.matchModifiers.Show = true;
+			
+			vector<string> vsMatchByCombo;
+			vsMatchByCombo.RemoveAll();
+			vsMatchByCombo.Add(GetLocalized(E_STR_NUMERIC_OFFSET));
+			vsMatchByCombo.Add(GetLocalized(STR_LABEL_SHORT_NAME_E));
+			vsMatchByCombo.Add(GetLocalized(E_STR_LONGNAME));
+			vsMatchByCombo.Add(GetLocalized(E_STR_UNITS));
+			vsMatchByCombo.Add(GetLocalized(E_STR_COMMENTS));
+			vsMatchByCombo.Add(GetLocalized(E_STR_PARAMETERS));
+			for (int idx = 1; idx < PARAMS_MAX_NUM; ++idx)
+			{
+				string		strName;
+				strName.Format(("%s %d"), GetLocalized(E_STR_PARAMETERS), idx + 1);
+				vsMatchByCombo.Add(strName);
+			}
+
+			GraphPage gp = pg;
+			vector<string> vsUDLs;
+			gp.GetCommonUPL(&vsUDLs);
+			int nType = PMMT_OFFSET;
+			Tree trFmt;
+			trFmt = gp.GetFormat(FPB_OTHER, FOB_OTHER, true, true);
+			if(trFmt.Root.Misc.MatchBy)
+				nType = trFmt.Root.Misc.MatchBy.nVal;
+			if ( nType >= PMMT_USERPARAM && nType < PMMT_USERPARAM_END)
+			{
+				string	strName;
+				if(trFmt.Root.Misc.MatchUDL)
+					strName = trFmt.Root.Misc.MatchUDL.strVal;
+				
+				//strName is not empty normally
+				if(strName.IsEmpty())
+					nType = PMMT_OFFSET;
+				else 
+				{
+					int nFound = vsUDLs.Find(strName); 
+					if (-1 == nFound)
+					{
+						vsUDLs.InsertAt(0, strName);
+						nType = PMMT_USERPARAM;
+					}
+					else
+					{
+						nType = PMMT_USERPARAM + nFound;
+						ASSERT(nType < PMMT_USERPARAM_END);
+					}
+					
+				}
+			}
+			for (idx = 0; idx < vsUDLs.GetSize(); ++idx)
+				vsMatchByCombo.Add(vsUDLs[idx]);
+		
+			string strCombo;
+			strCombo.SetTokens(vsMatchByCombo, '|');
+			//trGetN.matchModifiers.SetAttribute(STR_ID_ATTRIB, ONODETYPE_DROPLIST_STRINGS);	///------ Tony 10/10/2015 ORG-13209-S7 MATCH_MODIFIER_USE_STRING
+			///------ End MATCH_MODIFIER_USE_STRING
+			trGetN.matchModifiers.SetAttribute(STR_COMBO_ATTRIB, strCombo);
+			///------ Tony 10/10/2015 ORG-13209-S7 MATCH_MODIFIER_USE_STRING
+			//trGetN.matchModifiers.nVal = nType;
+			if(trGetN.matchModifiers.strVal.IsEmpty())
+				trGetN.matchModifiers.strVal = vsMatchByCombo[nType];
+			///------ End MATCH_MODIFIER_USE_STRING
+		}
+		///------ End SHOW_MATCH_MODIFIER_TO_SAVE_TEMPLATE
+	}
+	else 
+	{
+		trGetN.loadsys.Show = false;
+		trGetN.matchModifiers.Show = false;	///------ Tony 09/10/2015 ORG-13209-S7 SHOW_MATCH_MODIFIER_TO_SAVE_TEMPLATE
+	}
+	
+	///Jasmine 02/03/09 #4259 ADD_HINT_FOR_LOAD_SYSTEM_THEME_CHECK_BOX
+	trGetN.hint.SetAttribute(STR_ATTRIB_DISPFMT, DISPLAY_EDITOR_USE_LABEL | DISPLAY_EDITOR_NEXT_LINE | DISPLAY_EDITOR_WRAPPED);
+	trGetN.hint.Show = false;
+	if(trGetN.loadsys.Show != false && trGetN.loadsys.nVal == true)
+	{
+		trGetN.hint.Show = true;
+	}
+	///End ADD_HINT_FOR_LOAD_SYSTEM_THEME_CHECK_BOX
+	///End ADD_LOAD_SYSTEM_THEME_CHECK_BOX
+	
+	///Jasmine 02/09/09 REMOVE_OPTION_BRANCH
+	/*
+	////////Option///////////
+	if(trGetN.option)
+	{
+		//----- CPY 11/4/07 LOCALIZATION_NEEDED
+		// I have put in _L in all needed places withouth separate comments
+		//-----
+		///Set Default///
+		//GETN_CHECK(setdefault,"Set Default", false) ///Jasmine 10/17/06, wait SetDefaultTemplate
+	}	
+	*/	
+	if( !lstrlen(trGetN.filepath.strVal) || PDS_AUTO == okutil_cvt_str_to_predefined_type(trGetN.filepath.strVal) )
+	{
+		if(lstrlen(strFileCurrent))
+			strFile = strFileCurrent;
+		
+		trGetN.filepath.strVal = lstrlen(strFile) && _is_path_allow_saving(GetFilePath(strFile))? GetFilePath(strFile) : STR_USER_PATH;///set user folder as default
+	}
+	
+	string strSave;
+	/// ML 06/02/2017 ORG-15165-P1 template_saveas_USE_NEW_TEMPLATE_EXTENSIONS
+	//strSave.Format("...Save:[%s] *%s",strTemplateType, strExt);
+	//strSave.Format("...Save:[%s] %s",strTemplateType, strFileDlgAllExts);
+	strSave.Format("...Save:%s", strFileDlgAllExts);
+	/// end template_saveas_USE_NEW_TEMPLATE_EXTENSIONS
+   	trGetN.filepath.SetAttribute(STR_COMBO_ATTRIB, strSave);
+   	trGetN.filepath.SetAttribute(STR_FILENAME_ATTRIB, trGetN.filepath.strVal + trGetN.template.strVal + strExt);
+   	trGetN.filepath.SetAttribute(STR_DLG_OPTIONS_ATTRIB, FDLG_SUPPRESS_WARNING_SAVE_TO_EXISTING|FDLG_FILENAME_BOX_READ_ONLY);
+   	tree_set_browse_combo_attrib(trGetN.filepath, NULL, false);	///Jasmine 07/04/07 ADD_PATH_TRACK
+	
+   	 
+   	trGetN.emf.Show = nType == EXIST_PLOT;
+   	trGetN.bmp.Show = nType == EXIST_PLOT;
+   	///End REMOVE_OPTION_BRANCH
+   	
+	//------ Folger 08/24/07 USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	//return true;
+	return _is_path_allow_saving(GetFilePath(strFileCurrent));
+	//------ End USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+}
+///Sophy 11/12/2015 ORG-13757-P7 PROPER_CHECK_TEMPLATES_CHANGE_AND_REFRESH
+typedef	void(*PFN_NotifyTemplateLibraryOnSaveTemplate)(string strFilePath);
+///end PROPER_CHECK_TEMPLATES_CHANGE_AND_REFRESH
+ 
+
+void template_saveas(const Page& pg, const string& category, const string& template, const string& desc, const string& savetemplate, const string& sname, const string& lname, const TreeNode& clone, const string& matchModifiers, const string& filepath, const int& emf, const int& bmp, const int& loadsys, const string& hint, const int& asksave, const string& templateEdit)
+{
+	 	
+	//------ Folger 03/11/08 QA80-11175 SAVE_LAYOUT_TEMPLATE
+	if ( pg.GetType() == EXIST_LAYOUT )
+	{
+		/// Kenny 3/14/2017 ORG-14896-S1 ORIGIN_SUPPORT_SHELL_THUMBNAIL_AND_PREVIEW
+		//string strFile = page_get_template_name(pg) + ".otp";
+		string strFile = page_get_template_name(pg) + page_get_template_ext(EXIST_PLOT, NULL, TEMPL_EXT_FLAG_NEW_TYPE);
+		/// End ORIGIN_SUPPORT_SHELL_THUMBNAIL_AND_PREVIEW
+		string strName = pg.GetName();
+		string strMsg;
+		ocu_load_msg_str(XFWARN_SAVE_AS, &strMsg, strName, NULL, strFile);
+		if ( IDYES == MessageBox(GetWindow(), strMsg, _L("Attention!"), MB_YESNO | MB_DEFBUTTON2 | MB_ICONEXCLAMATION) )
+		{
+			LT_execute("save -Tb 200 %H %A;");
+		}
+		return;
+	}
+	//------
+	
+	//////get page and its type//////
+	if( !pg.IsValid() || !lstrlen(template) )//invalid page or no template name!
+		XF_THROW(CER_INVALID_ARGUMENT);
+	int nType = pg.GetType();
+	/// Kenny 3/14/2017 ORG-14896-S1 ORIGIN_SUPPORT_SHELL_THUMBNAIL_AND_PREVIEW
+	//string strExt = page_get_template_ext(nType);
+	string strExt = page_get_template_ext(nType, NULL, TEMPL_EXT_FLAG_NEW_TYPE);
+	/// End ORIGIN_SUPPORT_SHELL_THUMBNAIL_AND_PREVIEW
+	//////check path//////
+	string strPath = filepath;
+	if(PDS_AUTO == okutil_cvt_str_to_predefined_type(strPath) || !lstrlen(strPath))// strParam is <auto> or nothing
+		strPath = STR_USER_PATH;
+	if(!strPath.IsPath())
+		XF_THROW(CER_INVALID_FILEPATH);
+	if(strPath.Right(1).CompareNoCase(OFSEPS))
+		strPath += OFSEPS;
+	//////check template name//////
+	///------ Tony 11/04/2015 ORG-13734-S1 TEMPLATE_NAME_SUPPORT_DOT
+	//string strTemplate = GetFileName(template, true);
+	string strTemplate = template;
+	///------ End TEMPLATE_NAME_SUPPORT_DOT
+	///Jasmine 06/05/07 TEMPLATE_CHANGE_UNASSIGNED_TO_AUTO
+	if(!lstrlen(template) || PDS_AUTO == okutil_cvt_str_to_predefined_type(template))
+	{
+		string strFileCurrent = page_get_template_name(pg);
+		strTemplate = GetFileName(strFileCurrent, true);
+	}
+	///End TEMPLATE_CHANGE_UNASSIGNED_TO_AUTO
+	/// ML 06/02/2017 ORG-15165-P1 template_saveas_USE_NEW_TEMPLATE_EXTENSIONS
+	//string strFullPathFile = strPath + strTemplate + strExt;
+	string strFullPathFile;
+	if ( !s_strPathNameForSaving.IsEmpty() )
+	{
+		strFullPathFile = s_strPathNameForSaving;
+		s_strPathNameForSaving.Empty();
+	}
+	else
+		strFullPathFile = strPath + strTemplate + strExt;
+	/// end template_saveas_USE_NEW_TEMPLATE_EXTENSIONS
+	string strTemplateSuffix = okutil_composite_name_from_file_path(strFullPathFile, "Templates");	//------ Folger 08/01/07 TEMPLATE_CAN_ONLY_SAVED_IN_ONE_CATEGORY
+	
+	//------ Folger 08/24/07 USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	//Tree trXML;
+	//load_template_tree(trXML);//trXML.Load(STR_TEMPLATE_XML);
+	//TreeNode trBranch = tree_get_node_by_id(trXML, nType);
+	//string strFile, strCate;
+	//_find_template(trBranch, strTemplateSuffix, strFile, strCate);//check if template name exist in template organizer
+	
+	TemplateOrganizer to;
+	Tree trXML;
+	/// Iris 2/2/2015 ORG-12578-S1 NOT_ALLOW_SAVE_USER_TEMPLATE_INTO_BUILDIN_CATEGORY
+	//to.GetTemplateListFile(trXML);
+	to.GetTemplateListFile(trXML, true);
+	///End NOT_ALLOW_SAVE_USER_TEMPLATE_INTO_BUILDIN_CATEGORY
+	TreeNode trBranch = tree_get_node_by_id(trXML, nType);
+	//------ Folger 10/10/07 CORRECT_BEHAVIOR_OF_FINDING_CATEGORY_AND_TEMPLATE
+	//TreeNode trTemplate, trCategory;	
+	//to.FindTemplate(trBranch, strTemplateSuffix, trTemplate, trCategory);
+	//string strCate;
+	//if (trCategory)
+		//trCategory.GetAttribute(STR_LABEL_ATTRIB, strCate);
+		//
+	//if (category.CompareNoCase(strCate))
+		//trCategory = to.NewCategory(trBranch, category);
+	
+	TreeNode trCategory;
+	/// Iris 2/2/2015 ORG-12578-S1 NOT_ALLOW_SAVE_USER_TEMPLATE_INTO_BUILDIN_CATEGORY
+	//if (!to.FindCategory(trBranch, category, trCategory))
+	if (trBranch && !to.FindCategory(trBranch, category, trCategory))
+	///End NOT_ALLOW_SAVE_USER_TEMPLATE_INTO_BUILDIN_CATEGORY
+		trCategory = to.NewCategory(trBranch, category);
+	//------ End CORRECT_BEHAVIOR_OF_FINDING_CATEGORY_AND_TEMPLATE
+	
+	//------ End USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	///Jasmine 07/04/07 ALLOW_SAVE_TO_DIFFERENT_PATH_AND_UPDATE_ATTRIBUTE_IN_ORGANIZER
+	/*
+	bool bBuiltIn = is_built_in_template(nType, strTemplate, strFile);
+	while(!bBuiltIn && lstrlen(strFile) && strFullPathFile.CompareNoCase(strFile))//the same name, the same path
+	{
+		///Cheney 2007-5-30 UPDATE_XF_ERR_THROW
+		//string strWarning = "Template name is used by "+ strFile +"\nPlease select another name.";
+		string strWarning;
+		ocu_load_msg_str(XFWARN_TEMPLATE_NAME_IS_USED, &strWarning, strFile);
+		///end UPDATE_XF_ERR_THROW
+		GETN_TREE(trRename)
+			GETN_STR(Name, "Template Name", strTemplate)
+		if(!GetNBox(trRename, "Rename", strWarning, NULL, NULL, NULL))
+			return;//XF_THROW(XFERR_INVALID_OPERATION);//crash
+		strTemplate = GetFileName(trRename.Name.strVal, true);
+		strFile.Empty();
+		strCate.Empty();
+		_find_template(trBranch, strTemplate, strFile, strCate);
+	}
+	*/
+	///End ALLOW_SAVE_TO_DIFFERENT_PATH_AND_UPDATE_ATTRIBUTE_IN_ORGANIZER
+	//////check file//////
+	//strFullPathFile = strPath + strTemplate + strExt;		//------ Folger 08/01/07 TEMPLATE_CAN_ONLY_SAVED_IN_ONE_CATEGORY
+	
+	
+	///------ Tony 08/07/2015 ORG-13209-S5 NOT_ALLOW_SAME_TEMPLATE_NAME
+	bool bReplaceSameNameTemplate = !s_bSameNameTempNeedCheck;
+	if(s_bSameNameTempNeedCheck)
+	{
+		if(to.IsNeedCheckReplaceSameNameTemplate(trBranch, strFullPathFile, category))
+		{
+			string strWarning;
+			ocu_load_msg_str(IDS_TEMPLATE_SAME_NAME_IN_LIBRARY, &strWarning);
+			if(IDCANCEL == MessageBox(GetWindow(), strWarning, _L("Save As"), MB_OKCANCEL|MB_ICONEXCLAMATION))
+			{
+				XF_THROW(XFERR_INVALID_OPERATION);
+			}
+			
+			bReplaceSameNameTemplate = true;
+		}
+	}
+	s_bSameNameTempNeedCheck = true;
+	///------ End NOT_ALLOW_SAME_TEMPLATE_NAME
+	
+	//------ Folger 08/24/07 USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	
+	//if (s_nGetNDialog == 1)
+	//------ Folger 02/27/08 QA80-11175 AUTO_SAVE_SYSTEM_GROUP_TEMPLATE_INTO_UFF
+	//if ( asksave )
+	///Jasmine 02/09/09 REMOVE_OPTION_BRANCH
+	//if ( asksave || option.filepath.strVal.CompareNoCase(GetFilePath(page_get_template_name(pg))) )
+	///Jasmine 02/10/09 CHANCE_TO_MAKE_CHANGE_IF_FILE_EXIST
+	///------ Tony 08/06/2015 ORG-13290-P2 SAVE_TEMPLATE_EDIT_MODE_IMPROVE
+	//if(s_bAskIfExist)
+	bool bEditAndSameName = 0 == template.CompareNoCase(templateEdit);
+	if(s_bAskIfExist && !bEditAndSameName)
+	///------ End SAVE_TEMPLATE_EDIT_MODE_IMPROVE
+	{
+		if ( asksave || filepath.CompareNoCase(GetFilePath(page_get_template_name(pg))) )
+		///End REMOVE_OPTION_BRANCH
+		//------
+		{
+			if(strFullPathFile.IsFile())
+			{
+				///Cheney 2007-5-30 UPDATE_XF_ERR_THROW
+				//string strWarning = strFullPathFile + " already exists!\nDo you want to replace it?";
+				string strWarning;
+				ocu_load_msg_str(XFWARN_TEMPLATE_ALREADY_EXISTS, &strWarning, strFullPathFile);
+				///end UPDATE_XF_ERR_THROW
+				if(IDNO == MessageBox(NULL, strWarning, _L("Save As"), MB_YESNO|MB_ICONEXCLAMATION))
+					XF_THROW(XFERR_INVALID_OPERATION);
+			}
+		}
+		//------ End USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	}
+	///End CHANCE_TO_MAKE_CHANGE_IF_FILE_EXIST
+	
+	//////update template.xml//////
+	///Jasmine 07/04/07 ALLOW_SAVE_TO_DIFFERENT_PATH_AND_UPDATE_ATTRIBUTE_IN_ORGANIZER
+	//if(bBuiltIn)//need update file name
+	//{	
+	
+	//------ Folger 08/24/07 USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	//bool bReplace = lstrlen(category) && strCate.CompareNoCase(category);	//------ Folger 08/01/07 TEMPLATE_CAN_ONLY_SAVED_IN_ONE_CATEGORY
+		//foreach(TreeNode trCate in trBranch.Children)
+		//{
+			//TreeNode trTemp = trCate.FindNodeByAttribute(STR_LABEL_ATTRIB, strTemplateSuffix);
+			//if(trTemp.IsValid())
+			//{
+				////------ Folger 08/01/07 TEMPLATE_CAN_ONLY_SAVED_IN_ONE_CATEGORY
+				////trTemp.SetAttribute(STR_FILENAME_ATTRIB, strFullPathFile);
+				//if (bReplace)
+				//{
+					//string strWarning;
+					//strWarning.Format("%s is in Category %s.\nDo you want to move it to Category %s ?",
+										//strTemplateSuffix, strCate, category);
+					//if(IDYES == MessageBox(NULL, strWarning, "Save As", MB_YESNO|MB_ICONEXCLAMATION))
+					//{
+						//trTemp.Remove();
+					//}
+					//else
+						//bReplace = false;
+				//}
+				////------ End TEMPLATE_CAN_ONLY_SAVED_IN_ONE_CATEGORY
+			//}
+		//}
+		//trXML.Save(STR_TEMPLATE_XML);
+		//------ End USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+		
+	//}
+	///End ALLOW_SAVE_TO_DIFFERENT_PATH_AND_UPDATE_ATTRIBUTE_IN_ORGANIZER
+	//------ Folger 08/01/07 TEMPLATE_CAN_ONLY_SAVED_IN_ONE_CATEGORY
+	//if(lstrlen(category) && category.CompareNoCase(strCate))//a template can add to more than one categories	
+	
+	//------ Folger 08/24/07 USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	//if (bReplace)
+	////------ End TEMPLATE_CAN_ONLY_SAVED_IN_ONE_CATEGORY
+	//{
+		//int nRet = okutil_add_template(STR_TEMPLATE_XML, category, strFullPathFile, nType);//nRet = 0 if success else nRet = 1
+		////FileCopy(STR_TEMPLATE_XML, STR_GROUP_TEMPLATE_XML);	///Jasmine 08/15/07 QA80-10155 NO_MODIFICATION_TO_GROUP_FOLDER_FILE
+	//}
+	//------ End USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	
+	///Jasmine 01/24/09 #4259 ADD_LOAD_SYSTEM_THEME_CHECK_BOX
+	if( EXIST_PLOT == pg.GetType() )
+		_set_load_system_theme(pg, loadsys);
+	///End ADD_LOAD_SYSTEM_THEME_CHECK_BOX
+	
+	//////save template//////
+	//string desc = option.desc? option.desc.strVal : "";	///Jasmine 02/09/09 REMOVE_OPTION_BRANCH
+	
+	///-----Kit 11/11/2010 ORG-1483-P1 POPUP_MSG_WITH_MSGBOX_WHEN_THE_TEMPLATE_IS_SAME_AS_BULITIN
+	///-----Kit 11/15/2010 ORG-1483-P3 NO_NEED_POPUP_CONFIRM_MSG_WHEN_TEMPLATE_HAVE_IN_USER_FOLDER
+	//if( asksave == 0 && _override_exe_folder( strFullPathFile ) )
+	///------ Tony 08/06/2015 ORG-13290-P2 SAVE_TEMPLATE_EDIT_MODE_IMPROVE
+	//if( asksave == 0 && _is_in_system_folder_not_in_user_folder( strFullPathFile ) )
+	if( !bEditAndSameName && asksave == 0 && _is_in_system_folder_not_in_user_folder( strFullPathFile ) )
+	///------ End SAVE_TEMPLATE_EDIT_MODE_IMPROVE
+	///-----
+	{		
+		string strMessage;
+		ocu_load_err_msg_str( CER_BUILT_IN_TEMPLATE_NAME, &strMessage );
+		if( IDCANCEL == MessageBox( GetWindow(), strMessage, _L("Save As"), MB_OKCANCEL|MB_ICONEXCLAMATION ) )
+			return;
+	}
+	///-----End POPUP_MSG_WITH_MSGBOX_WHEN_THE_TEMPLATE_IS_SAME_AS_BULITIN
+	
+	/// Iris 6/24/2015 ORG-13209-S1 SAVE_GRAPH_TEMPLATE_WITH_CLONEABLE_INFO
+	///------ Tony 07/01/2015 ORG-13209-S1 MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE
+	BOOL bCloneable = false;
+	if(clone && clone.Show)
+	///------ End MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE
+	{
+		///------ Tony 07/01/2015 ORG-13209-S1 MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE
+		//BOOL bCloneable = clone && clone.Use > 0;
+		bCloneable = clone.Use > 0;
+		///------ End MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE
+		double dCtrl;
+		pg.LT_get_var("page.cntrl", &dCtrl);
+		int nCtrl = dCtrl;
+		O_SET_BIT(nCtrl, PPDWCNTRL_MARK_AS_CLONEABLE_TEMPLATE, bCloneable);
+		pg.LT_set_var("page.cntrl", nCtrl);
+		if( bCloneable )
+		{
+			///------ Tony 07/28/2015 ORG-13209-S4 IMPROVE_SAVE_TEMPLATE_DLG
+			//pg.LT_set_var("page.clonematch", clone.match.nVal + PCBMatch_Data_Index);
+			///Kyle 09/01/2015 ORG-13327-S2 TEMPLATE_SAVE_AS_CLONE_MATCH_CONTROL_CLEANUP
+			/*
+			int nMatchData = clone.match.nVal + PCBMatch_Data_Index;
+			
+			int nMatchSheet = 0;
+			if(clone.matchSheet.Show)
+				nMatchSheet= (clone.matchSheet.nVal << 4) + PCBMatch_Sheet_Index;
+			
+			int nMatch = nMatchData + nMatchSheet;
+			*/
+			double match = 0.0;
+			pg.LT_get_var("page.clonematch", &match);
+			int nMatch = _combine_match_ctrls(clone.matchcol.nVal, clone.matchsheet.Show ? clone.matchsheet.nVal : -1, (DWORD)match);
+			///End TEMPLATE_SAVE_AS_CLONE_MATCH_CONTROL_CLEANUP
+			pg.LT_set_var("page.clonematch", nMatch);
+			///------ End IMPROVE_SAVE_TEMPLATE_DLG
+		}
+	}
+	
+	///------ Tony 08/07/2015 ORG-13209-S5 NOT_ALLOW_SAME_TEMPLATE_NAME
+	//update xml before file save, then nReplaceSameNameTemplate and eidt mode will work fine
+	TreeNode trAddedTemplate = to.AddTemplate(trCategory, strFullPathFile, NULL, false, bCloneable, bReplaceSameNameTemplate, templateEdit);	
+	if(!trAddedTemplate)
+		XF_THROW(XFERR_INVALID_OPERATION);
+	///------ End NOT_ALLOW_SAME_TEMPLATE_NAME
+	
+	Tree trMatchModifiers;		///Kyle 11/11/2016 ORG-15418-P1 BATCH_PLOTTING_AND_SAVE_TEMPLATE_AS_OPTIONS_PREVENT_CHANGE_SOURCE_GRAPH
+	
+	///------ Tony 07/01/2015 ORG-13209-S1 MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE
+	if( EXIST_PLOT == pg.GetType() )		
+	///------ End MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE
+	{
+		///Kyle 11/11/2016 ORG-15418-P1 BATCH_PLOTTING_AND_SAVE_TEMPLATE_AS_OPTIONS_PREVENT_CHANGE_SOURCE_GRAPH
+		trMatchModifiers = pg.GetFormat(FPB_OTHER, FOB_OTHER, true, true);
+		int nOldMatchBy = trMatchModifiers.Root.Misc.MatchBy.nVal;
+		string strOldMatchUDL = trMatchModifiers.Root.Misc.MatchUDL.strVal;
+		trMatchModifiers.Reset();
+		trMatchModifiers.Root.Misc.MatchBy.nVal = nOldMatchBy;
+		trMatchModifiers.Root.Misc.MatchUDL.strVal = strOldMatchUDL;
+		pg.UpdateThemeIDs(trMatchModifiers.Root);
+		///End BATCH_PLOTTING_AND_SAVE_TEMPLATE_AS_OPTIONS_PREVENT_CHANGE_SOURCE_GRAPH
+	
+		string strSN = sname;
+		strSN.TrimLeft();
+		strSN.TrimRight();
+		string strLN = lname;
+		strLN.TrimLeft();
+		strLN.TrimRight();
+		
+		Tree tr;	
+		tr.Root.Misc.PagePresetShortName.strVal = strSN;	
+		tr.Root.Misc.PagePresetLongName.strVal = strLN;
+		///------ Tony 10/20/2015 ORG-13209-S7 TEMPLATE_SAVEAS_LT_IMPROVE
+		/////------ Tony 10/10/2015 ORG-13209-S7 MATCH_MODIFIER_USE_STRING
+		///////------ Tony 09/10/2015 ORG-13209-S7 SHOW_MATCH_MODIFIER_TO_SAVE_TEMPLATE
+		////tr.Root.Misc.MatchBy.nVal = matchModifiers;
+		////if (matchModifiers >= PMMT_USERPARAM && matchModifiers < PMMT_USERPARAM_END)
+		////{
+			////tr.Root.Misc.MatchUDL.strVal = s_vsMatchByCombo[matchModifiers];
+		////}
+		///////------ End SHOW_MATCH_MODIFIER_TO_SAVE_TEMPLATE
+		//int nMatchModifiers = s_vsMatchByCombo.Find(matchModifiers);
+		//if(nMatchModifiers == -1)
+			//nMatchModifiers = PMMT_OFFSET;
+		//tr.Root.Misc.MatchBy.nVal = nMatchModifiers;
+		//if (nMatchModifiers >= PMMT_USERPARAM && nMatchModifiers < PMMT_USERPARAM_END)
+		//{
+			//tr.Root.Misc.MatchUDL.strVal = matchModifiers;
+		//}
+		/////------ End MATCH_MODIFIER_USE_STRING
+		int nModifierType = _get_modifier_type(pg, matchModifiers);
+		tr.Root.Misc.MatchBy.nVal = nModifierType;
+		if (nModifierType >= PMMT_USERPARAM && nModifierType < PMMT_USERPARAM_END)
+		{
+			tr.Root.Misc.MatchUDL.strVal = matchModifiers;
+		}
+		///------ End TEMPLATE_SAVEAS_LT_IMPROVE
+		
+		if( 0 == pg.UpdateThemeIDs(tr.Root) )
+			pg.ApplyFormat(tr, true, true);
+	}
+	///End SAVE_GRAPH_TEMPLATE_WITH_CLONEABLE_INFO
+	
+	
+	/// ML 06/02/2017 ORG-15165-P1 template_saveas_USE_NEW_TEMPLATE_EXTENSIONS
+	//DWORD	dwCtrl = PAGE_ST_ADD_TO_MRU_LIST; 	/// SY 2007-03-07 QA70-9388 v8.0577 MRU_FOR_TEMPLATE_OGW
+	DWORD	dwCtrl = PAGE_ST_ADD_TO_MRU_LIST | PAGE_ST_FMT_BASED_ON_EXTENSION;
+	/// end template_saveas_USE_NEW_TEMPLATE_EXTENSIONS
+	
+	BOOL bRet;
+	if(nType == EXIST_PLOT)
+	{
+		LPCSTR lpcszEMF, lpcszBMP;
+		string strEMF(strPath + strTemplate +".emf"), strBMP(strPath + strTemplate +".bmp");
+		if( emf && pg.SaveEMF(strEMF) )
+			lpcszEMF = strEMF;
+		if( bmp && pg.SaveBitmap(strBMP) )
+			lpcszBMP = strBMP;
+		bRet = pg.SaveTemplate(strFullPathFile, lpcszBMP, lpcszEMF, desc, dwCtrl);	
+		///Sophy 11/12/2015 ORG-13757-P7 PROPER_CHECK_TEMPLATES_CHANGE_AND_REFRESH
+		PFN_NotifyTemplateLibraryOnSaveTemplate pfn = Project.FindCompiledFunction("NotifyTemplateLibraryOnSaveTemplate");
+		if ( pfn )
+		{
+			pfn(strFullPathFile);
+		}
+		///end PROPER_CHECK_TEMPLATES_CHANGE_AND_REFRESH
+	
+	}
+	else
+		bRet = pg.SaveTemplate(strFullPathFile, NULL, NULL, desc, dwCtrl);	
+		
+	///Kyle 11/11/2016 ORG-15418-P1 BATCH_PLOTTING_AND_SAVE_TEMPLATE_AS_OPTIONS_PREVENT_CHANGE_SOURCE_GRAPH
+	if( trMatchModifiers.Root )
+	{
+		pg.ApplyFormat(trMatchModifiers, true, true);
+	}
+	///End BATCH_PLOTTING_AND_SAVE_TEMPLATE_AS_OPTIONS_PREVENT_CHANGE_SOURCE_GRAPH
+	///Jasmine 10/23/08 QA80-12442 SHOW_WARNING_WHEN_SAVE_READ_ONLY_FILE	
+	if(!bRet)	
+	{
+		popup_errmsg_save_readonly_file(strFullPathFile);
+		XF_THROW(XFERR_INVALID_OPERATION);
+	}
+	///End SHOW_WARNING_WHEN_SAVE_READ_ONLY_FILE
+		
+	///Jasmine 04/13/07 PRINT_XF_MSG_TO_SCRIPT_WINDOW
+	if(strFullPathFile.IsFile())
+	{
+		update_recent_path_list(GetFilePath(strFullPathFile));	///Jasmine 07/04/07 ADD_PATH_TRACK
+	
+		///-----Kit 11/11/2010 ORG-1483-P1 POPUP_MSG_WITH_MSGBOX_WHEN_THE_TEMPLATE_IS_SAME_AS_BULITIN
+		//string strMessage;
+		/////Cheney 2007-6-18 UPDATE_XF_ERR_THROW_NEED_WAIT_SIM_NEW_FUNC_TO_REPLACE
+		////strMessage.Format("Save template as %s", strFullPathFile);
+		//ocu_load_msg_str(XF_TEMPLATE_SAVE_SUCCESS, &strMessage, strFullPathFile);
+		/////end UPDATE_XF_ERR_THROW_NEED_WAIT_SIM_NEW_FUNC_TO_REPLACE
+		/////Folger 04/16/07 REPLACE_BY_OKOC_OUT_MSG
+		////xf_print_msg(strMessage);
+		//okoc_out_msg(strMessage, 'I');
+		/////End REPLACE_BY_OKOC_OUT_MSG
+		//
+		/////Jasmine 02/04/09 MAX_ASK_SHOW_BUILT_IN_TEMPLATE_HINT_IN_ERRMSG
+		/////Jasmine 02/17/09 SHOW_BUILT_IN_MEG_FOR_ALL_TEMPLATE_IN_EXE_FOLDER
+		////if(is_built_in_template( nType, template, GetAppPath(TRUE) ) == true)
+		//if( _override_exe_folder(strFullPathFile) )
+			//okoc_out_msg(_L("A template file with the same name exists in the Origin Program Folder. Origin will use your custom template instead."), 'I');			
+		/////End SHOW_BUILT_IN_MEG_FOR_ALL_TEMPLATE_IN_EXE_FOLDER
+		string strMessage = "";
+		ocu_load_msg_str( XF_TEMPLATE_SAVE_SUCCESS, &strMessage, strFullPathFile );
+		okoc_out_msg(strMessage, 'I');
+		///-----End POPUP_MSG_WITH_MSGBOX_WHEN_THE_TEMPLATE_IS_SAME_AS_BULITIN
+	}
+	//------ Folger 08/24/07 USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	///------ Tony 07/01/2015 ORG-13209-S1 MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE
+	//to.AddTemplate(trCategory, strFullPathFile);
+	///------ Tony 08/07/2015 ORG-13209-S5 NOT_ALLOW_SAME_TEMPLATE_NAME
+	//to.AddTemplate(trCategory, strFullPathFile, NULL, false, bCloneable);	
+	///------ End NOT_ALLOW_SAME_TEMPLATE_NAME
+	///------ End MORE_PRESET_WHEN_SAVE_GRAPH_TEMPLATE
+	
+	
+	/// Iris 2/2/2015 ORG-12578-S1 NOT_ALLOW_SAVE_USER_TEMPLATE_INTO_BUILDIN_CATEGORY
+	// in new template library dlg no need to save user attribute and wants to save file path for template file. 
+	/*
+	octree_delete_nodes_by_missing_attribute(&trXML, STR_USER_PATH_ATTRIB);
+	//------ Folger 09/29/07 NEW_DISIGN_FOR_SAVING_TEMPLATE_XML
+	octree_remove_attribute(&trXML, STR_FILENAME_ATTRIB);
+	*/
+	///End NOT_ALLOW_SAVE_USER_TEMPLATE_INTO_BUILDIN_CATEGORY
+	_remove_template_label_attribue(trXML);
+	//------ End NEW_DISIGN_FOR_SAVING_TEMPLATE_XML
+	///Sophy 10/28/08 QA80-12442 SHOW_WARNING_WHEN_SAVE_READ_ONLY_FILE    
+	//trXML.Save(STR_TEMPLATE_FILE);
+	if( !trXML.Save(STR_TEMPLATE_XML) )
+		popup_errmsg_save_readonly_file( STR_TEMPLATE_XML, GetWindow() );
+	///end SHOW_WARNING_WHEN_SAVE_READ_ONLY_FILE
+	//------ End USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	///End PRINT_XF_MSG_TO_SCRIPT_WINDOW
+	
+}
+
+//nEventID < 0 on event, like GETNE_ON_INIT, GETNE_ON_OK etc, >0 on change from control
+//return 0 to do nothing, return PEVENT_GETN_RET_TO_CLOSE to close dialog
+//dwEnables = bOKEnable, bBTN1Enable, bBTN2Enable, bBTN3Enable, , can set to false to disable OK/Apply buttons
+//lpcszNodeName = the trGetN TreeNode tag name that generates the event, or is  if GETNE_ON_OK etc
+//strAux = optional string for XF Wizard Bar, like DLG_NEED_CHANGE_GRID etc, it will be invalid if from internal node value change event
+//strErrMsg = allowing messages to be shown
+int template_saveas_event1(TreeNode& trGetN, int nRow, int nEventID, DWORD& dwEnables, LPCSTR lpcszNodeName, WndContainer& DynaCntrlContainer, string& strAux, string& strErrMsg)
+{
+	if( xf_is_extended_event(nEventID) )
+		return template_saveas_event1_ex(trGetN, nRow, nEventID, dwEnables, lpcszNodeName, DynaCntrlContainer, strAux, strErrMsg);
+	DECLARE_BUTTON_ENABLES
+	/// ML 06/02/2017 ORG-15165-P1 template_saveas_USE_NEW_TEMPLATE_EXTENSIONS
+	s_strPathNameForSaving.Empty();
+	/// end template_saveas_USE_NEW_TEMPLATE_EXTENSIONS
+	//---- CPY 8/17/06 QA70-8428 ADD_SAVE_AS_OPTION 
+	// should not change page display format
+	/*
+	if(nEventID > 0 && !lstrcmpi(lpcszNodeName, "page"))
+	{
+		string strPage = trGetN.page.strVal;
+		strPage.TrimLeft('[');
+		strPage.TrimRight(']');
+		Page pg(strPage);
+		if(!pg.IsValid())
+			return false;
+		_on_page_change(pg, trGetN);
+	}
+	*/
+	////find template.xml
+	//string strXML = STR_TEMPLATE_XML;
+	//if(!strXML.IsFile())
+		//construct_template_organizer_tree();
+	//------ Folger 08/01/07 INIT_DLG_NO_MATTER_WITH_OR_WITHOUT_DLG
+	//if(GETNE_ON_INIT == nEventID)
+		//_init_dlg(trGetN);
+	//------ End INIT_DLG_NO_MATTER_WITH_OR_WITHOUT_DLG
+	//----
+	//check
+	//------ Folger 08/24/07 USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	if (nEventID == GETNE_ON_INIT)
+	{
+		if (!_is_path_allow_saving(trGetN.filepath.strVal))
+		{
+			strErrMsg = XFERR_PROTECT_SAVE_PATH;
+			strErrMsg += ":" + STR_INVALID_SAVE_PATH;//_L("System Folder or Group Folder");
+			bOKEnable = false;
+			return false;
+		}
+	}
+	//------ End USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	if(nEventID > 0)
+	{
+		if(trGetN.category.IsValid() && !lstrlen(trGetN.category.strVal))
+		{
+			strErrMsg = CWARN_NOT_ADD_TO_TEMPLATE_ORG;
+			bOKEnable = false;
+			return false;
+		}
+		if(trGetN.template.IsValid() && !lstrlen(trGetN.template.strVal))
+		{
+			strErrMsg = CER_EMPTY_VARIABLE;
+			///------ Tony 10/27/2015 ORG-13734-S1 BETTER_TEMPLATE_NAME_ERROR_CHECKING
+			//strErrMsg +=":"+ "template";
+			strErrMsg +=":"+ "Template name";
+			///------ End BETTER_TEMPLATE_NAME_ERROR_CHECKING
+			bOKEnable = false;
+			return false;
+		}
+		///------ Tony 10/27/2015 ORG-13734-S1 BETTER_TEMPLATE_NAME_ERROR_CHECKING
+		else if(!_is_str_valid_for_template(trGetN.template.strVal))
+		{
+			strErrMsg = XFERR_VARIABLE_CONTAIN_INVALID_CHARACTERS;
+			strErrMsg +=":"+ "Template name";
+			bOKEnable = false;
+			return false;
+		}
+		///------ End BETTER_TEMPLATE_NAME_ERROR_CHECKING
+		if(trGetN.filepath.IsValid() && (!lstrlen(trGetN.filepath.strVal) || !trGetN.filepath.strVal.IsPath()))
+		{
+			strErrMsg = CER_INVALID_FILEPATH;
+			bOKEnable = false;
+			return false;
+		}
+	}
+	///Jasmine 10/09/06 WAIT_NEW_SAVEAS_DB
+	if(nEventID > 0 && ( !lstrcmpi(lpcszNodeName, "template") || !lstrcmpi(lpcszNodeName, "filepath") ))
+	{
+		string strFile;
+		trGetN.filepath.GetAttribute(STR_FILENAME_ATTRIB, strFile);
+		if(!lstrcmpi(lpcszNodeName, "filepath") && trGetN.template)
+		{
+			string strPath = trGetN.filepath.strVal;//update from editbox
+			if(strPath.Right(1).CompareNoCase(OFSEPS))
+				strPath += OFSEPS;
+			strFile = strPath + GetFileName(strFile);
+			trGetN.template.strVal = GetFileName(strFile, true);
+			trGetN.filepath.strVal = GetFilePath(strFile);
+		}
+		///Jasmine 08/12/09 HARD_CODE_TO_GET_FILE_EXTENSION
+		//strFile = GetFilePath(strFile) + trGetN.template.strVal + "." + strFile.GetToken(1, '.');
+		string strExt;
+		separate_file_name_ext(strFile, NULL, &strExt);		
+		strFile = GetFilePath(strFile) + trGetN.template.strVal +  "." + strExt;
+		///End HARD_CODE_TO_GET_FILE_EXTENSION
+		trGetN.filepath.SetAttribute(STR_FILENAME_ATTRIB, strFile);
+	}
+	//------ Folger 08/24/07 USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_XML
+	if (nEventID > 0 && !_is_path_allow_saving(trGetN.filepath.strVal))
+	{
+		strErrMsg = XFERR_PROTECT_SAVE_PATH;
+		strErrMsg += ":" + STR_INVALID_SAVE_PATH;
+		bOKEnable = false;
+		return false;
+	}
+	//------ End USE_TEMPLATE_ORGANIZER_TO_ACCESS_TEMPLATE_X

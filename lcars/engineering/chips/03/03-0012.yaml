@@ -1,0 +1,19 @@
+Metadata:
+  Id: 03-0012
+  Name: Astrometrics Systems & Spatial Anomalies
+  Category: '03'
+  Version: 5.0.0
+  Faction: Federation
+  Type: data
+  Status: nominal
+Specs:
+  Capacity: 8192
+  ColorCode: '#FFCC00'
+  SecurityLevel: 6
+  Bus: ODN-03
+Paths:
+  DatabaseFile: lcars/data/03/03-0012-astrometrics.db
+Entrypoints:
+  Main: lcars.modules.astrometrics:AstrometricsLab
+Description: Астрометричні координати зоряних систем (Sol, Vulcan, Qo'noS, Romulus)
+  та просторові аномалії.

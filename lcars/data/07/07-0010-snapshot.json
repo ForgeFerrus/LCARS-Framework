@@ -1,0 +1,52 @@
+{
+  "id": "07-0010",
+  "name": "Main Tactical Bridge Console",
+  "era": "24th",
+  "elements_count": 3,
+  "elements": [
+    {
+      "Id": "main_panel",
+      "Type": "PANEL",
+      "Position": [
+        10,
+        20
+      ],
+      "Size": [
+        300,
+        200
+      ],
+      "IsPrimitive": true,
+      "Properties": {}
+    },
+    {
+      "Id": "warp_btn",
+      "Type": "BUTTON",
+      "Position": [
+        25,
+        45
+      ],
+      "Size": [
+        120,
+        40
+      ],
+      "IsPrimitive": true,
+      "Properties": {
+        "Text": "WARP 9"
+      }
+    },
+    {
+      "Id": "shield_elbow",
+      "Type": "ELBOW",
+      "Position": [
+        155,
+        45
+      ],
+      "Size": [
+        100,
+        50
+      ],
+      "IsPrimitive": true,
+      "Properties": {}
+    }
+  ]
+}

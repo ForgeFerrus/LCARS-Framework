@@ -1,0 +1,63 @@
+# ◤ ISOLINEAR CHIP — COPILOT AUTONOMOUS AGENT CORE
+# Опис: Агентний шар інтелектуального помічника LCARS Copilot
+# Призначення: Пам'ять сесій, черга задач, оркестрація скілів, самодіагностика, виконання інструментів
+# Категорія: 04-0020 — AI Systems
+
+Metadata:
+  Id: 04-0020
+  Name: LCARS Copilot Autonomous Agent Core
+  Version: 2.0.0
+  Faction: Federation
+  Type: agent
+  Status: nominal
+
+Specs:
+  Capacity: 2048
+  ColorCode: '#CC6699'
+  SecurityLevel: 8
+  Priority: 2
+
+Entrypoints:
+  Main: lcars.service.copilot:Copilot
+  Access: lcars.service.copilot:AgentAccess
+  Dispatcher: lcars.service.copilot:AgentToolDispatcher
+
+Config:
+  AgentIdPrefix: LCARS-AGENT-
+  MaxMemoryTurns: 50
+  DefaultPriority: NORMAL
+  CliFallback: gemini-cli
+
+Paths:
+  ServiceRoot: lcars/service
+  CopilotPath: lcars/service/copilot.py
+  SkillsRoot: lcars/skills
+  DatabaseFile: lcars/data/04/04-0020-copilot-agent.db
+
+Interfaces:
+  - CopilotAgentAPI
+  - TaskQueueAPI
+  - AgentMemoryAPI
+  - AgentToolAPI
+
+Boot:
+  Sequence:
+    - InitAgentMemory
+    - LoadSkillsCatalog
+    - InitTaskWorker
+    - LinkAiProvider
+  DefaultState: active
+
+Description: |
+  Головний агентний процесор LCARS Copilot.
+  Управляє контекстом розмови, завантажує спеціалізовані навички (.md),
+  оркеструє чергу фонових інженерних завдань та викликає внутрішні інструменти
+  бортового комп'ютера.
+
+Tags:
+  - ai
+  - copilot
+  - agent
+  - intelligence
+  - skills
+

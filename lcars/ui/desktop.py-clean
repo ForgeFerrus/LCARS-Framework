@@ -1,0 +1,344 @@
+"""
+LCARS Desktop - Справжній LCARS дизайн з правильними кутовими панелями та асиметрією
+"""
+
+import sys
+from pathlib import Path
+from datetime import datetime
+from typing import Optional
+
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QLabel, QPushButton, QFrame, QStackedWidget, QGridLayout
+)
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QFont
+
+# Додавання шляху до проекту
+project_root = str(Path(__file__).parent.parent.parent)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from lcars.themes.lcars_palette import (
+    LCARSEra, FactionEra, get_era_palette, get_random_button_color,
+    get_lcars_font_style, setup_lcars_font
+)
+
+class LCARSButton(QPushButton):
+    """Справжня LCARS кнопка ('цеглинка') з атмосферним циклом кольору"""
+    
+    def __init__(self, text, color=None, shape="rect", era: LCARSEra = LCARSEra.LCARS_25TH, faction: Optional[FactionEra] = None, parent=None):
+        super().__init__(text, parent)
+        self.era = era
+        self.faction = faction
+        self.shape = shape
+        self.current_color = color or get_random_button_color(self.era, self.faction)
+        
+        # Атмосферний цикл
+        if not color:
+            self.color_timer = QTimer(self)
+            self.color_timer.timeout.connect(self._cycle_atmosphere)
+            self.color_timer.start(5000 + (hash(text) % 5000))
+        
+        # Стандарт 'цегла 220x60'
+        if shape == "tall":
+            self.setFixedSize(120, 60)
+        elif shape == "wide":
+            self.setFixedSize(200, 40)
+        elif shape == "square":
+            self.setFixedSize(80, 80)
+        else:
+            self.setFixedSize(220, 60)
+        
+        self.apply_style()
+
+    def _cycle_atmosphere(self):
+        self.current_color = get_random_button_color(self.era, self.faction)
+        self.apply_style()
+
+    def apply_style(self):
+        font_style = get_lcars_font_style(14, 'normal')
+        palette = get_era_palette(self.era, self.faction)
+        base_radius = palette.get('border_radius', '2px')
+        
+        radius = base_radius
+        if self.shape == "left_pill":
+            radius = f"{base_radius} 0px 0px {base_radius}"
+        elif self.shape == "right_pill":
+            radius = f"0px {base_radius} {base_radius} 0px"
+            
+        self.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {self.current_color};
+                color: #000000;
+                border: none;
+                border-radius: {radius};
+                {font_style}
+                text-align: right;
+                padding-right: 15px;
+                text-transform: uppercase;
+            }}
+            QPushButton:hover {{ background-color: #FFFFFF; }}
+            QPushButton:pressed {{ background-color: #AAAAAA; }}
+        """)
+
+class LCARSElbow(QFrame):
+    """Г-подібний кутовий елемент LCARS ('коліно')"""
+    def __init__(self, color=None, direction="top-left", era: LCARSEra = LCARSEra.LCARS_25TH, faction: Optional[FactionEra] = None, parent=None):
+        super().__init__(parent)
+        self.era = era
+        self.faction = faction
+        self.direction = direction
+        self.current_color = color or get_random_button_color(self.era, self.faction)
+        self.setFixedSize(150, 150)
+        
+        if not color:
+            self.timer = QTimer(self)
+            self.timer.timeout.connect(self._cycle_atmosphere)
+            self.timer.start(8000 + (id(self) % 4000))
+            
+        self.apply_style()
+
+    def _cycle_atmosphere(self):
+        self.current_color = get_random_button_color(self.era, self.faction)
+        self.apply_style()
+
+    def apply_style(self):
+        palette = get_era_palette(self.era, self.faction)
+        radius = palette.get('elbow_radius', '60px')
+        
+        if self.direction == "top-left":
+            style = f"border-top-left-radius: {radius}; border-bottom-left-radius: 2px; border-top-right-radius: 2px;"
+        elif self.direction == "bottom-right":
+            style = f"border-bottom-right-radius: {radius}; border-top-right-radius: 2px; border-bottom-left-radius: 2px;"
+        else:
+            style = f"border-radius: 2px;"
+
+        self.setStyleSheet(f"background-color: {self.current_color}; {style}")
+
+class LCARSDesktop(QMainWindow):
+    """Справжній LCARS десктоп: Чорний екран, яскраві блоки, повна асиметрія"""
+    
+    def __init__(self, era_key: str = "25th", faction: str = "Federation"):
+        super().__init__()
+        self.era_key = era_key
+        
+        era_map = {
+            "22nd": LCARSEra.COMS_22ND, "23rd": LCARSEra.PCARS_23RD, "23st": LCARSEra.PCARS_23ST,
+            "24th": LCARSEra.LCARS_24TH, "24st": LCARSEra.LCARS_24ST, "25th": LCARSEra.LCARS_25TH,
+            "29th": LCARSEra.TCARS_29TH
+        }
+        self.era = era_map.get(era_key, LCARSEra.LCARS_25TH)
+
+        faction_map = {
+            "klingon": FactionEra.KLINGON, "romulan": FactionEra.ROMULAN,
+            "cardassian": FactionEra.CARDASSIAN, "federation": None
+        }
+        self.faction = faction_map.get(faction.lower(), None)
+        
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self.setWindowState(Qt.WindowState.WindowFullScreen)
+        self.setStyleSheet("background-color: #000000;")
+        
+        import lcars
+        self.system = lcars.get_system()
+        self.event_bus = getattr(self.system, 'event_bus', None) if self.system else None
+        
+        self.init_ui()
+        
+        self.clock_timer = QTimer(self)
+        self.clock_timer.timeout.connect(self.update_clock)
+        self.clock_timer.start(1000)
+
+    def init_ui(self):
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(5)
+
+        palette = get_era_palette(self.era, self.faction)
+        b_radius = palette.get('border_radius', '2px')
+        e_radius = palette.get('elbow_radius', '60px')
+
+        # --- TOP HEADER ---
+        top_bar = QHBoxLayout()
+        top_bar.setSpacing(5)
+        
+        self.top_elbow = LCARSElbow(direction="top-left", era=self.era, faction=self.faction)
+        self.top_elbow.setFixedSize(220, 90)
+        top_bar.addWidget(self.top_elbow)
+
+        self.title_block = QFrame()
+        self.title_block.setFixedHeight(60)
+        self.title_block.setStyleSheet(f"background-color: {get_random_button_color(self.era, self.faction)}; border-radius: 2px;")
+        title_layout = QHBoxLayout(self.title_block)
+        
+        f_label = str(self.faction.value).upper() if self.faction else "STARFLEET"
+        self.title_label = QLabel(f"COMMAND INTERFACE - {f_label} - {self.era.value}")
+        self.title_label.setStyleSheet(f"color: black; {get_lcars_font_style(20, 'bold')}")
+        title_layout.addWidget(self.title_label)
+        top_bar.addWidget(self.title_block, 1)
+
+        self.top_right_cap = QFrame()
+        self.top_right_cap.setFixedSize(120, 60)
+        self.top_right_cap.setStyleSheet(f"background-color: {get_random_button_color(self.era, self.faction)}; border-top-right-radius: {e_radius}; border-bottom-right-radius: 5px;")
+        top_bar.addWidget(self.top_right_cap)
+        
+        main_layout.addLayout(top_bar)
+
+        # --- MIDDLE SECTION ---
+        middle_layout = QHBoxLayout()
+        middle_layout.setSpacing(5)
+
+        sidebar = QVBoxLayout()
+        sidebar.setSpacing(5)
+        
+        side_elbow = QFrame()
+        side_elbow.setFixedSize(220, 30)
+        side_elbow.setStyleSheet(f"background-color: {get_random_button_color(self.era, self.faction)}; border-bottom-left-radius: {b_radius};")
+        sidebar.addWidget(side_elbow)
+
+        nav_buttons = [
+            ("SENSORS", self.open_sensors),
+            ("PROJECTS", self.open_projects),
+            ("ENGINE", self.open_geant4),
+            ("TERMINAL", self.open_terminal),
+            ("ANALYTICS", self.open_analytics),
+            ("SYSTEM", self.open_system_menu)
+        ]
+
+        for text, handler in nav_buttons:
+            btn = LCARSButton(text, era=self.era, faction=self.faction, shape="left_pill")
+            btn.clicked.connect(handler)
+            sidebar.addWidget(btn)
+
+        sidebar.addStretch()
+        
+        off_btn = LCARSButton("OFF", "#CC0000", era=self.era, faction=self.faction, shape="left_pill")
+        off_btn.clicked.connect(self.close)
+        sidebar.addWidget(off_btn)
+        
+        middle_layout.addLayout(sidebar)
+
+        self.content_stack = QStackedWidget()
+        border_color = palette.get('panel_border', '#2F3749')
+        self.content_stack.setStyleSheet(f"background-color: #000000; border-top: 2px solid {border_color}; border-left: 2px solid {border_color};")
+        
+        self.mission_hub = self.create_dashboard()
+        self.content_stack.addWidget(self.mission_hub)
+        
+        middle_layout.addWidget(self.content_stack, 1)
+        main_layout.addLayout(middle_layout, 1)
+
+        # --- BOTTOM BAR ---
+        bottom_bar = QHBoxLayout()
+        bottom_bar.setSpacing(5)
+        
+        bot_left = QFrame()
+        bot_left.setFixedSize(220, 60)
+        bot_left.setStyleSheet(f"background-color: {get_random_button_color(self.era, self.faction)}; border-bottom-left-radius: {e_radius}; border-top-left-radius: 5px;")
+        bottom_bar.addWidget(bot_left)
+
+        bot_mid = QFrame()
+        bot_mid.setFixedHeight(60)
+        bot_mid.setStyleSheet(f"background-color: {get_random_button_color(self.era, self.faction)};")
+        bottom_bar.addWidget(bot_mid, 1)
+        
+        self.clock_label = QLabel("00:00:00")
+        self.clock_label.setStyleSheet(f"color: {get_random_button_color(self.era, self.faction)}; {get_lcars_font_style(16, 'normal')}")
+        bottom_bar.addWidget(self.clock_label)
+        
+        main_layout.addLayout(bottom_bar)
+
+    def create_dashboard(self):
+        dash = QWidget()
+        layout = QVBoxLayout(dash)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        palette = get_era_palette(self.era, self.faction)
+        header_color = palette.get('button_colors', ['#FFCC66'])[0]
+        
+        header = QLabel("◤ LCARS MISSION OPERATIONS HUB")
+        header.setStyleSheet(f"color: {header_color}; {get_lcars_font_style(28, 'bold')}")
+        layout.addWidget(header)
+        
+        grid = QGridLayout()
+        status_items = [
+            ("ENVIRONMENT", "NOMINAL"), ("SHIELDS", "STANDBY"),
+            ("SENSORS", "SCANNING..."), ("G4 ENGINE", "READY"),
+            ("NETWORK", "CONNECTED"), ("DATABANK", "ENX-ONLINE")
+        ]
+        for i, (name, val) in enumerate(status_items):
+            panel = QFrame()
+            accent_color = get_random_button_color(self.era, self.faction)
+            panel.setStyleSheet(f"background-color: rgba(20, 25, 40, 180); border-left: 5px solid {accent_color};")
+            l = QVBoxLayout(panel)
+            n = QLabel(name); n.setStyleSheet(f"color: {accent_color}; font-size: 10pt; font-weight: bold;")
+            v = QLabel(val); v.setStyleSheet("color: white; font-size: 14pt;")
+            l.addWidget(n); l.addWidget(v)
+            grid.addWidget(panel, i // 3, i % 3)
+        layout.addLayout(grid)
+        
+        self.terminal_output = QLabel("AUTHENTICATING COMMANDER...\nACCESS GRANTED.\nSYSTEMS NOMINAL.")
+        self.terminal_output.setStyleSheet(f"background-color: #050505; color: #00FF00; {get_lcars_font_style(12, 'normal')}; padding: 10px;")
+        self.terminal_output.setMinimumHeight(150)
+        layout.addWidget(self.terminal_output)
+        layout.addStretch()
+        return dash
+
+    def update_clock(self):
+        self.clock_label.setText(datetime.now().strftime("%H:%M:%S"))
+
+    def open_projects(self):
+        from lcars.ui.views.project_explorer import ProjectExplorer
+        if not hasattr(self, "project_widget"):
+            pm = self.system.project_manager if self.system else None
+            self.project_widget = ProjectExplorer(pm, era=self.era)
+            self.content_stack.addWidget(self.project_widget)
+        self.content_stack.setCurrentWidget(self.project_widget)
+
+    def open_sensors(self):
+        from lcars.ui.views.analytics import AnalyticsView
+        if not hasattr(self, "sensors_widget"):
+            self.sensors_widget = AnalyticsView(self.event_bus)
+            self.content_stack.addWidget(self.sensors_widget)
+        self.content_stack.setCurrentWidget(self.sensors_widget)
+
+    def open_geant4(self):
+        from lcars.ui.views.operations import OperationsView
+        if not hasattr(self, "geant4_widget"):
+            ex = self.system.task_executor if self.system else None
+            self.geant4_widget = OperationsView(self.event_bus, ex)
+            self.content_stack.addWidget(self.geant4_widget)
+        self.content_stack.setCurrentWidget(self.geant4_widget)
+
+    def open_terminal(self):
+        from lcars.ui.views.terminal import TerminalView
+        if not hasattr(self, "terminal_widget"):
+            self.terminal_widget = TerminalView(self.event_bus)
+            self.content_stack.addWidget(self.terminal_widget)
+        self.content_stack.setCurrentWidget(self.terminal_widget)
+
+    def open_analytics(self):
+        self.open_sensors()
+
+    def open_system_menu(self):
+        from lcars.ui.system_menu import SystemMenu
+        SystemMenu(self).exec()
+
+    def _show_placeholder(self, title):
+        w = QWidget(); l = QVBoxLayout(w); l.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl = QLabel(f"◤ {title}\nMODULE OFFLINE"); lbl.setStyleSheet(f"color: {get_random_button_color(self.era)}; {get_lcars_font_style(32, 'bold')}")
+        btn = LCARSButton("BACK", era=self.era); btn.clicked.connect(lambda: self.content_stack.setCurrentIndex(0))
+        l.addWidget(lbl); l.addWidget(btn)
+        self.content_stack.addWidget(w); self.content_stack.setCurrentWidget(w)
+
+def main():
+    setup_lcars_font()
+    app = QApplication(sys.argv)
+    LCARSDesktop().show()
+    sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()

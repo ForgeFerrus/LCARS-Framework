@@ -1,0 +1,3 @@
+Backup of lcars/ui/desktop.py created before replacing with central wrapper.
+
+(This is an automatic backup. It contains the restored-archive variant created earlier.)

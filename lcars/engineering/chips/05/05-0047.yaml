@@ -1,0 +1,18 @@
+Metadata:
+  Id: 05-0047
+  Name: Internal Security Forcefields & Deck Containment
+  Category: '05'
+  Version: 5.0.0
+  Faction: Federation
+  Type: security
+  Status: nominal
+Specs:
+  Capacity: 2048
+  ColorCode: '#CC0000'
+  SecurityLevel: 9
+  Bus: ODN-05
+Paths:
+  DatabaseFile: lcars/data/05/05-0047-tactical-security.db
+Entrypoints:
+  Main: lcars.modules.security:TacticalSecurity
+Description: Керування внутрішніми силовими полями ізоляції відсіків, брігу та збройових.

@@ -1,0 +1,18 @@
+Metadata:
+  Id: 07-0003
+  Name: LCARS Interface Editor & Decompiler
+  Category: '07'
+  Version: 5.0.0
+  Faction: Federation
+  Type: interface
+  Status: nominal
+Specs:
+  Capacity: 4096
+  ColorCode: '#FF9900'
+  SecurityLevel: 4
+  Bus: ODN-07
+Paths:
+  DatabaseFile: lcars/data/07/07-0003-editor.db
+Entrypoints:
+  Main: lcars.engineering.editor:InterfaceEditor
+Description: Інженерний декомпілятор та редактор інтерфейсів зорельота LCARS.

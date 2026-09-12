@@ -1,0 +1,19 @@
+Metadata:
+  Id: 02-0010
+  Name: Warp Core & EPS Engineering Telemetry
+  Category: '02'
+  Version: 5.0.0
+  Faction: Federation
+  Type: engineering
+  Status: nominal
+Specs:
+  Capacity: 8192
+  ColorCode: '#3399FF'
+  SecurityLevel: 7
+  Bus: ODN-02
+Paths:
+  DatabaseFile: lcars/data/02/02-0010-telemetry.db
+Entrypoints:
+  Main: lcars.engineering.telemetry:EngineeringTelemetry
+Description: Телеметрія реактора матерія/антиматерія, температура ядра та розподіл
+  потужності EPS-сітки.

@@ -1,0 +1,18 @@
+Metadata:
+  Id: 01-0001
+  Name: Base Signal Routing Matrix
+  Category: '01'
+  Version: 5.0.0
+  Faction: Federation
+  Type: base
+  Status: nominal
+Specs:
+  Capacity: 2048
+  ColorCode: '#CC6699'
+  SecurityLevel: 5
+  Bus: ODN-01
+Paths:
+  DatabaseFile: lcars/data/01/01-0001-signals.db
+Entrypoints:
+  Main: lcars.base.signal:SignalBus
+Description: Таблиці маршрутизації сигналів та шина подій базового фреймворку.

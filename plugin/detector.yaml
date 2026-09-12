@@ -1,0 +1,26 @@
+﻿name: detector
+version: 1.0.0
+entrypoint: plugins:SetupDetector
+license: MIT
+author: LCARS Framework
+
+description: "Geant4 детектори: симуляція, візуалізація, аналіз даних."
+
+tags:
+  - geant4
+  - detector
+  - simulation
+
+config:
+  type: object
+  properties:
+    geometryPath:
+      type: string
+      default: data/geometry
+    autoLoad:
+      type: boolean
+      default: false
+  additionalProperties: false
+
+security:
+  requireExplicitEnable: true

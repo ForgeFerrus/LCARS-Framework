@@ -1,0 +1,82 @@
+{
+    "elements": [
+        {
+            "name": "panel",
+            "background": "#0A0A1E",
+            "border_color": "#4C4C7A",
+            "border_radius": 4,
+            "border_width": 2
+        },
+        {
+            "name": "button",
+            "background": "#1E3A8A",
+            "hover_background": "#2C4B9E",
+            "active_background": "#3B5DB8",
+            "text_color": "#E0E0FF",
+            "border_radius": 4,
+            "padding": [8, 12]
+        },
+        {
+            "name": "alert_button",
+            "background": "#8A1E1E",
+            "hover_background": "#9E2C2C",
+            "active_background": "#B83B3B"
+        },
+        {
+            "name": "primary_button",
+            "background": "#1E4A8A",
+            "hover_background": "#2C5E9E",
+            "active_background": "#3B7AB8"
+        },
+        {
+            "name": "display",
+            "background": "#0A0A14",
+            "border_color": "#4C4C7A",
+            "border_width": 1,
+            "text_color": "#00FFFF",
+            "font_family": "Arial, sans-serif"
+        },
+        {
+            "name": "gauge",
+            "background": "#0A0A14",
+            "foreground": "#1E90FF",
+            "border_color": "#4C4C7A",
+            "border_width": 1,
+            "needle_color": "#FF4500"
+        },
+        {
+            "name": "tab",
+            "background": "#1A1A3A",
+            "active_background": "#2A2A5A",
+            "text_color": "#E0E0FF",
+            "border_radius": 4
+        },
+        {
+            "name": "header",
+            "background": "#1A1A3A",
+            "text_color": "#E0E0FF",
+            "font_size": 18,
+            "padding": [12, 16]
+        },
+        {
+            "name": "status_bar",
+            "background": "#1A1A3A",
+            "text_color": "#E0E0FF",
+            "border_top": "1px solid #4C4C7A"
+        },
+        {
+            "name": "alert",
+            "background": "#8A1E1E",
+            "text_color": "#FFFFFF",
+            "border": "2px solid #FF4D4D"
+        },
+        {
+            "name": "input",
+            "background": "#0A0A14",
+            "border_color": "#4C4C7A",
+            "border_width": 1,
+            "text_color": "#E0E0FF",
+            "focus_border_color": "#1E90FF"
+        }
+    ]
+}

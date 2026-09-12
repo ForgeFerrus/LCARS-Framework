@@ -1,0 +1,57 @@
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
+import psutil
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class SystemMonitor(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.prev_net_io = None
+        self.setup_system_monitor_tab()
+        from PyQt6.QtCore import QTimer
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self.update_system_monitor)
+        self._timer.start(2000)
+
+    def setup_system_monitor_tab(self):
+        layout = QVBoxLayout()
+        self.cpu_label = QLabel("CPU Usage: 0%")
+        layout.addWidget(self.cpu_label)
+        self.memory_label = QLabel("Memory Usage: 0%")
+        layout.addWidget(self.memory_label)
+        self.network_label = QLabel("Network Usage: 0 KB/s")
+        layout.addWidget(self.network_label)
+        update_button = QPushButton("Update System Monitor")
+        update_button.clicked.connect(self.update_system_monitor)
+        layout.addWidget(update_button)
+        self.setLayout(layout)
+
+    def update_system_monitor(self):
+        # gather cpu/memory metrics
+        try:
+            cpu_usage = psutil.cpu_percent()
+            memory = psutil.virtual_memory().percent
+            self.cpu_label.setText(f"CPU Usage: {cpu_usage}%")
+            self.memory_label.setText(f"Memory Usage: {memory}%")
+        except Exception as e:
+            logger.exception("failed to read cpu/memory: %s", e)
+        try:
+            net_io = psutil.net_io_counters()
+            if net_io:
+                if self.prev_net_io is None:
+                    self.network_label.setText("Network Usage: initializing…")
+                else:
+                    sent = (net_io.bytes_sent - self.prev_net_io.bytes_sent) / 1024
+                    recv = (net_io.bytes_recv - self.prev_net_io.bytes_recv) / 1024
+                    self.network_label.setText(
+                        f"Network: {sent:.1f} KB↑ {recv:.1f} KB↓"
+                    )
+                self.prev_net_io = net_io
+            else:
+                self.network_label.setText("Network Usage: unavailable")
+        except Exception as e:
+            logger.exception("failed to read network counters: %s", e)
+            self.network_label.setText("Network Usage: error")
