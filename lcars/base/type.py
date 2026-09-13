@@ -19,7 +19,12 @@ class Namespace(type):
         if AttributeName.startswith("_"):
             raise AttributeError(AttributeName)
 
-        ParentPath = cls.__dict__.get("PatternBuffer") or cls.__dict__.get("NamespacePath") or cls.__dict__.get("Name") or cls.__name__
+        ParentPath = (
+            cls.__dict__["PatternBuffer"] if "PatternBuffer" in cls.__dict__
+            else cls.__dict__["NamespacePath"] if "NamespacePath" in cls.__dict__
+            else cls.__dict__["Name"] if "Name" in cls.__dict__
+            else cls.__name__
+        )
         FullPath = f"{ParentPath}.{AttributeName}"
 
         # 1. Прямий резолвінг через реєстр LCARS
@@ -40,9 +45,6 @@ class Namespace(type):
 class SystemMap(metaclass=Namespace):
     NamespacePath = "System"
     Core = "System.Core"
-    Sqlite = "Bridge.Storage.Sqlite"
-    Json = "Bridge.Storage.Json"
-    Yaml = "Bridge.Storage.Yaml"
 
 class CoreMap(metaclass=Namespace):
     NamespacePath = "Base.Core"
@@ -92,9 +94,11 @@ class LCARS(metaclass=Namespace):
     Architecture = Version.Architecture
     Design = Version.Design
     PlatformSpec = Version.Platform
-    Stardate = Version.GetStardate
-    EarthDate = Version.GetEarthDate
+    Stardate = Version.Stardate
+    EarthDate = Version.EarthDate
+    Metadata = Version.Passport
     Version = Version.Release
+
 
 
     # === КАРТИ ПІДСИСТЕМ (MAPS) ===

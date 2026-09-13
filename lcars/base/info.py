@@ -23,21 +23,17 @@ class Version:
 
     @classmethod
     # Делегуємо отримання астрономічного часу спеціалізованому системному хронометру
-    def GetStardate(cls) -> str:
+    def Stardate(cls) -> str:
         from lcars.service.chronometer import StardateCalculator
         return str(StardateCalculator.Stardate())
 
     @classmethod
-    def GetEarthDate(cls) -> str:
+    def EarthDate(cls) -> str:
         from lcars.service.chronometer import StardateCalculator
         return StardateCalculator.EarthDate()
 
     @classmethod
-    def GetVersion(cls) -> str:
-        return cls.Release
-
-    @classmethod
-    def GetMetadata(cls) -> Dict[str, Any]:
+    def Metadata(cls) -> Dict[str, Any]:
         return cls.Passport()
 
     # Повний паспорт системи
@@ -49,8 +45,8 @@ class Version:
             "version": cls.Release,
             "build": cls.Build,
             "status": cls.Status,
-            "stardate": cls.GetStardate(),
-            "earth_date": cls.GetEarthDate(),
+            "stardate": cls.Stardate(),
+            "earth_date": cls.EarthDate(),
             "system": cls.System,
             "specification": cls.Specification,
             "architecture": cls.Architecture,
@@ -60,19 +56,16 @@ class Version:
         }
 
     def __str__(self):
-        return f"{self.Title} v{self.Release} [Stardate {self.GetStardate()}]"
+        return f"{self.Title} v{self.Release} [Stardate {self.Stardate()}]"
 
 # Канонічні аліаси для зворотної сумісності
 Passport = Version
 VersionInfo = Version
 SystemInfo = Version
-getVersion = Version.GetVersion
-getMetadata = Version.GetMetadata
 __all__ = [
     "Version",
     "Passport",
     "VersionInfo",
     "SystemInfo",
-    "getVersion",
-    "getMetadata",
 ]
+
