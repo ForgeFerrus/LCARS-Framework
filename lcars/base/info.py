@@ -5,9 +5,7 @@
 #       Містить глобальну версію, метадані та делегує обчислення часу хронометру.
 # СТАНДАРТ: Titanium (Zero-Except, Zero-Underscores, Strict PascalCase, Pure Classes).
 # =============================================================================
-from __future__ import annotations
 import sys
-from typing import Any, Dict
 
 # Офіційна глобальна версія проекту (встановлюється розробником)
 class Version:
@@ -33,12 +31,12 @@ class Version:
         return StardateCalculator.EarthDate()
 
     @classmethod
-    def Metadata(cls) -> Dict[str, Any]:
+    def Metadata(cls) -> dict:
         return cls.Passport()
 
     # Повний паспорт системи
     @classmethod
-    def Passport(cls) -> Dict[str, Any]:
+    def Passport(cls) -> dict:
         return {
             "title": cls.Title,
             "release": cls.Release,

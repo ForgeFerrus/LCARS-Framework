@@ -82,7 +82,26 @@ class PlatformMap(metaclass=Namespace):
     Build = "System.Platform.Build"
 
 # =====================================================================
+# LCARS TYPE & ANNOTATION SUBSTITUTES (НАТИВНІ ТИПИ ТА АНОТАЦІЇ)
+class Type:
+    """Титанові замінники системних типів для уникнення зовнішніх імпортів."""
+    Any = object
+    Dict = dict
+    List = list
+    Tuple = tuple
+    Set = set
+    String = str
+    Integer = int
+    Float = float
+    Boolean = bool
+    Bytes = bytes
+    Callable = callable
+
+Annotation = Type
+
+# =====================================================================
 # LCARS CLASS - Головний клас з організованою класифікацією
+
 class LCARS(metaclass=Namespace):
     # === КОРПОРАТИВНИЙ ПАСПОРТ ТА СПЕЦИФІКАЦІЯ LCARS ===
     Name = "Library Computer Access/Retrieval System"
@@ -140,7 +159,9 @@ class LCARS(metaclass=Namespace):
     Time = "System.Time"
     Copy = "System.Copy"
     String = "System.String"
-    Typing = "System.Typing"
+    Typing = Type
+    Type = Type
+    Annotation = Annotation
     Method = "System.AbstractMethod"
     DataClass = "System.DataClass"
     Field = "System.DataClass.Field"
@@ -733,4 +754,7 @@ __all__ = [
     "Protocol",
     "Process",
     "Align",
+    "Type",
+    "Annotation",
 ]
+

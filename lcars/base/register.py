@@ -1,6 +1,5 @@
 # LCARS FRAMEWORK REGISTER — CENTRAL REGISTRY
 # ПРИНЦИП: Єдина точка доступу до всіх системних об'єктів
-from __future__ import annotations
 from .info import Version
 
 # Центральний реєстр LCARS (Library Computer Access and Retrieval System)
