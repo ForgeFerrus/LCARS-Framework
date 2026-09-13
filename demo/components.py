@@ -61,7 +61,6 @@ C.Add(LCARSLabel(Text="4. STRUCTURAL ELEMENTS (BARS & ELBOWS)", FontSize=14))
 R4 = LCARS.Horizontal()
 R4.setContentsMargins(0, 0, 0, 0)
 R4.setSpacing(12)
-# explicitly pass Sensory=True so they are colored
 R4.addWidget(LCARSElbow(Direction="top-left",     Width=140, Height=90, Sensory=True).widget)
 R4.addWidget(LCARSElbow(Direction="bottom-right", Width=140, Height=90, Sensory=True).widget)
 
@@ -77,7 +76,6 @@ R4.addLayout(VBarBox)
 R4.addStretch()
 C.Layout.addLayout(R4)
 
-# Push everything to the top
 C.Layout.addStretch()
 
 Padd.Widget.show()

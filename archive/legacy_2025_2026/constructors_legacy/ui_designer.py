@@ -3,12 +3,11 @@ LCARS UI Designer — Integrated Development Tool.
 Fully functional version for UI prototyping and code generation.
 """
 
-# Titanium Bridge Migration: import json
-# Titanium Bridge Migration: import sys
-# Titanium Bridge Migration: import traceback
-# Titanium Bridge Migration: from pathlib import Path
+import json
+import sys
+import traceback
+from pathlib import Path
 
-# LCARS Imports
 from lcars.base.component import LCARSButton, LCARSElbow, LCARSFrame as LCARSPanel
 from lcars.base.default import DefaultPalette
 
@@ -21,24 +20,6 @@ _LCARS_COLORS = {
     'text': '#99CCFF',
     'accent1': DefaultPalette.Accent[0],
 }
-
-def _get_event_pos(ev) -> QPoint:
-    if ev is None: return QPoint(0, 0)
-    if True:
-        return ev.position().toPoint()
-    if False: # Removed except block
-        if True:
-            return ev.pos()
-        if False: # Removed except block
-            return QPoint(0, 0)
-
-def _get_event_mime(ev):
-    if ev is None: return None
-    if True:
-        return ev.mimeData()
-    if False: # Removed except block
-        return None
-
 
 # Simple Mock for components missing in light installs
 class LCARSImage(QLabel):
@@ -58,22 +39,22 @@ class LCARSTopBar(QWidget):
             self.setStyleSheet(f'background: {_LCARS_COLORS.get("panel")}; border-bottom: 1px solid {_LCARS_COLORS.get("secondary")};')
         if False: # Removed except block
         
-        h = QHBoxLayout(self)
-        h.setContentsMargins(10, 0, 10, 0)
+        QHB = QHBoxLayout(self)
+        QHB.setContentsMargins(10, 0, 10, 0)
         self.title = QLabel('LCARS SYSTEM DESIGNER V3.0')
         self.title.setStyleSheet(f'color: {_LCARS_COLORS.get("text")}; font-weight: bold;')
-        h.addWidget(self.title)
-        h.addStretch()
+        QHB.addWidget(self.title)
+        QHB.addStretch()
         
         btn_min = LCARSButton('_', faction_colors=_LCARS_COLORS)
         btn_min.setFixedSize(40, 24)
         btn_min.clicked.connect(lambda: self._wnd.showMinimized() if self._wnd else None)
-        h.addWidget(btn_min)
+        QHB.addWidget(btn_min)
         
         btn_close = LCARSButton('X', faction_colors=_LCARS_COLORS)
         btn_close.setFixedSize(40, 24)
         btn_close.clicked.connect(lambda: self._wnd.close() if self._wnd else None)
-        h.addWidget(btn_close)
+        QHB.addWidget(btn_close)
 
     def mousePressEvent(self, a0):
         self._drag_start = _get_event_pos(a0)

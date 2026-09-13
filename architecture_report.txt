@@ -1,0 +1,24 @@
+LCARS Architecture Scan Report
+Root: C:\Users\Forge\MyProject\LCARS-Framework
+Timestamp: 2026-09-13T17:49:54.507056Z
+Problems: 4
+
+Problems detail:
+ - missing_dir: C:\Users\Forge\MyProject\LCARS-Framework\plugins
+ - missing_file: C:\Users\Forge\MyProject\LCARS-Framework\lcars\__init__.py
+ - missing_initialize: C:\Users\Forge\MyProject\LCARS-Framework\lcars\__init__.py
+ - missing_central_command: C:\Users\Forge\MyProject\LCARS-Framework\lcars\ui\lcars_central.py
+
+Present directories:
+ - C:\Users\Forge\MyProject\LCARS-Framework\lcars
+ - C:\Users\Forge\MyProject\LCARS-Framework\lcars\ui
+ - C:\Users\Forge\MyProject\LCARS-Framework\lcars\core
+ - C:\Users\Forge\MyProject\LCARS-Framework\config
+ - C:\Users\Forge\MyProject\LCARS-Framework\docs
+ - C:\Users\Forge\MyProject\LCARS-Framework\tests
+
+Present files:
+ - C:\Users\Forge\MyProject\LCARS-Framework\start.py
+ - C:\Users\Forge\MyProject\LCARS-Framework\launcher.py
+ - C:\Users\Forge\MyProject\LCARS-Framework\requirements.txt
+ - C:\Users\Forge\MyProject\LCARS-Framework\lcars\ui\lcars_central.py

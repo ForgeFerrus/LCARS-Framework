@@ -3,13 +3,12 @@
 # Об'єднано: колишні designer (полотно, сайдбар, експорт) та boot-шар вікна.
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Titanium Bridge Migration: import sys
-# Titanium Bridge Migration: from typing import Any, List, Optional, Tuple, Type, Union
-
+import sys
+from typing import Any, List, Optional, Tuple, Type, Union
 from lcars.base.type import Matrix, Directive, LCARS
 Primitives = LCARS
 from lcars.base.register import registry
-from lcars.base.graphic import Graphic, THICK, THIN, GAP, RADIUS
+from lcars.base.graphic import Graphic
 
 # ==============================================================================
 # INTERNAL GRAPHIC DRAWING WIDGETS (для дизайнера)

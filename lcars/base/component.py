@@ -58,19 +58,15 @@ class Component(Graphic):
         return True
 
     @classmethod
-    def NormalizeDirection(cls, Direction: Any) -> int:
+    def NormalizeDirection(cls, Direction: Any):
         if isinstance(Direction, (int, float)):
             return int(Direction) % 360
         DirStr = cls.Normalize(Direction)
-        if DirStr in ("right", "east", "0", "0deg"):
-            return 0
-        elif DirStr in ("bottom", "down", "south", "90", "90deg"):
-            return 90
-        elif DirStr in ("left", "west", "180", "180deg"):
-            return 180
-        elif DirStr in ("top", "up", "north", "270", "270deg"):
-            return 270
-        return 0
+        if DirStr in ("right", "east", "0", "0deg"): return 0
+        if DirStr in ("bottom", "down", "south", "90", "90deg"): return 90
+        if DirStr in ("left", "west", "180", "180deg"): return 180
+        if DirStr in ("top", "up", "north", "270", "270deg"): return 270
+        return Direction # Return string as-is for elbows ("top-left", etc)
 
     def __init__(
         self,
@@ -141,10 +137,10 @@ class Component(Graphic):
             type(self).Algorithm
         )
 
-        self.Power = kwargs.get("Power", True) if "kwargs" in locals() else Args.get("Power", True)
-        self.Locked = kwargs.get("Locked", False) if "kwargs" in locals() else Args.get("Locked", False)
-        self.IsWakeupTrigger = bool(kwargs.get("IsWakeupTrigger", False) if "kwargs" in locals() else Args.get("IsWakeupTrigger", False))
-        self.DarkCycle = bool(kwargs.get("DarkCycle", False) if "kwargs" in locals() else Args.get("DarkCycle", False))
+        self.Power = Args.get("Power", True)
+        self.Locked = Args.get("Locked", False)
+        self.IsWakeupTrigger = bool(Args.get("IsWakeupTrigger", False))
+        self.DarkCycle = bool(Args.get("DarkCycle", False))
 
         ODN.Listen(
             "UI.AlertChanged",
@@ -367,8 +363,7 @@ class Component(Graphic):
         return Base
 
     # Розрахунок внутрішньої геометрії — перевизначається підкласами
-    def CalculateLayout(self, Width, Height):
-        return {"x": 0, "y": 0, "w": Width, "h": Height}
+
 
     # Алгоритмічний життєвий цикл базового компонента LCARS (чисті системні команди)
     def Mount(self):
@@ -385,6 +380,14 @@ class Component(Graphic):
         return self
 
     def Purge(self):
+        try:
+            ODN.Disconnect("UI.AlertChanged", self.UpdateAlert)
+            ODN.Disconnect("UI.PaletteChanged", self.UpdateAlert)
+            ODN.Disconnect("UI.Power", self.UpdatePower)
+            ODN.Disconnect("UI.SecurityLock", self.UpdateSecurityLock)
+        except:
+            pass
+            
         if hasattr(self, "Destroy"):
             self.Destroy()
         return self
@@ -608,6 +611,10 @@ class LCARSButton(Interactable):
             self.Handler()
         return self
 
+    def OnClick(self):
+        self.State = "pressed"
+        return self.Engage()
+
     def Release(self):
         if not getattr(self, "Sensory", True):
             return self
@@ -616,6 +623,13 @@ class LCARSButton(Interactable):
         self.Update()
         self.TransmitRelease(self)
         return self
+
+    def OnRelease(self):
+        self.State = "normal"
+        return self.Release()
+
+    def GetNumber(self):
+        return self.Number
 
     def Focus(self, Entering: bool):
         if not getattr(self, "Sensory", True):
@@ -1313,6 +1327,7 @@ class LCARSElbow(Component):
             **Args
         )
 
+        self.Direction = Direction
         self.Thickness = float(Thickness)
         self.Radius = float(Radius)
 
@@ -1401,6 +1416,7 @@ class LCARSElbow(Component):
         Thickness,
         Radius
     ):
+        self.Direction = Direction
         self.Thickness = float(Thickness)
         self.Radius = float(Radius)
         self.Update()
@@ -1556,20 +1572,12 @@ registry.Register("LCARS.Component.Elbow", "lcars.base.component", "LCARSElbow")
 __all__ = [
     "Component",
     "Interactable",
-    "Graphic",
-    "Normalize",
-    "Take",
-    "LCARSButton",
-    "Button",
-    "LCARSElbow",
-    "Elbow",
-    "LCARSIndicator",
-    "Indicator",
-    "LCARSBar",
-    "Bar",
-    "LCARSLabel",
-    "Label",
-    "SetStyle",
+    "Normalize", "Take",
+    "LCARSButton", "Button",
+    "LCARSElbow", "Elbow",
+    "LCARSIndicator", "Indicator",
+    "LCARSBar", "Bar",
+    "LCARSLabel", "Label",
 ]
 
 

@@ -411,8 +411,8 @@ class DatabaseMaintenance(LCARS):
         return Count
 
 class RecoveryMaintenance(LCARS):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.BackupStore = deque(maxlen=10)
         self.EmergencyState: dict = {
             "active": False,

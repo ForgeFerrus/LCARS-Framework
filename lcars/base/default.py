@@ -42,6 +42,8 @@ class Palette(LCARS):
     Disabled = ["#606060", "#333333"]
     Dark = ["#000000"]
 
+    YellowAlert = Yellow
+    RedAlert = Red
     Normal = Buttons
     Alert = Red
     Neutral = Disabled
@@ -380,4 +382,17 @@ ResolvePaletteGroup = SystemTheme.ResolvePaletteGroup
 RandomButtonColor = SystemTheme.DynamicColor
 ContrastColor = SystemTheme.ContrastColor
 FontStyle = SystemTheme.FontStyle
+FontSetup = SystemTheme.FontSetup
 SetDisplayFlag = SystemTheme.SetDisplayFlag
+DefaultPalette = Palette
+
+__all__ = [
+    "AudioEnabled", "SystemScale", "SystemState", "MinFontSize",
+    "SystemStyle", "Palette", "DefaultPalette", "SystemTheme",
+    "DefaultBackground", "DefaultFontFamily", "DefaultFontWeight",
+    "FrameThick", "FrameThin", "FrameRadius",
+    "CycleNormal", "CycleYellow", "CycleRed", "CycleDark",
+    "DefaultStyle", "DefaultSystemConfig", "SystemThemeInfo", "BaselineTheme",
+    "DefaultConfig", "ApplySystemConfig", "ResolvePaletteGroup",
+    "RandomButtonColor", "ContrastColor", "FontStyle", "FontSetup", "SetDisplayFlag",
+]

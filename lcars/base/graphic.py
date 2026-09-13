@@ -213,6 +213,16 @@ class Graphic(SystemComponent):
         self.Color = Color
         return self.SetStyle(f"background-color: {Color};")
 
+    def SetBorderColor(self, Color):
+        return self.SetStyle(f"border: 1px solid {Color};")
+
+    def SetBorderRadius(self, Radius):
+        self.Radius = int(Radius)
+        return self.SetStyle(f"border-radius: {self.Radius}px;")
+
+    def SetBorder(self, Width=1, Style="solid", Color="#FFFFFF"):
+        return self.SetStyle(f"border: {Width}px {Style} {Color};")
+
     def SetTextColor(self, Color):
         return self.SetStyle(f"color: {Color};")
 
@@ -279,10 +289,14 @@ class Graphic(SystemComponent):
     def IsWidgetActive(self) -> bool:
         if self.Widget is None:
             return False
+        Target = getattr(self.Widget, "Widget", getattr(self.Widget, "widget", self.Widget))
         SipMod = LCARS.Import("PyQt6.sip") or LCARS.Import("sip")
         if SipMod and hasattr(SipMod, "isdeleted"):
-            if SipMod.isdeleted(self.Widget):
-                return False
+            try:
+                if SipMod.isdeleted(Target):
+                    return False
+            except (TypeError, Exception):
+                pass
         return True
 # =============================================================================
 # 3. ВІДЖЕТ ВІЗУАЛІЗАЦІЇ LCARS (GRAPHIC WIDGET)

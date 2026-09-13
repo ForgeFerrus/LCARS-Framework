@@ -8,6 +8,9 @@
 # - інтегрується з Registry, ODN і Nexus;
 # - не є транспортом і не створює канали.
 from __future__ import annotations
+import math
+from typing import Any, Optional, Dict, List, Tuple, Iterable
+
 from lcars.base.info import Version
 from lcars.base.type import LCARS, SystemComponent
 from lcars.base.register import registry
@@ -35,7 +38,7 @@ class MatrixNode(SystemComponent):
         self.Links = Links or []
         self.Quantum = Quantum or QuantumState()
 
-class SystemMatrix(LCARS):
+class SystemMatrix(SystemComponent):
     # Ініціалізація матриці з розмірностями та залежностями.
     def __init__(
         self,
@@ -46,7 +49,7 @@ class SystemMatrix(LCARS):
         Nexus=None,
         Parent=None,
     ):
-        super().__init__(Id=Id or f"Matrix-{id(self)}")
+        super().__init__(SystemId=Id or f"Matrix-{id(self)}")
         self.Parent = Parent
         self.Version = Version
         self.Role = "Core.Matrix"
@@ -129,7 +132,7 @@ class SystemMatrix(LCARS):
         return Node
 
     # Отримання вузла за координатами.
-    def GetNode(self, X: int, Y: int, Z: int) -> Optional[MatrixNode]:
+    def ReadNode(self, X: int, Y: int, Z: int) -> Optional[MatrixNode]:
         with self.Lock:
             return self.Nodes.get((X, Y, Z))
 
@@ -145,7 +148,7 @@ class SystemMatrix(LCARS):
 
     # Зчитування значення вузла за координатами.
     def Read(self, X: int, Y: int, Z: int) -> Any:
-        Node = self.GetNode(X, Y, Z)
+        Node = self.ReadNode(X, Y, Z)
         return None if Node is None else Node.Value
 
     # Запис значення у вузол за координатами.
@@ -302,7 +305,7 @@ class SystemMatrix(LCARS):
 
     # Вимірювання квантового стану вузла.
     def MeasureQuantum(self, X: int, Y: int, Z: int) -> Optional[Dict[str, Any]]:
-        Node = self.GetNode(X, Y, Z)
+        Node = self.ReadNode(X, Y, Z)
         if Node is None:
             return None
         Node.Quantum.Measured = True
@@ -314,7 +317,7 @@ class SystemMatrix(LCARS):
 
     # Отримання квантового стану вузла.
     def GetQuantumState(self, X: int, Y: int, Z: int) -> Optional[QuantumState]:
-        Node = self.GetNode(X, Y, Z)
+        Node = self.ReadNode(X, Y, Z)
         return None if Node is None else Node.Quantum
 
     # Створення підматриці як домену.
@@ -369,7 +372,7 @@ class SystemMatrix(LCARS):
                     Node.State,
                     dict(Node.Metadata),
                 )
-                Copy = self.GetNode(X + Ox, Y + Oy, Z + Oz)
+                Copy = self.ReadNode(X + Ox, Y + Oy, Z + Oz)
                 if Copy is not None:
                     Copy.Links = list(Node.Links)
                     Copy.Quantum = QuantumState(
@@ -384,7 +387,7 @@ class SystemMatrix(LCARS):
 
     # Встановлення стану вузла за координатами.
     def SetState(self, X: int, Y: int, Z: int, State: str) -> bool:
-        Node = self.GetNode(X, Y, Z)
+        Node = self.ReadNode(X, Y, Z)
         if Node is None:
             return False
         Node.State = State
@@ -392,7 +395,7 @@ class SystemMatrix(LCARS):
 
     # Отримання стану вузла за координатами.
     def GetState(self, X: int, Y: int, Z: int) -> Optional[str]:
-        Node = self.GetNode(X, Y, Z)
+        Node = self.ReadNode(X, Y, Z)
         return None if Node is None else Node.State
 
     # Повернення кількості вузлів у матриці.

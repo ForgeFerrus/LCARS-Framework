@@ -10,6 +10,24 @@ from lcars.base.type import LCARS, SystemComponent
 from lcars.base.info import Version
 
 
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
+
+@dataclass
+class ConfigSchema:
+    name: str = ""
+    Name: str = ""
+    required_keys: List[str] = field(default_factory=list)
+    optional_keys: List[str] = field(default_factory=list)
+    type_hints: Dict[str, Any] = field(default_factory=dict)
+    defaults: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if not self.Name and self.name:
+            self.Name = self.name
+        if not self.name and self.Name:
+            self.name = self.Name
+
 class ConfigManager(SystemComponent):
     SystemVersion = Version.Release
     Instance = None
@@ -19,6 +37,7 @@ class ConfigManager(SystemComponent):
         self.Version = Version.Release
         self.Passport = Version.Passport()
         self.Configs = {}
+        self.Schemas = {}
         self.Watchers = {}
         self.PathTool = LCARS.System.Path
 
@@ -46,6 +65,14 @@ class ConfigManager(SystemComponent):
     def Themes(self):
         return ["Default", "UFP Classic", "Tactical", "Engineering", "Titan", "Klingon"]
 
+    def RegisterSchema(self, Schema: ConfigSchema) -> None:
+        SchemaName = Schema.Name or Schema.name
+        self.Schemas[SchemaName] = Schema
+        if SchemaName not in self.Configs and Schema.defaults:
+            self.Configs[SchemaName] = dict(Schema.defaults)
+
+    register_schema = RegisterSchema
+
     def Load(self, NameKey, Filepath):
         PathObj = self.PathTool(Filepath)
         if not PathObj.exists():
@@ -72,6 +99,8 @@ class ConfigManager(SystemComponent):
             return True
         return False
 
+    load_config = Load
+
     def Get(self, NameKey, PropertyKey=None, DefaultValue=None):
         if NameKey not in self.Configs:
             return DefaultValue
@@ -89,6 +118,8 @@ class ConfigManager(SystemComponent):
                 return DefaultValue
         return CurrentVal
 
+    get = Get
+
     def Set(self, NameKey, PropertyKey, Value):
         if NameKey not in self.Configs:
             self.Configs[NameKey] = {}
@@ -103,6 +134,8 @@ class ConfigManager(SystemComponent):
         if OldValue != Value:
             self.Trigger(NameKey, PropertyKey, OldValue, Value)
 
+    set = Set
+
     def Subscribe(self, Callback):
         if "global" not in self.Watchers:
             self.Watchers["global"] = []
@@ -113,6 +146,18 @@ class ConfigManager(SystemComponent):
         if WatchKeyStr not in self.Watchers:
             self.Watchers[WatchKeyStr] = []
         self.Watchers[WatchKeyStr].append(Callback)
+
+    watch = Watch
+
+    def PrintConfig(self, NameKey: str) -> None:
+        cfg = self.Get(NameKey)
+        if isinstance(cfg, dict):
+            for k, v in cfg.items():
+                print(f"    {k}: {v}")
+        else:
+            print(f"    {NameKey}: {cfg}")
+
+    print_config = PrintConfig
 
     def Trigger(self, NameKey, PropertyKey, OldValue, NewValue):
         WatchKeyStr = f"{NameKey}:{PropertyKey}"
@@ -136,4 +181,4 @@ if ConfigFile.exists():
 
 Config = ConfigManager
 
-__all__ = ["ConfigManager", "Config", "ConfigInstance"]
+__all__ = ["ConfigSchema", "ConfigManager", "Config", "ConfigInstance"]

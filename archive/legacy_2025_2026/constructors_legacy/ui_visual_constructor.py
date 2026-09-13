@@ -1,9 +1,6 @@
-"""
-LCARS Visual Constructor - Робочий drag & drop редактор
-"""
 
-# Titanium Bridge Migration: import sys
-# Titanium Bridge Migration: from pathlib import Path
+import sys
+from pathlib import Path
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QPushButton, QLabel, QComboBox, 
                             QFileDialog, QMessageBox, QFrame, QScrollArea)

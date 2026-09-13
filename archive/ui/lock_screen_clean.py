@@ -1,11 +1,7 @@
-"""
-LCARS Lock Screen - ЗА ВАШИМ ДИЗАЙНОМ
-Точно як на скріншоті з CorelDRAW
-"""
 
-# Titanium Bridge Migration: import sys
-# Titanium Bridge Migration: import os
-# Titanium Bridge Migration: from pathlib import Path
+import sys
+import os
+from pathlib import Path
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                                QLabel, QPushButton, QFrame, QApplication, QLineEdit)
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal

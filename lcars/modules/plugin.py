@@ -30,18 +30,45 @@ __version__ = getVersion()
 # ═════════════════════════════════════════════════════════════════════════════
 @dataclass
 class Metadata:
-    Name: str
-    Version: str
-    Author: str
-    Description: str
+    Name: str = "Unknown"
+    Version: str = "0.0.1"
+    Author: str = "Anonymous"
+    Description: str = ""
     Dependencies: List[str] = field(default_factory=list)
     Id: str = ""
     Entrypoint: str = ""
+    name: str = ""
+    version: str = ""
+    author: str = ""
+    description: str = ""
+    dependencies: List[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        if not self.Name and self.name:
+            self.Name = self.name
+        if not self.name and self.Name:
+            self.name = self.Name
+        if not self.Version and self.version:
+            self.Version = self.version
+        if not self.version and self.Version:
+            self.version = self.Version
+        if not self.Author and self.author:
+            self.Author = self.author
+        if not self.author and self.Author:
+            self.author = self.Author
+        if not self.Description and self.description:
+            self.Description = self.description
+        if not self.description and self.Description:
+            self.description = self.Description
+        if not self.Dependencies and self.dependencies:
+            self.Dependencies = self.dependencies
+        if not self.dependencies and self.Dependencies:
+            self.dependencies = self.Dependencies
 
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 2. БАЗОВИЙ КЛАС ПЛАГІНА
-# ═════════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════
 class LCARSPlugin(ABC):
     def __init__(self, metadata: Optional[Metadata] = None, MetadataNode: Optional[Metadata] = None):
         if metadata is None:
@@ -53,25 +80,36 @@ class LCARSPlugin(ABC):
         self.IsEnabled = False
         self.ExportMap: Dict[str, Any] = {}
 
-    @abstractmethod
     def OnLoad(self) -> bool:
-        pass
+        if hasattr(self, "on_load") and callable(getattr(self, "on_load")):
+            return self.on_load()
+        return True
 
-    @abstractmethod
     def OnUnload(self) -> bool:
-        pass
+        if hasattr(self, "on_unload") and callable(getattr(self, "on_unload")):
+            return self.on_unload()
+        return True
 
     def OnStartup(self):
-        pass
+        if hasattr(self, "on_startup") and callable(getattr(self, "on_startup")):
+            return self.on_startup()
 
     def OnShutdown(self):
-        pass
+        if hasattr(self, "on_shutdown") and callable(getattr(self, "on_shutdown")):
+            return self.on_shutdown()
 
     def Export(self, NameKey: str, ValueNode: Any):
         self.ExportMap[NameKey] = ValueNode
 
     def GetExport(self, NameKey: str) -> Optional[Any]:
         return self.ExportMap.get(NameKey)
+
+    export = Export
+    get_export = GetExport
+    on_load = OnLoad
+    on_unload = OnUnload
+    on_startup = OnStartup
+    on_shutdown = OnShutdown
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -121,6 +159,10 @@ class PluginRegistry:
     def __init__(self):
         self.ActivePluginsMap: Dict[str, LCARSPlugin] = {}
 
+    @property
+    def plugins(self) -> Dict[str, LCARSPlugin]:
+        return self.ActivePluginsMap
+
     def RegisterPlugin(self, PluginIdStr: str, PluginInstance: LCARSPlugin):
         if PluginIdStr in self.ActivePluginsMap:
             return
@@ -135,6 +177,11 @@ class PluginRegistry:
 
     def ListPlugins(self) -> List[str]:
         return list(self.ActivePluginsMap.keys())
+
+    register = RegisterPlugin
+    unregister = UnregisterPlugin
+    get = GetPlugin
+    list = ListPlugins
 
 
 # ═════════════════════════════════════════════════════════════════════════════

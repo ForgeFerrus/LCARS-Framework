@@ -12,9 +12,26 @@
 from lcars.base.type import LCARS
 from lcars.base.interface import PADD
 from lcars.base.component import (
+    LCARSLabel,
     LCARSButton, LCARSLabel, LCARSElbow, LCARSBar,
     LCARSIndicator, SetStyle
 )
+
+class LCARSDataBlock(LCARSLabel):
+    def __init__(self, *args, **kwargs):
+        kwargs.pop("Data", None)
+        kwargs.pop("Title", None)
+        super().__init__(Text="DATA BLOCK", *args, **kwargs)
+    
+    def SetData(self, data):
+        if isinstance(data, dict):
+            parts = []
+            for k, v in data.items():
+                parts.append(f"{k}: {v}")
+            self.SetText(" | ".join(parts))
+        else:
+            self.SetText(str(data))
+
 from lcars.base.default import Palette, SystemTheme
 from lcars.ui.terminal import LCARSTerminal
 from lcars.service.onboard import Computer
@@ -386,13 +403,7 @@ class InteractiveWorkbench:
         # Категорія 1: Базові форми
         SidebarLayout.addWidget(LCARSLabel(Text="1. CANONICAL BASE FORMS", FontSize=16).widget)
         ButtonsDefs = [
-            ("RECT BUTTON", LCARSButton, {"Text": "SYSTEM RECT", "Form": LCARSButton.Rect, "Width": 200, "Height": 44, "FontSize": 16}),
-            ("WARP PILL", LCARSButton, {"Text": "WARP PILL", "Form": LCARSButton.Pill, "Width": 200, "Height": 44, "FontSize": 16}),
-            ("IMPULSE SOFT", LCARSButton, {"Text": "IMPULSE SOFT", "Form": LCARSButton.Soft, "Width": 200, "Height": 44, "FontSize": 16}),
-            ("ANGLE CUT 180", LCARSButton, {"Text": "ANGLE CUT", "Form": LCARSButton.SoftHalf, "Direction": 180, "Width": 200, "Height": 44, "FontSize": 16}),
-            ("ANGLE CUT 0", LCARSButton, {"Text": "ANGLE CUT", "Form": LCARSButton.SoftHalf, "Direction": 0, "Width": 200, "Height": 44, "FontSize": 16}),
-            ("CAP WEST 180", LCARSButton, {"Text": "CAP WEST", "Form": LCARSButton.PillHalf, "Direction": 180, "Width": 200, "Height": 44, "FontSize": 16}),
-            ("CAP EAST 0", LCARSButton, {"Text": "CAP EAST", "Form": LCARSButton.PillHalf, "Direction": 0, "Width": 200, "Height": 44, "FontSize": 16}),
+            ("BUTTON", LCARSButton, {"Text": "BUTTON", "Form": LCARSButton.Rect, "Width": 200, "Height": 44, "FontSize": 16}),
         ]
         for LabelText, Cls, Kwargs in ButtonsDefs:
             Btn = LCARSButton(Text=LabelText, Form=LCARSButton.SoftHalf, Direction=180, Height=34, FontSize=16)
@@ -403,10 +414,7 @@ class InteractiveWorkbench:
         SidebarLayout.addSpacing(6)
         SidebarLayout.addWidget(LCARSLabel(Text="2. L-FRAME ELBOWS", FontSize=16).widget)
         ElbowDefs = [
-            ("ELBOW TOP-LEFT", LCARSElbow, {"Direction": "top-left", "Text": "BRIDGE", "Number": "01-TL", "Width": 320, "Height": 60, "Thickness": 26, "Radius": 20, "FontSize": 16}),
-            ("ELBOW TOP-RIGHT", LCARSElbow, {"Direction": "top-right", "Text": "SCIENCE", "Number": "02-TR", "Width": 320, "Height": 60, "Thickness": 26, "Radius": 20, "FontSize": 16}),
-            ("ELBOW BOTTOM-LEFT", LCARSElbow, {"Direction": "bottom-left", "Text": "ENGINEERING", "Number": "03-BL", "Width": 320, "Height": 60, "Thickness": 26, "Radius": 20, "FontSize": 16}),
-            ("ELBOW BOTTOM-RIGHT", LCARSElbow, {"Direction": "bottom-right", "Text": "DEFLECTOR", "Number": "04-BR", "Width": 320, "Height": 60, "Thickness": 26, "Radius": 20, "FontSize": 16}),
+            ("STRUCTURAL ELBOW", LCARSElbow, {"Direction": "top-left", "Text": "ELBOW", "Number": "01", "Width": 320, "Height": 60, "Thickness": 26, "Radius": 20, "FontSize": 16}),
         ]
         for LabelText, Cls, Kwargs in ElbowDefs:
             Btn = LCARSButton(Text=LabelText, Form=LCARSButton.PillHalf, Direction=0, Height=34, FontSize=16)
@@ -417,8 +425,9 @@ class InteractiveWorkbench:
         SidebarLayout.addSpacing(6)
         SidebarLayout.addWidget(LCARSLabel(Text="3. SENSORS & DATA BLOCKS", FontSize=16).widget)
         DataDefs = [
-            ("PILL INDICATOR", LCARSIndicator, {"IndicatorType": LCARSIndicator.Pill, "Width": 140, "Height": 38}),
+            ("PILL INDICATOR", LCARSIndicator, {"Form": LCARSButton.Pill, "Text": "INDICATOR", "Width": 140, "Height": 38}),
             ("HORIZONTAL BAR", LCARSBar, {"Width": 240, "Height": 14}),
+            ("LABEL TEXT", LCARSLabel, {"Text": "SYS LABEL", "FontSize": 18}),
             ("DATA BLOCK", LCARSDataBlock, {"Title": "PRIMARY ODN", "Data": {"CORE": "ONLINE", "WARP": "9.975"}, "Width": 280, "Height": 110, "FontSize": 16}),
         ]
         for LabelText, Cls, Kwargs in DataDefs:
@@ -427,7 +436,7 @@ class InteractiveWorkbench:
             SidebarLayout.addWidget(Btn.widget)
 
         SidebarLayout.addStretch()
-        WorkSpaceLayout.addWidget(self.Sidebar)
+        
 
         # 2.2 ЦЕНТРАЛЬНЕ ПОЛОТНО Z-ORDER
         self.Canvas = LiveDesignerCanvas(Workbench=self)
@@ -515,6 +524,18 @@ class InteractiveWorkbench:
         ThickRowLayout.addWidget(BtnThickMinus.widget, 1)
         ThickRowLayout.addWidget(BtnThickPlus.widget, 1)
         InspectorLayout.addWidget(ThickRow)
+        
+        RadRow = LCARS.Widget()
+        RadRowLayout = LCARS.Horizontal(RadRow)
+        RadRowLayout.setContentsMargins(0, 0, 0, 0)
+        RadRowLayout.setSpacing(3)
+        BtnRadMinus = LCARSButton(Text="RAD-", Form=LCARSButton.SoftHalf, Direction=180, Height=36, FontSize=16)
+        BtnRadMinus.Clicked.Connect(lambda data: self.AdjustRadius(-4))
+        BtnRadPlus = LCARSButton(Text="RAD+", Form=LCARSButton.SoftHalf, Direction=0, Height=36, FontSize=16)
+        BtnRadPlus.Clicked.Connect(lambda data: self.AdjustRadius(4))
+        RadRowLayout.addWidget(BtnRadMinus.widget, 1)
+        RadRowLayout.addWidget(BtnRadPlus.widget, 1)
+        InspectorLayout.addWidget(RadRow)
 
         # Форма та стан
         CycleRow = LCARS.Widget()
@@ -528,6 +549,27 @@ class InteractiveWorkbench:
         CycleRowLayout.addWidget(BtnFormCycle.widget, 1)
         CycleRowLayout.addWidget(BtnStateCycle.widget, 1)
         InspectorLayout.addWidget(CycleRow)
+        
+        # TEXT EDIT
+        InspectorLayout.addSpacing(6)
+        InspectorLayout.addWidget(LCARSLabel(Text="COMPONENT TEXT", FontSize=16).widget)
+        
+        TextEditRow = LCARS.Widget()
+        TextEditLayout = LCARS.Horizontal(TextEditRow)
+        TextEditLayout.setContentsMargins(0, 0, 0, 0)
+        TextEditLayout.setSpacing(3)
+        
+        self.TextInput = LCARS.LineEdit()
+        self.TextInput.setStyleSheet("background: #222; color: #fc9; font-size: 16px; border: 1px solid #fc9; border-radius: 4px; padding: 4px;")
+        
+        BtnApplyText = LCARSButton(Text="SET", Form=LCARSButton.SoftHalf, Direction=0, Width=60, Height=32, FontSize=16)
+        BtnApplyText.Clicked.Connect(lambda data: self.ApplyText())
+        
+        TextEditLayout.addWidget(self.TextInput, 1)
+        TextEditLayout.addWidget(BtnApplyText.widget)
+        
+        InspectorLayout.addWidget(TextEditRow)
+
 
         # Клон і видалення
         ActionRow = LCARS.Widget()
@@ -657,6 +699,9 @@ class InteractiveWorkbench:
         WidthVal = W.width()
         HeightVal = W.height()
 
+        if hasattr(self, "TextInput"):
+            self.TextInput.setText(TextVal)
+            
         self.PassportBlock.SetData({
             "CLASS": ClassName,
             "FORM": FormName,
@@ -719,6 +764,33 @@ class InteractiveWorkbench:
         self.Canvas.SyncHandles()
         self.UpdateInspector()
         self.Canvas.update()
+
+    def ApplyText(self):
+        Item = self.Canvas.Selected
+        if not Item: return
+        new_text = self.TextInput.text()
+        if hasattr(Item, "Text"):
+            Item.Text = new_text
+            Item.SetText(new_text)
+        self.UpdateInspector()
+        self.Canvas.update()
+
+    def CycleDirectionActive(self):
+        Item = self.Canvas.Selected
+        if not Item:
+            return
+        if hasattr(Item, "Direction"):
+            if isinstance(Item.Direction, str):
+                dirs = ["top-left", "top-right", "bottom-right", "bottom-left"]
+                try:
+                    idx = dirs.index(str(Item.Direction).lower())
+                except:
+                    idx = 0
+                Item.Direction = dirs[(idx + 1) % len(dirs)]
+            else:
+                Item.Direction = (int(Item.Direction) + 90) % 360
+            self.UpdateInspector()
+            self.Canvas.update()
 
     def CycleFormActive(self):
         Item = self.Canvas.Selected

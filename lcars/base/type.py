@@ -5,10 +5,17 @@
 # ─────────────────────────────────────────────────────────────────────────────
 from .register import registry
 from .info import Version, Passport
-
 # =====================================================================
-# METACLASS - Простір імен LCARS (генератор замінників та маршрутизація через Proxy)
+# Простір імен LCARS (генератор замінників та маршрутизація через Bridge)
 class Namespace(type):
+    PatternBuffer = None
+
+    def ResolvePattern(cls):
+        if Namespace.PatternBuffer is None:
+            from lcars.service.bridge import Bridge
+            Namespace.PatternBuffer = Bridge
+        return Namespace.PatternBuffer
+
     def __getattr__(cls, AttributeName: str):
         if AttributeName.startswith("_"):
             raise AttributeError(AttributeName)
@@ -17,9 +24,7 @@ class Namespace(type):
         )
         FullNamespacePath = f"{ParentNamespace}.{AttributeName}"
 
-        # Завантаження через Proxy без прямого importlib у цьому файлі
-        from lcars.service.bridge import Proxy
-        Loaded = Proxy.GetInstance().Load(FullNamespacePath)
+        Loaded = cls.ResolvePattern().Route(FullNamespacePath)
         if Loaded is not None:
             return Loaded
 
@@ -32,23 +37,20 @@ class Namespace(type):
     def __getattribute__(cls, AttributeName: str):
         if AttributeName.startswith("_"):
             return super().__getattribute__(AttributeName)
-        if AttributeName in {"Name", "NamespacePath"}:
+        if AttributeName in {
+            "Name", "NamespacePath", "ResolvePattern", "PatternBuffer", 
+            "Version", "Passport", "DebugInfo", "Register"
+        }:
             return super().__getattribute__(AttributeName)
+        
         TargetValue = super().__getattribute__(AttributeName)
-        if isinstance(TargetValue, str) and "." in TargetValue:
-            from lcars.service.bridge import Proxy
-            Loaded = Proxy.GetInstance().Load(TargetValue)
+        if isinstance(TargetValue, str) and any(TargetValue.startswith(pfx) for pfx in ("System.", "Base.", "Bridge.", "LCARS.")):
+            Loaded = cls.ResolvePattern().Route(TargetValue)
             if Loaded is not None:
                 return Loaded
-            return Namespace(AttributeName, (), {
-                "Name": TargetValue,
-                "NamespacePath": TargetValue,
-                "__init__": lambda self, *a, **k: None
-            })
         return TargetValue
-
 # =====================================================================
-# MAP КЛАСИ - Логічні групи реєстру
+# Логічні групи реєстру
 class SystemMap(metaclass=Namespace):
     NamespacePath = "System"
     Core = "System.Core"
@@ -109,7 +111,6 @@ class LCARS(metaclass=Namespace):
     ZipFile = "Bridge.Storage.Zip"
     SQLite = "Bridge.Storage.Sqlite"
     Serialization = "Bridge.Storage.Json"
-    Json = "Bridge.Storage.Json"
     Pickle = "Bridge.Storage.Pickle"
     Toml = "Bridge.Storage.Toml"
     Arrow = "Bridge.Storage.Arrow"
@@ -282,7 +283,6 @@ class LCARS(metaclass=Namespace):
     ProgressBar = "Base.Interface.ProgressBar"
     LCD = "Base.Interface.LCD"
     Stack = "Base.Interface.Stack"
-    Stacked = "Base.Interface.Stack"
     Chamber = "Base.Interface.Stack"
     
     # === LISTS / TABLES ===
@@ -326,16 +326,15 @@ class LCARS(metaclass=Namespace):
     Region = "Base.Visual.Region"
     
     # === GRAPHICS VIEW ===
-    GraphicsView = "Base.Graphics.View"
-    GraphicsScene = "Base.Graphics.Scene"
-    GraphicsItem = "Base.Graphics.Item"
-    GraphicsObject = "Base.Graphics.Object"
-    GraphicsLine = "Base.Graphics.Line"
-    GraphicsRect = "Base.Graphics.Rect"
-    GraphicsEllipse = "Base.Graphics.Ellipse"
-    GraphicsPath = "Base.Graphics.Path"
-    GraphicsPolygon = "Base.Graphics.Polygon"
-    GraphicsText = "Base.Graphics.Text"
+    View = "Base.Graphics.View"
+    Scene = "Base.Graphics.Scene"
+    Item = "Base.Graphics.Item"
+    Line = "Base.Graphics.Line"
+    Rect = "Base.Graphics.Rect"
+    Ellipse = "Base.Graphics.Ellipse"
+    Polygon = "Base.Graphics.Polygon"
+    Text = "Base.Graphics.Text"
+    GraphicObject = "Base.Graphics.Object"
     GraphicsImage = "Base.Graphics.Image"
     
     # === ANIMATION ===
@@ -387,44 +386,29 @@ class LCARS(metaclass=Namespace):
     
     # === BRIDGE METHODS ===
     @staticmethod
-    def Register(Key, Value):
-        registry.Register(Key, Value)
+    def Register(Key, Value, Attribute=None):
+        if isinstance(Value, tuple):
+            registry.Register(Key, Value[0], Value[1] if len(Value) > 1 else None)
+        else:
+            registry.Register(Key, Value, Attribute)
         return Value
-    
-    @staticmethod
-    def Path(*Parts):
-        PathClass = LCARS.System.Path
-        return str(PathClass(*Parts))
-    
-    @staticmethod
-    def PathLib(*Parts):
-        PathClass = LCARS.System.Path
-        return PathClass(*Parts)
-    
-    @staticmethod
-    def WorkDir():
-        PathClass = LCARS.System.Path
-        return str(PathClass.cwd())
-    
-    @staticmethod
-    def HomeDir():
-        PathClass = LCARS.System.Path
-        return str(PathClass.home())
-    
-    Cache = {}
     
     @classmethod
     def DebugInfo(cls):
-        return {"version": cls.Version, "platform": cls.Platform, "registered": len(registry.List())}
-    
-    def __init__(self, Id=None):
-        self.Id = Id or f"Sys{id(self)}"
+        return {
+            "Name": cls.Name,
+            "Version": str(cls.Version),
+            "Registered": len(registry),
+        }
 
+    def __init__(self, SystemId=None, Id=None, **kwargs):
+        self.SystemId = SystemId or Id or f"Sys{id(self)}"
+        self.Id = self.SystemId
 # =====================================================================
 # COMPONENT CLASS - Базовий клас для компонентів
-class SystemComponent:
-    def __init__(self, SystemId=None):
-        self.SystemId = SystemId
+class SystemComponent(LCARS):
+    def __init__(self, SystemId=None, Id=None, **kwargs):
+        super().__init__(SystemId=SystemId, Id=Id, **kwargs)
         self.Version = Version.Release
         self.Enabled = True
         self.Visible = True
@@ -434,90 +418,75 @@ class SystemComponent:
         self.Config = {}
         self.Status = "Stopped"
 
-    def SetModule(self, Module):
+    def AssignModule(self, Module):
         self.Module = Module
-        Module.Parent = self
+        if Module:
+            Module.Parent = self
         self.Status = "Running"
 
     def Configure(self, Config):
         self.Config.update(Config)
-        if self.Module:
+        if self.Module and hasattr(self.Module, "Configure"):
             self.Module.Configure(Config)
 
-    def GetStatus(self):
+    def Diagnostics(self):
         return {
             "Id": self.SystemId,
             "Status": self.Status,
             "Module": self.Module,
             "Config": self.Config
         }
+
+    # === LIFECYCLE CONTRACT (DNA) ===
+    def Initialize(self):
+        pass
+
+    def Start(self):
+        self.Status = "Running"
+
+    def Stop(self):
+        self.Status = "Stopped"
+
+    def Destroy(self):
+        pass
+
 # =====================================================================
-# LCARS TYPE - Базовий тип даних з динамічною маршрутизацією
-class Matrix(LCARS):
+# ABSTRACT MATRIX TYPE
+# =====================================================================
+class Matrix(SystemComponent):
     TypeName = "LCARSMatrix"
 
-    # Ініціалізує матрицю з батьківським елементом та порожніми контейнерами
-    def __init__(self, Parent=None, Id=None, **kwargs):
-        super().__init__(Id=Id)
-        self.Parent = Parent
+    def __init__(self, Parent=None, Id=None, SystemId=None, **kwargs):
+        EffectiveId = Id or SystemId or (Parent if isinstance(Parent, str) else None)
+        EffectiveParent = Parent if not isinstance(Parent, str) else None
+        super().__init__(SystemId=EffectiveId, Id=EffectiveId)
+        self.LcarsId = self.SystemId
+        self.Parent = EffectiveParent
         self.Nodes = {}
         self.Domains = {}
         self.Links = {}
         self.Layers = {}
         self.State = {}
         self.Metadata = {}
-        ParentWidget = getattr(Parent, "widget", Parent) if Parent is not None and not hasattr(Parent, "isWidgetType") else Parent
-        WidgetClass = LCARS.Widget
-        if callable(WidgetClass):
-            self.widget = WidgetClass(ParentWidget)
-        else:
-            self.widget = None
 
-    @property
-    def Widget(self):
-        return self.widget
-
-    @Widget.setter
-    def Widget(self, val):
-        self.widget = val
-
-    def __getattr__(self, name: str) -> Any:
-        if name.startswith("_") or name == "widget":
-            raise AttributeError(name)
-        widget = getattr(self, "widget", None)
-        if widget is not None and widget is not self and hasattr(widget, name):
-            return getattr(widget, name)
-        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
-
-    # Додає вузол до матриці за іменем
+    # === MATRIX CONTRACT ===
     def AddNode(self, Name, Node):
         self.Nodes[Name] = Node
         return Node
 
-    # Повертає вузол за іменем або None
-    def GetNode(self, Name):
+    def ReadNode(self, Name):
         return self.Nodes.get(Name)
 
-    # Додає домен до матриці
     def AddDomain(self, Name, Domain=None):
         self.Domains[Name] = Domain
         return Domain
 
-    # Створює зв'язок між джерелом і ціллю
-    def Link(self, Source, Target):
-        self.Links.setdefault(Source, set()).add(Target)
+    def LinkNodes(self, Source, Target):
+        pass
+        
+    def UnlinkNodes(self, Source, Target):
+        pass
 
-    # Повертає знімок стану матриці
-    def Snapshot(self):
-        return {
-            "Nodes": self.Nodes,
-            "Domains": self.Domains,
-            "Links": self.Links,
-            "Layers": self.Layers,
-            "State": self.State
-        }
-
-LCARSMatrix = Matrix
 # =====================================================================
 # Базовий тип процесу.
 # Описує системний процес незалежно від його реалізації.
@@ -572,8 +541,8 @@ class Process(LCARS):
         )
 # =====================================================================
 class AlignMeta(type):
-    def __getattr__(cls, name):
-        return getattr(LCARS, "AlignCenter", 0x0004) if "Center" in name else (getattr(LCARS, "AlignRight", 0x0002) if "Right" in name else getattr(LCARS, "AlignLeft", 0x0001))
+    def __getattr__(cls, Name: str):
+        return getattr(LCARS, "AlignCenter", 0x0004) if "Center" in Name else (getattr(LCARS, "AlignRight", 0x0002) if "Right" in Name else getattr(LCARS, "AlignLeft", 0x0001))
 
 class Align(metaclass=AlignMeta):
     AlignCenter = 0x0004
@@ -588,9 +557,11 @@ class Align(metaclass=AlignMeta):
 # Описує системну директиву незалежно від її реалізації.
 class Directive(LCARS):
     Align = Align
-    PathDrive = LCARS.PathLib
 
-    # Ініціалізує директиву з пріоритетом та станом
+    @staticmethod
+    def PathDrive(*Parts):
+        return LCARS.System.Path(*Parts)
+
     def __init__(self, Id=None):
         super().__init__(Id)
 
@@ -603,15 +574,12 @@ class Directive(LCARS):
         self.State = "Created"
         self.Metadata = {}
 
-    # Валідує директиву, завжди повертає True
     def Validate(self):
         return True
 
-    # Скидає стан директиви до "Created"
     def Reset(self):
         self.State = "Created"
 
-    # Серіалізує директиву у словник
     def ToDict(self):
         return {
             "id": self.Id,
@@ -624,7 +592,6 @@ class Directive(LCARS):
             "metadata": self.Metadata.copy()
         }
 
-    # Десеріалізує директиву з словника
     @classmethod
     def FromDict(cls, Data):
         Obj = cls(Data.get("id"))
@@ -639,7 +606,6 @@ class Directive(LCARS):
 
         return Obj
 
-    # Повертає рядкове представлення директиви
     def __repr__(self):
         return (
             f"<Directive "
@@ -729,8 +695,35 @@ class Protocol(LCARS):
             f"State={self.State!r}>"
         )
         
-SystemProcess = Process
+# =====================================================================
+# ЕКСПОРТОВАНІ ТИПИ БАЗОВОГО ШАРУ (DNA)
+# =====================================================================
 __all__ = [
-    "LCARS", "SystemComponent", "Matrix", 
-    "Directive", "Protocol", "Process", "SystemProcess",
+    "LCARS",
+    "SystemComponent",
+    "Matrix",
+    "Directive",
+    "Protocol",
+    "Process",
+    "Align",
 ]
+
+# Динамічний лінивий резолвінг для збереження ізоляції базового шару
+def __getattr__(Name: str):
+    if Name in {"Type", "Primitives", "LCARSTypes"}:
+        return LCARS
+    if Name == "SystemProcess":
+        return Process
+    if Name == "Color":
+        return LCARS.Visual.Color
+    if Name == "Font":
+        return LCARS.Visual.Font
+    if Name == "Widget":
+        return LCARS.Interface.Widget
+    if Name == "Link":
+        from lcars.service.bridge import Link
+        return Link
+    if Name == "ODN":
+        from lcars.core.signal import ODN
+        return ODN
+    raise AttributeError(f"module 'lcars.base.type' has no attribute '{Name}'")

@@ -14,10 +14,10 @@ typeCheckingMode = "off"
 reportMissingImports = "none"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["test", "tests"]
 norecursedirs = ["archive", ".venv", "demo", "data", "scripts", "build", "dist", ".devin"]
-python_files = ["Nova.py", "Terminal.py", "Desktop.py", "Control.py", "Network.py"]
-python_classes = ["*Suite"]
-python_functions = ["Verify*"]
+python_files = ["test_*.py", "*_test.py", "*.py", "Nova.py", "Terminal.py", "Desktop.py", "Control.py", "Network.py"]
+python_classes = ["Test*", "*Suite", "*Test"]
+python_functions = ["test_*", "Verify*", "test*"]
 
 

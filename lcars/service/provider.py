@@ -662,7 +662,7 @@ class AIProviderManager(Directive):
             "available": AvailableBackends,
             "all": [b.Name for b in self.Backends],
         }
-    
+
     def Initialize(self):
         self.Initialized = True
 
@@ -673,6 +673,11 @@ class AIProviderManager(Directive):
     
     def GetProvider(self):
         return self
+
+    getStatus = GetStatus
+    get_status = GetStatus
+    switch_model = SwitchModel
+    get_provider = GetProvider
 
 # =====================================================================
 # 11. AI PROVIDER — статичний доступ

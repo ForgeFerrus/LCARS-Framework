@@ -10,7 +10,7 @@
 from __future__ import annotations
 from lcars.core.computer import BoardComputer, SubsystemState, ProcessorState
 from lcars.base.type import LCARS
-from lcars.base.default import FontSetup
+
 from lcars.base.interface import PADD
 from lcars.engineering.telemetry import EmitTelemetry
 
@@ -65,7 +65,7 @@ class OnboardDeployment(LCARS):
                 ArgvList = getattr(Sys, "argv", []) if Sys else []
                 self.App = ApplicationType(ArgvList)
 
-        FontSetup()
+        # FontSetup()
 
         self.PaddInstance = PADD(
             Title=Title,

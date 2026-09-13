@@ -48,6 +48,13 @@ class LCARSTerminal(PADD):
         self.AlertState = "GREEN"
         self.PowerColor = Palette.Buttons[1]
         self.PowerColorName = "STANDARD"
+        self.EmergencyTriggeredConnected = False
+        self.ConsoleModelConnected = False
+        self.AlertConnected = False
+        self.PaletteConnected = False
+        self.EmergencyDisengagedConnected = False
+        self.PowerConnected = False
+        self.EmergencyConnected = False
         self.IsEmergency = False
         self.EmergencySubsystem = "CORE"
         self.EmergencyReason = ""
@@ -60,12 +67,12 @@ class LCARSTerminal(PADD):
         self.Output = None
         self.OriginalKeyPress = None
         self.ClockTimer = None
-        self._ConsoleModelConnected = False
-        self._ConsoleModeConnected = False
-        self._AlertConnected = False
-        self._PaletteConnected = False
-        self._EmergencyTriggeredConnected = False
-        self._EmergencyDisengagedConnected = False
+        self.ConsoleModelConnected = False
+        self.PaletteConnected = False
+        self.EmergencyTriggeredConnected = False
+        self.AlertConnected = False
+        self.PowerConnected = False
+        self.EmergencyConnected = False
 
         super().__init__(
             Parent=ActualParent,
@@ -392,44 +399,55 @@ class LCARSTerminal(PADD):
 
     # Підключає тільки сигнали, потрібні для UI.
     def ConnectODN(self):
-        if not self._ConsoleModelConnected:
+        if not self.ConsoleModelConnected:
             ODN.Connect("Console.ModelChanged", self.OnModelChanged)
-            self._ConsoleModelConnected = True
-        if not self._ConsoleModeConnected:
+            self.ConsoleModelConnected = True
+        if not self.ConsoleModelConnected:
             ODN.Connect("Console.ModeChanged", self.OnModeChanged)
-            self._ConsoleModeConnected = True
-        if not self._AlertConnected:
+            self.ConsoleModelConnected = True
+        if not self.AlertConnected:
             ODN.Connect("Alert.Changed", self.OnAlertChanged)
-            self._AlertConnected = True
-        if not self._PaletteConnected:
+            self.AlertConnected = True
+        if not self.PaletteConnected:
             ODN.Connect("UI.PaletteChanged", self.OnPaletteChanged)
-            self._PaletteConnected = True
-        if not self._EmergencyTriggeredConnected:
+            self.PaletteConnected = True
+        if not self.EmergencyTriggeredConnected:
             ODN.Connect("Emergency.Triggered", self.OnEmergencyTriggered)
-            self._EmergencyTriggeredConnected = True
-        if not self._EmergencyDisengagedConnected:
+            self.EmergencyTriggeredConnected = True
+        if not self.EmergencyDisengagedConnected:
             ODN.Connect("Emergency.Disengaged", self.OnEmergencyDisengaged)
-            self._EmergencyDisengagedConnected = True
+            self.EmergencyDisengagedConnected = True
 
     def DisconnectODN(self):
-        if self._ConsoleModelConnected:
+        if self.ConsoleModelConnected:
             ODN.Disconnect("Console.ModelChanged", self.OnModelChanged)
-            self._ConsoleModelConnected = False
-        if self._ConsoleModeConnected:
+            self.ConsoleModelConnected = False
+        self.PaletteConnected = False
+        self.EmergencyTriggeredConnected = False
+        self.AlertConnected = False
+        self.PowerConnected = False
+        self.EmergencyConnected = False
+        if self.ConsoleModelConnected:
             ODN.Disconnect("Console.ModeChanged", self.OnModeChanged)
-            self._ConsoleModeConnected = False
-        if self._AlertConnected:
+            self.ConsoleModelConnected = False
+        self.PaletteConnected = False
+        self.EmergencyTriggeredConnected = False
+        self.AlertConnected = False
+        self.PowerConnected = False
+        self.EmergencyConnected = False
+        if self.AlertConnected:
             ODN.Disconnect("Alert.Changed", self.OnAlertChanged)
-            self._AlertConnected = False
-        if self._PaletteConnected:
+            self.AlertConnected = False
+        if self.PaletteConnected:
             ODN.Disconnect("UI.PaletteChanged", self.OnPaletteChanged)
-            self._PaletteConnected = False
-        if self._EmergencyTriggeredConnected:
+            self.PaletteConnected = False
+        self.EmergencyTriggeredConnected = False
+        if self.EmergencyTriggeredConnected:
             ODN.Disconnect("Emergency.Triggered", self.OnEmergencyTriggered)
-            self._EmergencyTriggeredConnected = False
-        if self._EmergencyDisengagedConnected:
+            self.EmergencyTriggeredConnected = False
+        if self.EmergencyDisengagedConnected:
             ODN.Disconnect("Emergency.Disengaged", self.OnEmergencyDisengaged)
-            self._EmergencyDisengagedConnected = False
+            self.EmergencyDisengagedConnected = False
 
     # Оновлює модель у статусі.
     def OnModelChanged(self, Packet=None, **kwargs):

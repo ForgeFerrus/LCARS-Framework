@@ -21,10 +21,12 @@ from lcars.base.info import Version
 from lcars.core.signal import ODN, Transmission
 from lcars.base.default import Palette
 
+from enum import IntEnum, EnumMeta
+
 # ═════════════════════════════════════════════════════════════════════
 # 1. МЕТАКЛАС ТА СТАТУСИ РІВНІВ БОЙОВОЇ ГОТОВНОСТІ (ALERT LEVELS)
 # ═════════════════════════════════════════════════════════════════════
-class AlertLevelMeta(type):
+class AlertLevelMeta(EnumMeta):
     @property
     def Members(cls):
         return {
@@ -37,7 +39,7 @@ class AlertLevelMeta(type):
         return iter([cls.GREEN, cls.YELLOW, cls.RED])
 
     def __contains__(cls, Item):
-        return Item in [cls.GREEN, cls.YELLOW, cls.RED]
+        return Item in [cls.GREEN, cls.YELLOW, cls.RED] or any(Item == m.value or Item == m for m in cls)
 
     def __getitem__(cls, Name):
         NameStr = str(Name).upper().strip()
@@ -57,34 +59,33 @@ class AlertLevelMeta(type):
             return MembersMap[NameStr]
         raise KeyError(Name)
 
-class AlertLevel(int, metaclass=AlertLevelMeta):
+class AlertLevel(IntEnum, metaclass=AlertLevelMeta):
+    GREEN = 0
+    NORMAL = 0
+    NOMINAL = 0
+
+    YELLOW = 1
+    CAUTION = 1
+    STANDBY = 1
+
+    RED = 2
+    TACTICAL = 2
+    COMBAT = 2
+    BATTLE = 2
+
     @property
     def Name(self) -> str:
-        if self == 0:
+        if self.value == 0:
             return "GREEN"
-        elif self == 1:
+        elif self.value == 1:
             return "YELLOW"
-        elif self == 2:
+        elif self.value == 2:
             return "RED"
-        return "UNKNOWN"
+        return self.name
 
     @property
     def Value(self) -> int:
-        return int(self)
-
-# Реєстрація канонічних констант рівнів тривоги
-AlertLevel.GREEN = AlertLevel(0)
-AlertLevel.NORMAL = AlertLevel(0)
-AlertLevel.NOMINAL = AlertLevel(0)
-
-AlertLevel.YELLOW = AlertLevel(1)
-AlertLevel.CAUTION = AlertLevel(1)
-AlertLevel.STANDBY = AlertLevel(1)
-
-AlertLevel.RED = AlertLevel(2)
-AlertLevel.TACTICAL = AlertLevel(2)
-AlertLevel.COMBAT = AlertLevel(2)
-AlertLevel.BATTLE = AlertLevel(2)
+        return self.value
 
 # ═════════════════════════════════════════════════════════════════════
 # 2. АРХІТЕКТУРНА КОНФІГУРАЦІЯ ТРИВОГ (ALERT CONFIGURATION)
@@ -176,6 +177,11 @@ class AlertSystem(SystemComponent):
     def Init(self, EventBus=None, Controller=None) -> AlertSystem:
         self.EventBus = EventBus
         self.Controller = Controller
+        self.Level = AlertLevel.GREEN
+        self.PreviousLevel = AlertLevel.GREEN
+        self.Reason = "System Nominal"
+        self.AuthorizedBy = "SystemBootstrap"
+        self.EmergencyFailoverActive = False
         self.ApplyTacticalProfile(self.Level)
         return self
 
@@ -236,7 +242,20 @@ class AlertSystem(SystemComponent):
             ODN.Transmit("UI.AlertChanged", Level=NewLevel.Name, Theme=self.ActiveTheme, Colors=self.GetActivePalette())
             ODN.Transmit("ODN.06.RemoteAlertPush", Level=NewLevel.Name, Reason=self.Reason)
 
-            # 7. Внутрішні канали сигналів
+            # 7. EventBus integration
+            if self.EventBus:
+                EventPayload = {
+                    "level": NewLevel.Name,
+                    "previous_level": OldLevel.Name,
+                    "reason": self.Reason,
+                    "authorized_by": self.AuthorizedBy,
+                }
+                if hasattr(self.EventBus, "emit"):
+                    self.EventBus.emit("CHANGED", EventPayload)
+                elif hasattr(self.EventBus, "Emit"):
+                    self.EventBus.Emit("CHANGED", EventPayload)
+
+            # 8. Внутрішні канали сигналів
             self.Changed.Emit(StateMap)
             if NewLevel.Value > OldLevel.Value:
                 self.LevelRaised.Emit(StateMap)
@@ -305,8 +324,17 @@ class AlertSystem(SystemComponent):
 
     # Оновлення візуального оформлення фреймворка
     def ActuateInterfaceTheme(self, Level: AlertLevel) -> None:
-        if self.Controller and hasattr(self.Controller, "ApplyLevel"):
-            self.Controller.ApplyLevel(Level)
+        if self.Controller:
+            if hasattr(self.Controller, "ApplyLevel"):
+                self.Controller.ApplyLevel(Level)
+            elif hasattr(self.Controller, "apply_level"):
+                self.Controller.apply_level(Level)
+            elif hasattr(self.Controller, "SetAlertLevel"):
+                self.Controller.SetAlertLevel(Level)
+            elif hasattr(self.Controller, "set_alert_level"):
+                self.Controller.set_alert_level(Level)
+            elif callable(self.Controller):
+                self.Controller(Level)
         ActiveColors = self.GetActivePalette()
         ODN.Transmit("UI.ThemeChanged", Theme=self.ActiveTheme, Level=Level.Name, Colors=ActiveColors)
         ODN.Transmit("UI.PaletteChanged", CurrentAlert=Level.Name, Colors=ActiveColors)
@@ -487,3 +515,19 @@ def GetAlertSystem(EventBus=None, Controller=None) -> AlertSystem:
     if EventBus is not None or Controller is not None:
         Sys.Init(EventBus=EventBus, Controller=Controller)
     return Sys
+
+def GetSystemVersion() -> str:
+    return str(Version.Release)
+
+getSystemVersion = GetSystemVersion
+
+__all__ = [
+    "AlertLevel",
+    "AlertConfiguration",
+    "AlertSystem",
+    "ActiveAlerts",
+    "AlertStatus",
+    "GetAlertSystem",
+    "GetSystemVersion",
+    "getSystemVersion",
+]

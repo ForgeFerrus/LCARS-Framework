@@ -3,72 +3,60 @@
 from __future__ import annotations
 from .info import Version
 
-# Центральний реєстр LCARS
-class LCARSRegister:
-    def __init__(self):
+# Центральний реєстр LCARS (Library Computer Access and Retrieval System)
+# Забезпечує зберігання системних сутностей, швидкий пошук та прямий доступ до компонентів.
+class LCARSRegister(dict):
+    # Ініціалізація реєстру з опціональним первинним мапінгом системних ключів
+    def __init__(self, Mapping: dict = None):
+        super().__init__()
         self.Version = Version
-        self.Mapping = {}
+        self.Mapping = self
         self.Keys = {}
+        if Mapping:
+            for Key, (Module, Attribute) in Mapping.items():
+                self.Register(Key, Module, Attribute)
 
-    def Register(self, Key, Module, Attribute=None):
-        self.Mapping[Key] = (Module, Attribute)
-        self.Keys[Key.lower()] = Key
+    # Реєстрація нового вузла або системної сутності в реєстрі
+    def Register(self, Key: str, Module: any, Attribute: any = None) -> "LCARSRegister":
+        Value = (Module, Attribute)
+        self[Key] = Value
+        self.Keys[str(Key).lower()] = Key
         return self
 
-    def List(self):
-        return list(self.Mapping)
+    # Отримання (резолвінг) зареєстрованого вузла за ключем або регістронезалежним аліасом
+    def Retrieve(self, Key: str, Default=None):
+        Res = None
+        if Key in self:
+            Res = self[Key]
+        else:
+            LowerKey = str(Key).lower()
+            if LowerKey in self.Keys:
+                Res = self[self.Keys[LowerKey]]
+        if Res is None:
+            return Default
+        if isinstance(Res, tuple) and len(Res) == 2 and Res[1] is None and not isinstance(Res[0], str):
+            return Res[0]
+        return Res
+    Resolve = Retrieve
 
-    def keys(self):
-        return self.Mapping.keys()
+    # Бібліотека зареєстрованих ключів або їхня кількість (якщо Count=True)
+    def Library(self, Count: bool = False):
+        if Count:
+            return len(self)
+        return list(self.keys())
+    Catalog = Library
+    List = Library
+    Count = lambda self: len(self)
 
-    def values(self):
-        return self.Mapping.values()
-
-    def items(self):
-        return self.Mapping.items()
-
-    def get(self, Key, default=None):
-        res = self.Resolve(Key)
-        return res if res is not None else default
-
-    Get = get
-
-    def __getitem__(self, Key):
-        res = self.Resolve(Key)
-        if res is None:
-            raise KeyError(Key)
-        return res
-
-    def __contains__(self, Key):
-        return self.Resolve(Key) is not None
-
-    def __iter__(self):
-        return iter(self.Mapping)
-
-    def __len__(self):
-        return len(self.Mapping)
-
-    def Resolve(self, Key):
-        if Key in self.Mapping:
-            return self.Mapping[Key]
-        if str(Key).lower() in self.Keys:
-            return self.Mapping[self.Keys[str(Key).lower()]]
-        return None
-
-    def Build(self, Mapping):
-        for Key, (Module, Attribute) in Mapping.items():
-            self.Register(Key, Module, Attribute)
-        return self
-
-    def Remove(self, Key):
-        self.Mapping.pop(Key, None)
+    # Вилучення (дереєстрація) запису за вказаним ключем
+    def Deregister(self, Key: str) -> "LCARSRegister":
+        self.pop(Key, None)
         self.Keys.pop(str(Key).lower(), None)
         return self
 
-# Ініціалізація
-registry = REGISTRY = LCARSRegister()
 
-REGISTRY.Build({
+# Ініціалізація
+registry = REGISTRY = LCARSRegister({
 # ════════════════════════════════════════════════════════════════════════════
 # 1. ГОЛОВНЕ КОМП'ЮТЕРНЕ ЯДРО ЗОРЕЛЬОТА // MAIN COMPUTER CORE (System.*)
 # ОПИС: Низькорівневе обчислювальне ядро LCARS, керування процесами,
@@ -663,6 +651,10 @@ REGISTRY.Build({
     # IDENTIFIER
     "System.Identifier"              : ("uuid", None),
     "System.Identifier.New"          : ("uuid", "uuid4"),
+    "System.Uuid"                    : ("uuid", None),
+    "System.UUID"                    : ("uuid", None),
+    "System.Uuid.New"                : ("uuid", "uuid4"),
+    "System.Uuid.UUID"               : ("uuid", "UUID"),
 
     "System.Identifier.UUID"         : ("uuid", "UUID"),
     "System.Identifier.UUID1"        : ("uuid", "uuid1"),
@@ -2578,3 +2570,6 @@ REGISTRY.Build({
     "Bridge.Regex":                    ("regex", None),
     "Bridge.LXML":                     ("lxml", None),
 })
+
+__all__ = ["registry", "REGISTRY", "LCARSRegister"]
+

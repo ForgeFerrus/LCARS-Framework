@@ -22,16 +22,36 @@ from lcars.modules.process import Application, ProcessEntry, ProcessTable, Proce
 from lcars.system.software import SystemState
 
 ROOT = LCARS.System.Path(__file__).resolve().parents[2] if hasattr(LCARS.System, "Path") else None
+from enum import Enum
+
+class EventType(str, Enum):
+    SIMULATION_STARTED = "SIMULATION_STARTED"
+    SIMULATION_STOPPED = "SIMULATION_STOPPED"
+    SIMULATION_PAUSED = "SIMULATION_PAUSED"
+    SIMULATION_COMPLETED = "SIMULATION_COMPLETED"
+    DETECTOR_UPDATED = "DETECTOR_UPDATED"
+    ALERT_CHANGED = "ALERT_CHANGED"
+    SYSTEM_INIT = "SYSTEM_INIT"
+    PLUGIN_LOADED = "PLUGIN_LOADED"
+    CONFIG_CHANGED = "CONFIG_CHANGED"
+    DATA_READY = "DATA_READY"
+    ERROR_OCCURRED = "ERROR_OCCURRED"
+    STATUS_UPDATE = "STATUS_UPDATE"
+    CUSTOM = "CUSTOM"
+    CHANGED = "CHANGED"
+
 # ═════════════════════════════════════════════════════════════════════
 # 1. QUANTUM EVENT SYSTEM (КВАНТОВА ШИНА СИСТЕМНИХ ПОДІЙ)
 # ═════════════════════════════════════════════════════════════════════
 class Event(LCARS):
     # Окремий квантовий імпульс-подія зі штампом часу, джерелом та корисним навантаженням
-    def __init__(self, Type, Source, Data = None, Time = None, Id = None):
+    def __init__(self, Type, Source = "system", Data = None, Time = None, Id = None, source = None, data = None, **kwargs):
         super().__init__()
-        self.Type = Type
-        self.Source = Source
-        self.Data = Data or {}
+        self.Type = getattr(Type, "value", str(Type))
+        self.Source = source or Source
+        self.Data = data if data is not None else (Data if Data is not None else kwargs)
+        self.source = self.Source
+        self.data = self.Data
         DateTimeMod = getattr(LCARS.System, "Time", None)
         self.Time = Time if Time is not None else (DateTimeMod.DateTime.now().timestamp() if (DateTimeMod and hasattr(DateTimeMod, "DateTime")) else 0.0)
         UuidMod = getattr(LCARS.System, "Uuid", None)
@@ -43,6 +63,7 @@ class Event(LCARS):
             import uuid
             GeneratedId = uuid.uuid4().hex[:12]
         self.Id = Id if Id is not None else GeneratedId
+
 # Центральна квантова шина підписок та розподілу подій між підсистемами
 class EventBus(LCARS):
     def __init__(self):
@@ -59,12 +80,17 @@ class EventBus(LCARS):
         return f"L{self.ListenerCounter:04d}"
 
     # Підписка на подію за типом із пріоритетом та фільтром джерела
-    def On(self, EventTypeStr, CallbackFunc, Priority = 0, SourceFilter = None):
+    def On(self, EventTypeStr, CallbackFunc, Priority = 0, SourceFilter = None, priority = 0):
+        EffectivePriority = priority or Priority
+        EventKey = getattr(EventTypeStr, "value", str(EventTypeStr))
         ListenerId = self.NextId()
-        Entry = (ListenerId, CallbackFunc, Priority, SourceFilter)
-        self.Listeners.setdefault(EventTypeStr, []).append(Entry)
-        self.Listeners[EventTypeStr].sort(key=lambda item: item[2], reverse=True)
+        Entry = (ListenerId, CallbackFunc, EffectivePriority, SourceFilter)
+        self.Listeners.setdefault(EventKey, []).append(Entry)
+        self.Listeners[EventKey].sort(key=lambda item: item[2], reverse=True)
         return ListenerId
+
+    Subscribe = On
+    subscribe = On
 
     # Відписка від події за отриманим ідентифікатором
     def Off(self, ListenerId):
@@ -75,18 +101,29 @@ class EventBus(LCARS):
                     return True
         return False
 
+    Unsubscribe = Off
+    unsubscribe = Off
+
     # Трансляція події всім підписникам та відправка копії в шину ODN
-    def Emit(self, EventTypeStr, Source = "kernel", **Data):
-        Ev = Event(Type=EventTypeStr, Source=Source, Data=Data)
+    def Emit(self, EventTypeStr, Source = "kernel", Data = None, **Extra):
+        if isinstance(EventTypeStr, Event):
+            Ev = EventTypeStr
+            EventKey = Ev.Type
+        else:
+            EventKey = getattr(EventTypeStr, "value", str(EventTypeStr))
+            Payload = dict(Data or {})
+            Payload.update(Extra)
+            Ev = Event(Type=EventKey, Source=Source, Data=Payload)
+            
         Handled = 0
-        ODN.Transmit(f"EventBus.{EventTypeStr}", Data=Data, Source=Source)
+        ODN.Transmit(f"EventBus.{EventKey}", Data=Ev.Data, Source=Ev.Source)
 
         self.History.append(Ev)
         if len(self.History) > self.MaxHistory:
             self.History = self.History[-self.MaxHistory // 2:]
 
         Targets = []
-        Targets.extend(self.Listeners.get(EventTypeStr, []))
+        Targets.extend(self.Listeners.get(EventKey, []))
         Targets.extend(self.Listeners.get("*", []))
 
         for ListenerId, CallbackFunc, Priority, SourceFilter in Targets:
@@ -97,11 +134,20 @@ class EventBus(LCARS):
                 Handled += 1
         return Handled
 
+    Publish = Emit
+    publish = Emit
+    emit = Emit
+
+    def print_stats(self):
+        print(f"     Total Events: {len(self.History)}")
+        print(f"     Active Listeners: {sum(len(v) for v in self.Listeners.values())}")
+
     # Отримання списку останніх подій з можливістю фільтрації за типом
     def GetHistory(self, EventTypeFilter = None, Limit = 50):
         Source = self.History
         if EventTypeFilter:
-            Source = [E for E in Source if E.Type == EventTypeFilter]
+            FilterKey = getattr(EventTypeFilter, "value", str(EventTypeFilter))
+            Source = [E for E in Source if E.Type == FilterKey]
         return list(Source[-Limit:])
 
     # Повне очищення списку слухачів та історії
@@ -327,6 +373,7 @@ class Kernel(LCARS):
 
 __all__ = [
     "SystemState",
+    "EventType",
     "Event",
     "EventBus",
     "Nexus",

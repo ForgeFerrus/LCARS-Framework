@@ -7,7 +7,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton
 from PyQt6.QtWidgets import QWidget, QPushButton
  # Імпорт get_base_components буде виконано всередині __init__ для уникнення циклічного імпорту
-from lcars.themes.eras.pcars22_primitives import Rect, Circle, Square, PCARSText, PCARS22Indicator
+
 from lcars.themes.lcars_palette import LCARSEra, get_palette_by_name, get_random_button_color
 
 class Workspace(QWidget):
@@ -22,7 +22,7 @@ class Workspace(QWidget):
         self.selected = None  # індекс виділеного елемента
         self.edit_mode = edit_mode
         # Імпорт get_base_components тут, щоб уникнути циклічного імпорту
-        from lcars.themes.eras.PCARSConstructor import get_base_components
+        
         self.component_palette = get_base_components()
         start_positions = [
             ('button', (80, 120)),

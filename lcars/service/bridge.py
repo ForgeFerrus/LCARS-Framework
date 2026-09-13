@@ -48,7 +48,7 @@ class Proxy(Service):
         return Proxy.PIP.get(RootPkg, RootPkg)
 
     @staticmethod
-    def _ResolveExecutable() -> str:
+    def ResolveExecutable() -> str:
         SysExecEntry = registry.Resolve("System.Core.Executable")
         if SysExecEntry and isinstance(SysExecEntry, tuple) and SysExecEntry[0]:
             SysMod = __import__(SysExecEntry[0], fromlist=[SysExecEntry[1]] if SysExecEntry[1] else [])
@@ -58,7 +58,7 @@ class Proxy(Service):
         return "python"
 
     @staticmethod
-    def _ResolveRunFunc():
+    def ResolveRunFunc():
         SubprocessEntry = registry.Resolve("System.Process.Run")
         if SubprocessEntry and isinstance(SubprocessEntry, tuple) and SubprocessEntry[0]:
             SubMod = __import__(SubprocessEntry[0], fromlist=[SubprocessEntry[1]] if SubprocessEntry[1] else [])
@@ -70,10 +70,10 @@ class Proxy(Service):
     @staticmethod
     def InstallPackage(ModulePath: str) -> bool:
         PipName = Proxy.ResolvePipName(ModulePath)
-        RunFunc = Proxy._ResolveRunFunc()
+        RunFunc = Proxy.ResolveRunFunc()
         if RunFunc is None:
             raise RuntimeError(f"Proxy.InstallPackage: System.Process.Run not available for {PipName}")
-        ExecPath = Proxy._ResolveExecutable()
+        ExecPath = Proxy.ResolveExecutable()
         Result = RunFunc(
             [ExecPath, "-m", "pip", "install", "--quiet", PipName],
             capture_output=True,
@@ -86,7 +86,7 @@ class Proxy(Service):
 
     @staticmethod
     def InstallNpmPackage(PackageName: str) -> bool:
-        RunFunc = Proxy._ResolveRunFunc()
+        RunFunc = Proxy.ResolveRunFunc()
         if RunFunc is None:
             raise RuntimeError(f"Proxy.InstallNpmPackage: System.Process.Run not available for {PackageName}")
         # Знаходимо npm через shutil.which
@@ -111,7 +111,7 @@ class Proxy(Service):
 
     @staticmethod
     def EnsureQvacWorker() -> bool:
-        RunFunc = Proxy._ResolveRunFunc()
+        RunFunc = Proxy.ResolveRunFunc()
         if RunFunc is None:
             raise RuntimeError("Proxy.EnsureQvacWorker: System.Process.Run not available")
         # Знаходимо npm через shutil.which
@@ -189,6 +189,9 @@ class Proxy(Service):
 
         # 2. Registry
         Entry = self.Resolve(Key)
+
+        if Entry is None:
+            raise KeyError(f"Resource not registered: {Key}")
 
         if not isinstance(Entry, tuple):
             self.Runtime[Key] = Entry
@@ -450,36 +453,22 @@ class Link(SystemComponent):
         )
 
     def Disconnect(self) -> bool:
-        if not isinstance(
-            self.Signal,
-            Transmission
-        ):
-            self.State = "Disconnected"
-            self.Receiver = None
-            return True
-
-        Listeners = getattr(
-            self.Signal,
-            "_listeners",
-            None
-        )
-
-        if isinstance(
-            Listeners,
-            list
-        ):
-            self.Signal._listeners = [
-                Listener
-                for Listener in Listeners
-                if Listener is not self.Receiver
-            ]
+        if isinstance(self.Signal, Transmission) and callable(self.Receiver):
+            self.Signal.Disconnect(self.Receiver)
 
         self.Receiver = None
         self.State = "Disconnected"
-
         return True
 
     def Resolve(self):
+        if self.Target is not None:
+            return self.Target
+        Inst = Bridge.GetInstance()
+        if Inst.Register is None or Inst.Register.Resolve(self.Key) is None:
+            return None
+        if Inst.Proxy is None:
+            Inst.Proxy = Proxy(Inst.Register, bridge=Inst)
+        self.Target = Inst.Proxy.Load(self.Key)
         return self.Target
 
     def __getattr__(self, Name):
@@ -534,8 +523,11 @@ class Bridge(Service):
             cls.Instance.Gateways = {}
             cls.Instance.DirectLinks = {}
             cls.Instance.DeferredLinks = {}
-            cls.Instance.Proxy = Proxy(cls.Instance.Register, bridge=cls.Instance)
+            cls.Instance.Proxy = None
         return cls.Instance
+
+    def __init__(self):
+        pass
 
     @classmethod
     def GetInstance(cls) -> "Bridge":
@@ -554,19 +546,27 @@ class Bridge(Service):
         self.Status = "Online"
         return True
 
-    # Завантаження об'єкта або модуля через Proxy
-    @classmethod
-    def Load(cls, Key: str):
-        return Proxy.GetInstance().Load(Key)
-
-    load = Load
-
-    # Повертає об'єкт, який відповідає ключу у реєстрі Bridge.
+    # Оптична маршрутизація: спершу Connect (ODN Link), а при відсутності сигналу — fallback через Proxy
     @classmethod
     def Route(cls, Key: str):
-        return cls.Load(Key)
+        Inst = cls.GetInstance()
+        LinkNode = Inst.Connect(Key)
+        if LinkNode is not None and LinkNode.Target is not None:
+            return LinkNode.Target
 
-    route = Route
+        # Якщо зворотний сигнал / жива ціль відсутня — запускаємо Proxy як fallback
+        if Inst.Register is None or Inst.Register.Resolve(Key) is None:
+            return None
+
+        if Inst.Proxy is None:
+            Inst.Proxy = Proxy(Inst.Register, bridge=Inst)
+        Loaded = Inst.Proxy.Load(Key)
+        if LinkNode is not None and Loaded is not None:
+            LinkNode.Target = Loaded
+        return Loaded
+
+    Load = Route
+
     # Підключаємося до gateway за ключем.
     # Повертає Link, який пов'язаний із сигналом ODN.
     def Connect(

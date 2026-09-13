@@ -36,17 +36,17 @@ class Transmission(Directive):
         self.State = "Cancelled"
         return self
 
-    def Emit(self, *Args, **Flags) -> Any:
-        Path = self.Channel or f"Transmission.{id(self)}"
+    def Emit(self, *Args, Channel: Optional[str] = None, **Flags) -> Any:
+        Path = Channel or Flags.pop("Channel", None) or self.Channel or f"Transmission.{id(self)}"
         return ODN.Transmit(Path, Data=Args[0] if len(Args) == 1 else (Args if Args else None), **Flags)
 
-    def Connect(self, Receiver: Callable) -> Transmission:
-        Path = self.Channel or f"Transmission.{id(self)}"
+    def Connect(self, Receiver: Callable, Channel: Optional[str] = None) -> Transmission:
+        Path = Channel or self.Channel or f"Transmission.{id(self)}"
         ODN.Connect(Path, Receiver)
         return self
 
-    def Disconnect(self, Receiver: Callable) -> Transmission:
-        Path = self.Channel or f"Transmission.{id(self)}"
+    def Disconnect(self, Receiver: Callable, Channel: Optional[str] = None) -> Transmission:
+        Path = Channel or self.Channel or f"Transmission.{id(self)}"
         ODN.Disconnect(Path, Receiver)
         return self
 
@@ -135,10 +135,15 @@ class OpticalDataNetwork(SystemComponent):
         if callable(Receiver) and Receiver not in self.Receivers[Path]:
             self.Receivers[Path].append(Receiver)
 
+    Listen = Connect
+    Subscribe = Connect
+
     # Відключення приймача від каналу шини
     def Disconnect(self, Path: str, Receiver: Callable) -> None:
         if Path in self.Receivers and Receiver in self.Receivers[Path]:
             self.Receivers[Path].remove(Receiver)
+
+    Unsubscribe = Disconnect
 
     # Миттєва двостороння передача імпульсу у канал (Команда -> Відповідь)
     def Transmit(self, Path: str, Data: Any = None, Source: Optional[str] = None, Target: Optional[str] = None, **Flags) -> Transmission:
@@ -187,20 +192,39 @@ class OpticalDataNetwork(SystemComponent):
             self.Channels[Path].Cancel()
             del self.Channels[Path]
 
-    # Системні аліаси відправки
-    Emit = Transmit
-    emit = Transmit
-    Listen = Connect
-    listen = Connect
+    def Shutdown(self) -> None:
+        self.Channels.clear()
+        self.Receivers.clear()
+        self.Routes.clear()
+
+# Патерн Спостерігача (Observer) для сигнальної мережі
+class Observer:
+    def __init__(self, *types):
+        self.Types = types
+        self.Callbacks: List[Callable] = []
+
+    def Attach(self, callback: Callable) -> Observer:
+        if callable(callback) and callback not in self.Callbacks:
+            self.Callbacks.append(callback)
+        return self
+
+    def Detach(self, callback: Callable) -> Observer:
+        if callback in self.Callbacks:
+            self.Callbacks.remove(callback)
+        return self
+
+    def Update(self, data: Any = None) -> None:
+        for cb in list(self.Callbacks):
+            cb(data)
 
 # Канонічні інстанси та аліаси зорельота
 Signal = Transmission
 OTN = OpticalTransportNetwork()
 ODN = OpticalDataNetwork()
-
 __all__ = [
     "Signal",
     "Transmission",
+    "Observer",
     "OpticalTransportNetwork",
     "OpticalDataNetwork",
     "OTN",

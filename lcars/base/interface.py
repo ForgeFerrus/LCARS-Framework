@@ -157,6 +157,12 @@ class Element(Component):
 
         return self
 
+    def addWidget(self, *args, **kwargs):
+        return self.Add(*args, **kwargs)
+
+    def addLayout(self, *args, **kwargs):
+        return self.Add(*args, **kwargs)
+
     def AddLayout(self, TargetLayout, SubLayout):
         if TargetLayout is not None and SubLayout is not None and hasattr(TargetLayout, "addLayout"):
             LayoutObj = getattr(SubLayout, "Layout", SubLayout)
@@ -168,6 +174,9 @@ class Element(Component):
         if LayoutObj is not None and hasattr(LayoutObj, "addStretch"):
             LayoutObj.addStretch(int(Factor))
         return self
+
+    def addStretch(self, *args, **kwargs):
+        return self.AddStretch(*args, **kwargs)
 
     def Clear(self):
         if self.Layout is None:
@@ -269,6 +278,7 @@ class Element(Component):
             self.Widget.setStyleSheet(f"background-color: #000000; border: none; color: {Palette.Buttons[0]};")
         if "Content" not in self.Items:
             ContentSeg = Segment(Parent=self.Widget)
+            ContentSeg.Vertical(0, 0, 0, 0, 0)
             self.Items["Content"] = ContentSeg
             RootLayout = getattr(self.Widget, "layout", lambda: None)()
             if RootLayout is None:
@@ -861,6 +871,12 @@ class PADD(Element):
     @property
     def Content(self):
         return self.Items.get("Content")
+
+    def Add(self, *Arguments):
+        ContentItem = self.Items.get("Content")
+        if ContentItem is not None and ContentItem is not self:
+            return ContentItem.Add(*Arguments)
+        return super().Add(*Arguments)
 
     def ConfigurePadd(self):
         Host = self.Widget
@@ -1623,6 +1639,7 @@ Elbow = LCARSElbow
 Bar = LCARSBar
 Pill = LCARSButton
 Frame = Panel
+Padd = PADD
 LCARSPadd = PADD
 LCARSScreen = Screen
 LCARSSegment = Segment
@@ -1633,6 +1650,7 @@ LCARSWaveform = ScanningBar
 __all__ = [
     "Element",
     "PADD",
+    "Padd",
     "Screen",
     "Display",
     "Panel",
