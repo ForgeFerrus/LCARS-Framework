@@ -698,29 +698,6 @@ class Protocol(LCARS):
 # =====================================================================
 # ЕКСПОРТОВАНІ ТИПИ БАЗОВОГО ШАРУ (DNA)
 # =====================================================================
-# АРХІТЕКТУРНІ ЗАМІННИКИ ТА АЛІАСИ LCARS (SUBSTITUTES)
-# =====================================================================
-# Прямі класи-замінники LCARS без магічних дандерів __getattr__
-class Type(LCARS): pass
-class Primitives(LCARS): pass
-class LCARSTypes(LCARS): pass
-class SystemProcess(Process): pass
-
-# Прямі замінники на рівні модуля для базових компонентів
-Color = LCARS.Visual.Color
-Font = LCARS.Visual.Font
-Widget = LCARS.Interface.Widget
-
-def __getattr__(Name: str):
-    if Name == "Link":
-        from lcars.service.bridge import Link
-        return Link
-    if Name == "ODN":
-        from lcars.core.signal import ODN
-        return ODN
-    raise AttributeError(f"module 'lcars.base.type' has no attribute '{Name}'")
-
-# Експортовані сутності модуля
 __all__ = [
     "LCARS",
     "SystemComponent",
@@ -729,11 +706,4 @@ __all__ = [
     "Protocol",
     "Process",
     "Align",
-    "Type",
-    "Primitives",
-    "LCARSTypes",
-    "SystemProcess",
-    "Color",
-    "Font",
-    "Widget",
 ]

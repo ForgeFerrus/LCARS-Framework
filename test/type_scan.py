@@ -9,7 +9,8 @@ ProjectRoot = Path(__file__).resolve().parent.parent
 if str(ProjectRoot) not in sys.path:
     sys.path.insert(0, str(ProjectRoot))
 
-from lcars.base.type import LCARS, Link
+from lcars.base.type import LCARS
+from lcars.service.bridge import Link
 from lcars.base.register import registry
 
 W  = "\033[0m"

@@ -14,7 +14,7 @@ print("=" * 50)
 
 # Тест 1: Імпорт базових типів
 try:
-    from lcars.base.type import LCARS, Type, Matrix, SystemComponent
+    from lcars.base.type import LCARS, Matrix, SystemComponent
     print("✓ Base types imported successfully")
 except Exception as e:
     print(f"✗ Base types import failed: {e}")
@@ -70,7 +70,9 @@ except Exception as e:
 
 # Тест 5: Перевірка функцій доступу
 try:
-    from lcars.base.type import Color, Font, Widget
+    Color = LCARS.Visual.Color
+    Font = LCARS.Visual.Font
+    Widget = LCARS.Interface.Widget
     print("✓ Access functions imported")
     
     # Спроба отримати з реєстру (може бути None якщо не ініціалізовано)
@@ -82,9 +84,8 @@ except Exception as e:
 
 # Тест 6: Перевірка метакласу
 try:
-    # Type використовує LCARSMeta metaclass
-    type_obj = Type("test_type")
-    print(f"✓ Type object created: {type_obj.SystemId}")
+    type_obj = LCARS("test_type")
+    print(f"✓ LCARS object created: {type_obj.SystemId}")
     
     # Перевірка атрибутів
     debug_info = LCARS.DebugInfo()
