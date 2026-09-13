@@ -6,56 +6,35 @@
 from .register import registry
 from .info import Version, Passport
 # =====================================================================
-# Простір імен LCARS (генератор замінників та маршрутизація через Bridge)
+# Простір імен LCARS (будівник ланцюжків та маршрутизація через Реєстр)
 class Namespace(type):
-    PatternBuffer = None
+    PatternBuffer: str = ""
 
-    def ResolvePattern(cls):
-        if Namespace.PatternBuffer is None:
-            from lcars.service.bridge import Bridge
-            Namespace.PatternBuffer = Bridge
-        return Namespace.PatternBuffer
+    # Прямий резолвінг вузла або ланцюжка
+    def Pattern(cls, Path: str):
+        return registry.Retrieve(Path)
 
-    def __getattr__(cls, AttributeName: str):
+    # LCARS Буфер для побудови ланцюжка
+    def ResolvePattern(cls, AttributeName: str):
         if AttributeName.startswith("_"):
             raise AttributeError(AttributeName)
-        ParentNamespace = type.__getattribute__(cls, "NamespacePath") if "NamespacePath" in cls.__dict__ else (
-            type.__getattribute__(cls, "Name") if "Name" in cls.__dict__ else type.__getattribute__(cls, "__name__")
-        )
-        FullNamespacePath = f"{ParentNamespace}.{AttributeName}"
+
+        ParentPath = cls.__dict__.get("PatternBuffer") or cls.__dict__.get("NamespacePath") or cls.__dict__.get("Name") or cls.__name__
+        FullPath = f"{ParentPath}.{AttributeName}"
 
         # 1. Прямий резолвінг через реєстр LCARS
-        DirectResolved = registry.Retrieve(FullNamespacePath)
+        DirectResolved = registry.Retrieve(FullPath)
         if DirectResolved is not None and not isinstance(DirectResolved, tuple):
             return DirectResolved
 
-        # 2. Маршрутизація через Bridge Pattern Buffer
-        Loaded = cls.ResolvePattern().Route(FullNamespacePath)
-        if Loaded is not None:
-            return Loaded
-
-        # 3. Створення проміжної ланки ланцюжка
+        # 2. Створення наступної ланки простору імен
         return Namespace(AttributeName, (), {
-            "Name": FullNamespacePath,
-            "NamespacePath": FullNamespacePath,
-            "__init__": lambda self, *a, **k: None
+            "PatternBuffer": FullPath,
+            "NamespacePath": FullPath,
         })
 
-    def __getattribute__(cls, AttributeName: str):
-        if AttributeName.startswith("_"):
-            return super().__getattribute__(AttributeName)
-        if AttributeName in {
-            "Name", "NamespacePath", "ResolvePattern", "PatternBuffer", 
-            "Version", "Passport", "DebugInfo", "Register"
-        }:
-            return super().__getattribute__(AttributeName)
-        
-        TargetValue = super().__getattribute__(AttributeName)
-        if isinstance(TargetValue, str) and any(TargetValue.startswith(pfx) for pfx in ("System.", "Base.", "Bridge.", "LCARS.")):
-            Loaded = cls.ResolvePattern().Route(TargetValue)
-            if Loaded is not None:
-                return Loaded
-        return TargetValue
+    # Системний аліас Python для підтримки оператора
+    __getattr__ = ResolvePattern
 # =====================================================================
 # Логічні групи реєстру
 class SystemMap(metaclass=Namespace):
@@ -90,13 +69,37 @@ class BridgeMap(metaclass=Namespace):
 class RuntimeMap(metaclass=Namespace):
     NamespacePath = "System.Core"
 
+class PlatformMap(metaclass=Namespace):
+    NamespacePath = "System.Platform"
+    Release = "System.Platform.Release"
+    Machine = "System.Platform.Machine"
+    Processor = "System.Platform.Processor"
+    Architecture = "System.Platform.Architecture"
+    Node = "System.Platform.Node"
+    Compiler = "System.Platform.Compiler"
+    Build = "System.Platform.Build"
+
 # =====================================================================
 # LCARS CLASS - Головний клас з організованою класифікацією
 class LCARS(metaclass=Namespace):
+    # === КОРПОРАТИВНИЙ ПАСПОРТ ТА СПЕЦИФІКАЦІЯ LCARS ===
     Name = "Library Computer Access/Retrieval System"
-    Version = Version.Release
+    Title = Version.Title
+    Status = "Operational"
+    Build = Version.Build
     Passport = Passport
+    Specification = Version.Specification
+    Architecture = Version.Architecture
+    Design = Version.Design
+    PlatformSpec = Version.Platform
+    Stardate = Version.GetStardate
+    EarthDate = Version.GetEarthDate
+    Version = Version.Release
+
+
+    # === КАРТИ ПІДСИСТЕМ (MAPS) ===
     System = SystemMap
+    Platform = PlatformMap
     Core = CoreMap
     Geometry = GeometryMap
     Visual = VisualMap
@@ -107,16 +110,6 @@ class LCARS(metaclass=Namespace):
     Runtime = RuntimeMap
     
     # === СТОРОННІ ТА ФАЙЛОВІ БІБЛІОТЕКИ (МІСТ / BRIDGE) ===
-    Zip = "Bridge.Storage.Zip"
-    Sqlite = "Bridge.Storage.Sqlite"
-    Yaml = "Bridge.Storage.Yaml"
-    Json = "Bridge.Storage.Json"
-    Csv = "Bridge.Storage.Csv"
-    Xml = "Bridge.Storage.Xml"
-    Ini = "Bridge.Storage.Ini"
-    Mime = "Bridge.Storage.Mime"
-    ZipFile = "Bridge.Storage.Zip"
-    SQLite = "Bridge.Storage.Sqlite"
     Serialization = "Bridge.Storage.Json"
     Pickle = "Bridge.Storage.Pickle"
     Toml = "Bridge.Storage.Toml"
@@ -391,9 +384,24 @@ class LCARS(metaclass=Namespace):
     Translucent = "Base.Protocol.Widget.Transparent"
     TextCursor = "Base.Visual.Text.Cursor"
     
-    # === BRIDGE METHODS ===
+    # === МЕТОДИ ДОСТУПУ ТА РЕЗОЛВІНГУ (LCARS RETRIEVAL) ===
+    @classmethod
+    def Resolve(cls, Path: str):
+        """Прямий резолвінг ключа з реєстру LCARS."""
+        return registry.Retrieve(Path)
+
+    Retrieve = Resolve
+
+    @classmethod
+    def Library(cls, Count: bool = False):
+        """Каталог або кількість зареєстрованих компонентів."""
+        return registry.Library(Count=Count)
+
+    Catalog = Library
+
     @staticmethod
     def Register(Key, Value, Attribute=None):
+        """Реєстрація компонента в системному реєстрі LCARS."""
         if isinstance(Value, tuple):
             registry.Register(Key, Value[0], Value[1] if len(Value) > 1 else None)
         else:
@@ -402,15 +410,23 @@ class LCARS(metaclass=Namespace):
     
     @classmethod
     def DebugInfo(cls):
+        """Діагностична інформація системи LCARS."""
         return {
             "Name": cls.Name,
+            "Title": cls.Title,
             "Version": str(cls.Version),
+            "Status": cls.Status,
             "Registered": len(registry),
+            "Stardate": cls.Stardate(),
         }
 
     def __init__(self, SystemId=None, Id=None, **kwargs):
         self.SystemId = SystemId or Id or f"Sys{id(self)}"
         self.Id = self.SystemId
+
+    def __repr__(self):
+        return f"<LCARS Id={self.Id!r} Status={self.Status!r}>"
+
 # =====================================================================
 # COMPONENT CLASS - Базовий клас для компонентів
 class SystemComponent(LCARS):
