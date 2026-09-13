@@ -5,8 +5,6 @@
 #       Містить глобальну версію, метадані та делегує обчислення часу хронометру.
 # СТАНДАРТ: Titanium (Zero-Except, Zero-Underscores, Strict PascalCase, Pure Classes).
 # =============================================================================
-import sys
-
 # Офіційна глобальна версія проекту (встановлюється розробником)
 class Version:
     Release = "0.3.0-alpha"
@@ -50,8 +48,9 @@ class Version:
             "architecture": cls.Architecture,
             "design": cls.Design,
             "platform": cls.Platform,
-            "runtime": f"Python {sys.version.split()[0]} on {sys.platform}",
+            "runtime": f"LCARS Quantum Core v{cls.Release} (Operational)",
         }
+
 
     def __str__(self):
         return f"{self.Title} v{self.Release} [Stardate {self.Stardate()}]"
