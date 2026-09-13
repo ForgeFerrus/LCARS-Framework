@@ -24,10 +24,17 @@ class Namespace(type):
         )
         FullNamespacePath = f"{ParentNamespace}.{AttributeName}"
 
+        # 1. Прямий резолвінг через реєстр LCARS
+        DirectResolved = registry.Retrieve(FullNamespacePath)
+        if DirectResolved is not None and not isinstance(DirectResolved, tuple):
+            return DirectResolved
+
+        # 2. Маршрутизація через Bridge Pattern Buffer
         Loaded = cls.ResolvePattern().Route(FullNamespacePath)
         if Loaded is not None:
             return Loaded
 
+        # 3. Створення проміжної ланки ланцюжка
         return Namespace(AttributeName, (), {
             "Name": FullNamespacePath,
             "NamespacePath": FullNamespacePath,
