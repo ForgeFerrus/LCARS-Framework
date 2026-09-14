@@ -26,14 +26,11 @@ class Namespace(type):
             else cls.__name__
         )
         FullPath = f"{ParentPath}.{AttributeName}"
-
-        # 1. Створення наступної ланки або типу простору імен
+        # Створення наступної ланки або типу простору імен
         return Namespace(AttributeName, (), {
             "PatternBuffer": FullPath,
             "NamespacePath": FullPath,
         })
-
-
 
     # Системний аліас Python для підтримки оператора крапки
     __getattr__ = ResolvePattern
@@ -89,21 +86,6 @@ class LCARS(metaclass=Namespace):
     Storage  = Namespace("Storage",  (), {"PatternBuffer": "Bridge.Storage"})
     Runtime  = Namespace("Runtime",  (), {"PatternBuffer": "System.Core"})
 
-    # === СТОРОННІ ТА ФАЙЛОВІ БІБЛІОТЕКИ (МІСТ / BRIDGE) ===
-    Serialization = "Bridge.Storage.Json"
-    Pickle = "Bridge.Storage.Pickle"
-    Toml = "Bridge.Storage.Toml"
-    Arrow = "Bridge.Storage.Arrow"
-    Tar = "Bridge.Storage.Tar"
-    GZip = "Bridge.Storage.GZip"
-    # Сумісні аліаси
-    JSON = "Bridge.Storage.Json"
-    YAML = "Bridge.Storage.Yaml"
-    SQL = "Bridge.Storage.Sqlite"
-    CSV = "Bridge.Storage.Csv"
-    XML = "Bridge.Storage.Xml"
-    INI = "Bridge.Storage.Ini"
-    MIME = "Bridge.Storage.Mime"
     # === СИСТЕМНІ КОРЕНІ (ОПЕРАЦІЙНА СИСТЕМА) ===
     ABC = "System.ABC"
     Regex = "System.Regex"
@@ -361,6 +343,22 @@ class LCARS(metaclass=Namespace):
     Translucent = "Base.Protocol.Widget.Transparent"
     TextCursor = "Base.Visual.Text.Cursor"
     
+    # === СТОРОННІ ТА ФАЙЛОВІ БІБЛІОТЕКИ (МІСТ / BRIDGE) ===
+    Serialization = "Bridge.Storage.Json"
+    Pickle = "Bridge.Storage.Pickle"
+    Toml = "Bridge.Storage.Toml"
+    Arrow = "Bridge.Storage.Arrow"
+    Tar = "Bridge.Storage.Tar"
+    GZip = "Bridge.Storage.GZip"
+    # Сумісні аліаси
+    JSON = "Bridge.Storage.Json"
+    YAML = "Bridge.Storage.Yaml"
+    SQL = "Bridge.Storage.Sqlite"
+    CSV = "Bridge.Storage.Csv"
+    XML = "Bridge.Storage.Xml"
+    INI = "Bridge.Storage.Ini"
+    MIME = "Bridge.Storage.Mime"
+
     # === МЕТОДИ ДОСТУПУ ТА РЕЗОЛВІНГУ (LCARS RETRIEVAL) ===
     # Прямий резолвінг ключа з реєстру LCARS
     @classmethod
@@ -385,24 +383,34 @@ class LCARS(metaclass=Namespace):
             registry.Register(Key, Value, Attribute)
         return Value
     
-    # Діагностична інформація системи LCARS
+    # Системна діагностика вузла LCARS
     @classmethod
-    def DebugInfo(cls):
+    def Diagnostics(cls):
         return {
-            "Name": cls.Name,
-            "Title": cls.Title,
-            "Version": str(cls.Version),
-            "Status": cls.Status,
-            "Registered": len(registry),
-            "Stardate": cls.Stardate(),
+            "name": cls.Name,
+            "title": cls.Title,
+            "version": str(cls.Version),
+            "status": cls.Status,
+            "registered": len(registry),
+            "stardate": cls.Stardate(),
         }
 
     def __init__(self, SystemId=None, Id=None, **kwargs):
         self.SystemId = SystemId or Id or f"Sys{id(self)}"
         self.Id = self.SystemId
 
-    def __repr__(self):
-        return f"<LCARS Id={self.Id!r} Status={self.Status!r}>"
+    # Системний ідентифікатор вузла
+    def Identifier(self) -> str:
+        return str(self.Id)
+
+    # Повний дескриптор сутності
+    def Descriptor(self) -> dict:
+        return {
+            "id": self.Id,
+            "system_id": self.SystemId,
+            "status": getattr(self, "Status", "Operational"),
+        }
+
 
 # =====================================================================
 # COMPONENT CLASS - Базовий клас для компонентів
@@ -532,14 +540,13 @@ class Process(LCARS):
 
         return Obj
 
-    # Повертає рядкове представлення процесу
-    def __repr__(self):
-        return (
-            f"<Process "
-            f"Id={self.Id!r} "
-            f"Name={self.Name!r} "
-            f"State={self.State!r}>"
-        )
+    # Системний ідентифікатор процесу
+    def Identifier(self) -> str:
+        return str(self.Id)
+
+    # Повний дескриптор процесу
+    def Descriptor(self) -> dict:
+        return self.ToDict()
 # =====================================================================
 class AlignMeta(type):
     def __getattr__(cls, Name: str):
@@ -575,12 +582,24 @@ class Directive(LCARS):
         self.State = "Created"
         self.Metadata = {}
 
-    def Validate(self):
+    # Валідує директиву за даними, завжди повертає True
+    def Validate(self, Data=None):
         return True
 
+    # Виконує директиву за даними
+    def Execute(self, Data=None):
+        self.State = "Executed"
+        return True
+
+    # Скасовує виконання директиви
+    def Cancel(self):
+        self.State = "Cancelled"
+
+    # Скидає стан директиви до "Created"
     def Reset(self):
         self.State = "Created"
 
+    # Серіалізує директиву у словник
     def ToDict(self):
         return {
             "id": self.Id,
@@ -593,6 +612,7 @@ class Directive(LCARS):
             "metadata": self.Metadata.copy()
         }
 
+    # Десеріалізує директиву з словника
     @classmethod
     def FromDict(cls, Data):
         Obj = cls(Data.get("id"))
@@ -607,13 +627,13 @@ class Directive(LCARS):
 
         return Obj
 
-    def __repr__(self):
-        return (
-            f"<Directive "
-            f"Id={self.Id!r} "
-            f"Name={self.Name!r} "
-            f"State={self.State!r}>"
-        )
+    # Системний ідентифікатор директиви
+    def Identifier(self) -> str:
+        return str(self.Id)
+
+    # Повний дескриптор директиви
+    def Descriptor(self) -> dict:
+        return self.ToDict()
 
 # Базовий тип протоколу.
 # Описує формат, правила та стан протоколу.
@@ -686,15 +706,14 @@ class Protocol(LCARS):
         Obj.Metadata = Data.get("metadata", {}).copy()
         return Obj
 
-    # Повертає рядкове представлення протоколу
-    def __repr__(self):
-        return (
-            f"<Protocol "
-            f"Id={self.Id!r} "
-            f"Name={self.Name!r} "
-            f"Version={self.Version!r} "
-            f"State={self.State!r}>"
-        )
+    # Системний ідентифікатор протоколу
+    def Identifier(self) -> str:
+        return str(self.Id)
+
+    # Повний дескриптор протоколу
+    def Descriptor(self) -> dict:
+        return self.ToDict()
+
         
 # =====================================================================
 # ЕКСПОРТОВАНІ ТИПИ БАЗОВОГО ШАРУ (DNA)

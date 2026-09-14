@@ -87,9 +87,11 @@ try:
     type_obj = LCARS("test_type")
     print(f"✓ LCARS object created: {type_obj.SystemId}")
     
-    # Перевірка атрибутів
-    debug_info = LCARS.DebugInfo()
-    print(f"✓ Debug info: {debug_info}")
+    # Перевірка діагностики та дескриптора
+    diagnostics = LCARS.Diagnostics()
+    print(f"✓ LCARS Diagnostics: {diagnostics['status']} (Keys: {diagnostics['registered']})")
+    descriptor = type_obj.Descriptor()
+    print(f"✓ LCARS Descriptor: {descriptor['id']}")
     
 except Exception as e:
     print(f"✗ Metaclass test failed: {e}")
