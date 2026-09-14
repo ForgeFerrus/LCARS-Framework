@@ -28,15 +28,36 @@ class Namespace(type):
         FullPath = f"{ParentPath}.{AttributeName}"
 
         # 1. Прямий резолвінг через реєстр LCARS
-        DirectResolved = registry.Retrieve(FullPath)
-        if DirectResolved is not None and not isinstance(DirectResolved, tuple):
-            return DirectResolved
+        Raw = None
+        if FullPath in registry:
+            Raw = registry[FullPath]
+        else:
+            LowerKey = FullPath.lower()
+            if LowerKey in registry.Keys:
+                Raw = registry[registry.Keys[LowerKey]]
+
+        if Raw is not None:
+            if isinstance(Raw, tuple) and len(Raw) == 2:
+                ModuleName, AttrName = Raw
+                if isinstance(ModuleName, str):
+                    # Ліниве імпортування реального модуля/класу
+                    import importlib
+                    Mod = importlib.import_module(ModuleName)
+                    if AttrName:
+                        return getattr(Mod, AttrName)
+                    return Mod
+                # Вже готовий об'єкт
+                if AttrName and hasattr(ModuleName, AttrName):
+                    return getattr(ModuleName, AttrName)
+                return ModuleName
+            return Raw
 
         # 2. Створення наступної ланки простору імен
         return Namespace(AttributeName, (), {
             "PatternBuffer": FullPath,
             "NamespacePath": FullPath,
         })
+
 
     # Системний аліас Python для підтримки оператора крапки
     __getattr__ = ResolvePattern
@@ -81,17 +102,16 @@ class LCARS(metaclass=Namespace):
     Annotation = Annotation
     # Типи та анотації
     Typing = Type
-    # Канонічні простори імен — шляхи в реєстрі LCARS
-    System = "System"
-    Platform = "System.Platform"
-    Core = "Base.Core"
-    Geometry = "Base.Geometry"
-    Visual = "Base.Visual"
-    Interface = "Base.Interface"
-    Protocol = "Base.Protocol"
-    Bridge = "Bridge"
-    Storage = "Bridge.Storage"
-    Runtime = "System.Core"
+    # Канонічні простори імен — живі Namespace-об'єкти для dot-chain резолюції
+    System   = Namespace("System",   (), {"PatternBuffer": "System"})
+    Bridge   = Namespace("Bridge",   (), {"PatternBuffer": "Bridge"})
+    Core     = Namespace("Core",     (), {"PatternBuffer": "Base.Core"})
+    Visual   = Namespace("Visual",   (), {"PatternBuffer": "Base.Visual"})
+    Interface = Namespace("Interface", (), {"PatternBuffer": "Base.Interface"})
+    Protocol = Namespace("Protocol", (), {"PatternBuffer": "Base.Protocol"})
+    Geometry = Namespace("Geometry", (), {"PatternBuffer": "Base.Geometry"})
+    Storage  = Namespace("Storage",  (), {"PatternBuffer": "Bridge.Storage"})
+    Runtime  = Namespace("Runtime",  (), {"PatternBuffer": "System.Core"})
 
     # === СТОРОННІ ТА ФАЙЛОВІ БІБЛІОТЕКИ (МІСТ / BRIDGE) ===
     Serialization = "Bridge.Storage.Json"
@@ -121,19 +141,16 @@ class LCARS(metaclass=Namespace):
     Copy = "System.Copy"
     String = "System.String"
     Method = "System.AbstractMethod"
-
+    Environment = "System.Environment"
     DataClass = "System.DataClass"
     Field = "System.DataClass.Field"
     Threading = "System.Threading"
     DateTime = "System.DateTime"
     Module = "System.Module"
-    ModuleUtil = "System.Module.Util"
+    Util = "System.Module.Util"
     Import = "System.Module.Import"
-    ModuleSpec = "System.Module.SpecFromFile"
-    ModuleFromSpec = "System.Module.FromSpec"
-    ModuleLoader = "System.Module.Loader"
+    Loader = "System.Module.Loader"
     Deepcopy = "System.Copy.Deep"
-    Environment = "System.Environment"
     Directory = "System.Directory"
     Process = "System.Process"
     Task = "System.Task"
