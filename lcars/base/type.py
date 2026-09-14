@@ -42,6 +42,26 @@ class Namespace(type):
     __getattr__ = ResolvePattern
 
 # =====================================================================
+# LCARS TYPE & ANNOTATION (ТИТАНОВІ ЗАМІННИКИ ТИПІВ)
+# =====================================================================
+# Титанові замінники системних типів LCARS
+class Type(metaclass=Namespace):
+    NamespacePath = "System.Type"
+    Any = object
+    Dict = dict
+    List = list
+    Tuple = tuple
+    Set = set
+    String = str
+    Integer = int
+    Float = float
+    Boolean = bool
+    Bytes = bytes
+    Callable = callable
+
+Annotation = Type
+
+# =====================================================================
 # LCARS CLASS - ГОЛОВНИЙ КЛАС ТА ЄДИНА ТОЧКА ВХОДУ LCARS
 # =====================================================================
 class LCARS(metaclass=Namespace):
@@ -60,9 +80,15 @@ class LCARS(metaclass=Namespace):
     Metadata = Version.Passport
     Version = Version.Release
 
+    # Титанові типи та анотації
+    Type = Type
+    Typing = Type
+    Annotation = Annotation
+
     # Канонічні простори імен (генеруються безпосередньо через Namespace)
     System = Namespace("System", (), {"PatternBuffer": "System"})
     Platform = Namespace("Platform", (), {"PatternBuffer": "System.Platform"})
+
     Core = Namespace("Core", (), {"PatternBuffer": "Base.Core"})
     Geometry = Namespace("Geometry", (), {"PatternBuffer": "Base.Geometry"})
     Visual = Namespace("Visual", (), {"PatternBuffer": "Base.Visual"})
@@ -349,32 +375,32 @@ class LCARS(metaclass=Namespace):
     TextCursor = "Base.Visual.Text.Cursor"
     
     # === МЕТОДИ ДОСТУПУ ТА РЕЗОЛВІНГУ (LCARS RETRIEVAL) ===
+    # Прямий резолвінг ключа з реєстру LCARS
     @classmethod
     def Resolve(cls, Path: str):
-        """Прямий резолвінг ключа з реєстру LCARS."""
         return registry.Retrieve(Path)
 
     Retrieve = Resolve
 
+    # Каталог або кількість зареєстрованих компонентів
     @classmethod
     def Library(cls, Count: bool = False):
-        """Каталог або кількість зареєстрованих компонентів."""
         return registry.Library(Count=Count)
 
     Catalog = Library
 
+    # Реєстрація компонента в системному реєстрі LCARS
     @staticmethod
     def Register(Key, Value, Attribute=None):
-        """Реєстрація компонента в системному реєстрі LCARS."""
         if isinstance(Value, tuple):
             registry.Register(Key, Value[0], Value[1] if len(Value) > 1 else None)
         else:
             registry.Register(Key, Value, Attribute)
         return Value
     
+    # Діагностична інформація системи LCARS
     @classmethod
     def DebugInfo(cls):
-        """Діагностична інформація системи LCARS."""
         return {
             "Name": cls.Name,
             "Title": cls.Title,
@@ -392,32 +418,8 @@ class LCARS(metaclass=Namespace):
         return f"<LCARS Id={self.Id!r} Status={self.Status!r}>"
 
 # =====================================================================
-# LCARS TYPE & ANNOTATION (ТИТАНОВІ ЗАМІННИКИ ТИПІВ)
-# =====================================================================
-class Type(LCARS):
-    """Титанові замінники системних типів LCARS."""
-    Any = object
-    Dict = dict
-    List = list
-    Tuple = tuple
-    Set = set
-    String = str
-    Integer = int
-    Float = float
-    Boolean = bool
-    Bytes = bytes
-    Callable = callable
-
-Annotation = Type
-LCARS.Type = Type
-LCARS.Typing = Type
-LCARS.Annotation = Annotation
-
-
-
-
-# =====================================================================
 # COMPONENT CLASS - Базовий клас для компонентів
+
 class SystemComponent(LCARS):
     def __init__(self, SystemId=None, Id=None, **kwargs):
         super().__init__(SystemId=SystemId, Id=Id, **kwargs)
