@@ -413,25 +413,6 @@ LCARS.Type = Type
 LCARS.Typing = Type
 LCARS.Annotation = Annotation
 
-# =====================================================================
-# LCARS SENTINEL (АВТОНОМНИЙ ВАРТОВИЙ ЧИСТОТИ СИСТЕМИ)
-# =====================================================================
-class Sentinel(LCARS):
-    """Автономний Сентінел LCARS для очищення кешів та дотримання стандартів."""
-
-    @classmethod
-    def Purge(cls):
-        """Миттєве очищення всіх директорій кешу проекту."""
-        from scripts.sentinel import PurgeNow
-        return PurgeNow()
-
-    @classmethod
-    def Watch(cls, Interval: float = 1.0):
-        """Запуск фонового демона спостереження."""
-        from scripts.sentinel import RunSentinelSubsystem
-        return RunSentinelSubsystem(Interval)
-
-LCARS.Sentinel = Sentinel
 
 
 
@@ -739,7 +720,7 @@ __all__ = [
     "Align",
     "Type",
     "Annotation",
-    "Sentinel",
 ]
+
 
 
