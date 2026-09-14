@@ -87,9 +87,9 @@ try:
     type_obj = LCARS("test_type")
     print(f"✓ LCARS object created: {type_obj.SystemId}")
     
-    # Перевірка діагностики та дескриптора
-    diagnostics = LCARS.Diagnostics()
-    print(f"✓ LCARS Diagnostics: {diagnostics['status']} (Keys: {diagnostics['registered']})")
+    # Перевірка діагностики компонента та дескриптора вузла
+    comp_diag = component.Diagnostics()
+    print(f"✓ Component Diagnostics: {comp_diag['id']} -> {comp_diag['status']}")
     descriptor = type_obj.Descriptor()
     print(f"✓ LCARS Descriptor: {descriptor['id']}")
     

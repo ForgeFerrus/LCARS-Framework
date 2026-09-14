@@ -56,10 +56,17 @@ Annotation = Type
 # LCARS CLASS - ГОЛОВНИЙ КЛАС ТА ЄДИНА ТОЧКА ВХОДУ LCARS
 # =====================================================================
 class LCARS(metaclass=Namespace):
-    def __init__(self, SystemId=None, Id=None, **kwargs):
-        self.SystemId = SystemId or Id or f"Sys{id(self)}"
+    # Канонічний ініціалізатор системного вузла LCARS
+    def Initialize(self, SystemId=None, Id=None, Parent=None, **kwargs):
+        self.SystemId = SystemId or Id or getattr(self, "SystemId", None) or f"Sys{id(self)}"
         self.Id = self.SystemId
+        self.Parent = Parent
+        self.Config = dict(getattr(self, "Config", {}))
+        for Key, Value in kwargs.items():
+            setattr(self, Key, Value)
 
+    # Канонічний замінник конструктора
+    __init__ = Initialize
     # Паспортні дані та специфікація системи
     Name = "Library Computer Access/Retrieval System"
     Title = Version.Title
@@ -382,30 +389,6 @@ class LCARS(metaclass=Namespace):
             registry.Register(Key, Value, Attribute)
         return Value
     
-    # Системна діагностика вузла LCARS
-    @classmethod
-    def Diagnostics(cls):
-        return {
-            "name": cls.Name,
-            "title": cls.Title,
-            "version": str(cls.Version),
-            "status": cls.Status,
-            "registered": len(registry),
-            "stardate": cls.Stardate(),
-        }
-
-    # Канонічний ініціалізатор системного вузла LCARS
-    def Initialize(self, SystemId=None, Id=None, Parent=None, **kwargs):
-        self.SystemId = SystemId or Id or getattr(self, "SystemId", None) or f"Sys{id(self)}"
-        self.Id = self.SystemId
-        self.Parent = Parent
-        self.Config = dict(getattr(self, "Config", {}))
-        for Key, Value in kwargs.items():
-            setattr(self, Key, Value)
-
-    # Канонічний замінник конструктора
-    __init__ = Initialize
-
     # Системний ідентифікатор вузла
     def Identifier(self) -> str:
         return str(self.Id)
@@ -417,7 +400,6 @@ class LCARS(metaclass=Namespace):
             "system": self.SystemId,
             "status": getattr(self, "Status", "Operational"),
         }
-
 # =====================================================================
 # COMPONENT CLASS - Базовий клас для компонентів
 class SystemComponent(LCARS):
@@ -442,13 +424,19 @@ class SystemComponent(LCARS):
             self.Module.Configure(Config)
         return self
 
-    def Diagnostics(self):
+    # Діагностика стану живого компонента
+    def Diagnostics(self) -> dict:
         return {
             "id": self.Id,
+            "system_id": self.SystemId,
             "status": self.Status,
+            "enabled": self.Enabled,
+            "visible": self.Visible,
+            "active": self.Active,
             "module": self.Module,
-            "config": self.Config
+            "config": self.Config.copy(),
         }
+
 
     # === LIFECYCLE CONTRACT (DNA) ===
     def Start(self):
