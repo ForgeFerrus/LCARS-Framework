@@ -40,15 +40,16 @@ class Namespace(type):
 
     # Системний аліас Python для підтримки оператора крапки
     __getattr__ = ResolvePattern
-
 # =====================================================================
-# LCARS TYPE & ANNOTATION (ТИТАНОВІ ЗАМІННИКИ ТИПІВ)
+# LCARS TYPE & ANNOTATION (ЗАМІННИКИ ТИПІВ)
 # =====================================================================
-# Титанові замінники системних типів LCARS
+# замінники системних типів LCARS
 class Type(metaclass=Namespace):
     NamespacePath = "System.Type"
+    NoneType = type(None)
+    Class = type
     Any = object
-    Dict = dict
+    Mapping = dict
     List = list
     Tuple = tuple
     Set = set
@@ -60,7 +61,6 @@ class Type(metaclass=Namespace):
     Callable = callable
 
 Annotation = Type
-
 # =====================================================================
 # LCARS CLASS - ГОЛОВНИЙ КЛАС ТА ЄДИНА ТОЧКА ВХОДУ LCARS
 # =====================================================================
@@ -69,34 +69,31 @@ class LCARS(metaclass=Namespace):
     Name = "Library Computer Access/Retrieval System"
     Title = Version.Title
     Status = "Operational"
-    Build = Version.Build
     Passport = Passport
     Specification = Version.Specification
     Architecture = Version.Architecture
     Design = Version.Design
-    PlatformSpec = Version.Platform
+    Platform = Version.Platform
     Stardate = Version.Stardate
     EarthDate = Version.EarthDate
     Metadata = Version.Passport
     Version = Version.Release
 
     # Титанові типи та анотації
-    Type = Type
     Typing = Type
     Annotation = Annotation
 
-    # Канонічні простори імен (генеруються безпосередньо через Namespace)
-    System = Namespace("System", (), {"PatternBuffer": "System"})
-    Platform = Namespace("Platform", (), {"PatternBuffer": "System.Platform"})
-
-    Core = Namespace("Core", (), {"PatternBuffer": "Base.Core"})
-    Geometry = Namespace("Geometry", (), {"PatternBuffer": "Base.Geometry"})
-    Visual = Namespace("Visual", (), {"PatternBuffer": "Base.Visual"})
-    Interface = Namespace("Interface", (), {"PatternBuffer": "Base.Interface"})
-    Protocol = Namespace("Protocol", (), {"PatternBuffer": "Base.Protocol"})
-    Bridge = Namespace("Bridge", (), {"PatternBuffer": "Bridge"})
-    Storage = Namespace("Storage", (), {"PatternBuffer": "Bridge.Storage"})
-    Runtime = Namespace("Runtime", (), {"PatternBuffer": "System.Core"})
+    # Канонічні простори імен — шляхи в реєстрі LCARS
+    System = "System"
+    Platform = "System.Platform"
+    Core = "Base.Core"
+    Geometry = "Base.Geometry"
+    Visual = "Base.Visual"
+    Interface = "Base.Interface"
+    Protocol = "Base.Protocol"
+    Bridge = "Bridge"
+    Storage = "Bridge.Storage"
+    Runtime = "System.Core"
 
     
     # === СТОРОННІ ТА ФАЙЛОВІ БІБЛІОТЕКИ (МІСТ / BRIDGE) ===
