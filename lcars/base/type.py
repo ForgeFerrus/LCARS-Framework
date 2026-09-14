@@ -95,7 +95,6 @@ class LCARS(metaclass=Namespace):
     Storage = "Bridge.Storage"
     Runtime = "System.Core"
 
-    
     # === СТОРОННІ ТА ФАЙЛОВІ БІБЛІОТЕКИ (МІСТ / BRIDGE) ===
     Serialization = "Bridge.Storage.Json"
     Pickle = "Bridge.Storage.Pickle"

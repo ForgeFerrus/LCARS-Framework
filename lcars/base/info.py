@@ -9,7 +9,6 @@
 class Version:
     Release = "0.3.0-alpha"
     Status = "Operational"
-    Build = "2026.08.28"
     Title = "LCARS Framework"
     System = "Library Computer Access/Retrieval System"
     Specification = "Starfleet Cybernetics Division Directive 24.5"
@@ -39,7 +38,6 @@ class Version:
             "title": cls.Title,
             "release": cls.Release,
             "version": cls.Release,
-            "build": cls.Build,
             "status": cls.Status,
             "stardate": cls.Stardate(),
             "earth_date": cls.EarthDate(),
@@ -59,7 +57,6 @@ class Version:
 
 # Канонічні аліаси для зворотної сумісності
 Passport = Version
-
 VersionInfo = Version
 SystemInfo = Version
 __all__ = [
