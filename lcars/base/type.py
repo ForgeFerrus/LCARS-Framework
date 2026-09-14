@@ -78,11 +78,9 @@ class LCARS(metaclass=Namespace):
     EarthDate = Version.EarthDate
     Metadata = Version.Passport
     Version = Version.Release
-
-    # Титанові типи та анотації
-    Typing = Type
     Annotation = Annotation
-
+    # Типи та анотації
+    Typing = Type
     # Канонічні простори імен — шляхи в реєстрі LCARS
     System = "System"
     Platform = "System.Platform"
