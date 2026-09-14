@@ -27,36 +27,12 @@ class Namespace(type):
         )
         FullPath = f"{ParentPath}.{AttributeName}"
 
-        # 1. Прямий резолвінг через реєстр LCARS
-        Raw = None
-        if FullPath in registry:
-            Raw = registry[FullPath]
-        else:
-            LowerKey = FullPath.lower()
-            if LowerKey in registry.Keys:
-                Raw = registry[registry.Keys[LowerKey]]
-
-        if Raw is not None:
-            if isinstance(Raw, tuple) and len(Raw) == 2:
-                ModuleName, AttrName = Raw
-                if isinstance(ModuleName, str):
-                    # Ліниве імпортування реального модуля/класу
-                    import importlib
-                    Mod = importlib.import_module(ModuleName)
-                    if AttrName:
-                        return getattr(Mod, AttrName)
-                    return Mod
-                # Вже готовий об'єкт
-                if AttrName and hasattr(ModuleName, AttrName):
-                    return getattr(ModuleName, AttrName)
-                return ModuleName
-            return Raw
-
-        # 2. Створення наступної ланки простору імен
+        # 1. Створення наступної ланки або типу простору імен
         return Namespace(AttributeName, (), {
             "PatternBuffer": FullPath,
             "NamespacePath": FullPath,
         })
+
 
 
     # Системний аліас Python для підтримки оператора крапки
