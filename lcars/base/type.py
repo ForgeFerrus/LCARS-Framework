@@ -38,72 +38,14 @@ class Namespace(type):
             "NamespacePath": FullPath,
         })
 
-    # Системний аліас Python для підтримки оператора
+    # Системний аліас Python для підтримки оператора крапки
     __getattr__ = ResolvePattern
-# =====================================================================
-# Логічні групи реєстру
-class SystemMap(metaclass=Namespace):
-    NamespacePath = "System"
-    Core = "System.Core"
-
-class CoreMap(metaclass=Namespace):
-    NamespacePath = "Base.Core"
-
-class GeometryMap(metaclass=Namespace):
-    NamespacePath = "Base.Geometry"
-
-class VisualMap(metaclass=Namespace):
-    NamespacePath = "Base.Visual"
-
-class InterfaceMap(metaclass=Namespace):
-    NamespacePath = "Base.Interface"
-
-class ProtocolMap(metaclass=Namespace):
-    NamespacePath = "Base.Protocol"
-
-class StorageMap(metaclass=Namespace):
-    NamespacePath = "Bridge.Storage"
-
-class BridgeMap(metaclass=Namespace):
-    NamespacePath = "Bridge"
-    Storage = StorageMap
-
-class RuntimeMap(metaclass=Namespace):
-    NamespacePath = "System.Core"
-
-class PlatformMap(metaclass=Namespace):
-    NamespacePath = "System.Platform"
-    Release = "System.Platform.Release"
-    Machine = "System.Platform.Machine"
-    Processor = "System.Platform.Processor"
-    Architecture = "System.Platform.Architecture"
-    Node = "System.Platform.Node"
-    Compiler = "System.Platform.Compiler"
-    Build = "System.Platform.Build"
 
 # =====================================================================
-# LCARS TYPE & ANNOTATION SUBSTITUTES (НАТИВНІ ТИПИ ТА АНОТАЦІЇ)
-class Type:
-    """Титанові замінники системних типів для уникнення зовнішніх імпортів."""
-    Any = object
-    Dict = dict
-    List = list
-    Tuple = tuple
-    Set = set
-    String = str
-    Integer = int
-    Float = float
-    Boolean = bool
-    Bytes = bytes
-    Callable = callable
-
-Annotation = Type
-
+# LCARS CLASS - ГОЛОВНИЙ КЛАС ТА ЄДИНА ТОЧКА ВХОДУ LCARS
 # =====================================================================
-# LCARS CLASS - Головний клас з організованою класифікацією
-
 class LCARS(metaclass=Namespace):
-    # === КОРПОРАТИВНИЙ ПАСПОРТ ТА СПЕЦИФІКАЦІЯ LCARS ===
+    # Паспортні дані та специфікація системи
     Name = "Library Computer Access/Retrieval System"
     Title = Version.Title
     Status = "Operational"
@@ -118,19 +60,18 @@ class LCARS(metaclass=Namespace):
     Metadata = Version.Passport
     Version = Version.Release
 
+    # Канонічні простори імен (генеруються безпосередньо через Namespace)
+    System = Namespace("System", (), {"PatternBuffer": "System"})
+    Platform = Namespace("Platform", (), {"PatternBuffer": "System.Platform"})
+    Core = Namespace("Core", (), {"PatternBuffer": "Base.Core"})
+    Geometry = Namespace("Geometry", (), {"PatternBuffer": "Base.Geometry"})
+    Visual = Namespace("Visual", (), {"PatternBuffer": "Base.Visual"})
+    Interface = Namespace("Interface", (), {"PatternBuffer": "Base.Interface"})
+    Protocol = Namespace("Protocol", (), {"PatternBuffer": "Base.Protocol"})
+    Bridge = Namespace("Bridge", (), {"PatternBuffer": "Bridge"})
+    Storage = Namespace("Storage", (), {"PatternBuffer": "Bridge.Storage"})
+    Runtime = Namespace("Runtime", (), {"PatternBuffer": "System.Core"})
 
-
-    # === КАРТИ ПІДСИСТЕМ (MAPS) ===
-    System = SystemMap
-    Platform = PlatformMap
-    Core = CoreMap
-    Geometry = GeometryMap
-    Visual = VisualMap
-    Interface = InterfaceMap
-    Protocol = ProtocolMap
-    Bridge = BridgeMap
-    Storage = StorageMap
-    Runtime = RuntimeMap
     
     # === СТОРОННІ ТА ФАЙЛОВІ БІБЛІОТЕКИ (МІСТ / BRIDGE) ===
     Serialization = "Bridge.Storage.Json"
@@ -159,10 +100,8 @@ class LCARS(metaclass=Namespace):
     Time = "System.Time"
     Copy = "System.Copy"
     String = "System.String"
-    Typing = Type
-    Type = Type
-    Annotation = Annotation
     Method = "System.AbstractMethod"
+
     DataClass = "System.DataClass"
     Field = "System.DataClass.Field"
     Threading = "System.Threading"
@@ -451,6 +390,29 @@ class LCARS(metaclass=Namespace):
 
     def __repr__(self):
         return f"<LCARS Id={self.Id!r} Status={self.Status!r}>"
+
+# =====================================================================
+# LCARS TYPE & ANNOTATION (ТИТАНОВІ ЗАМІННИКИ ТИПІВ)
+# =====================================================================
+class Type(LCARS):
+    """Титанові замінники системних типів LCARS."""
+    Any = object
+    Dict = dict
+    List = list
+    Tuple = tuple
+    Set = set
+    String = str
+    Integer = int
+    Float = float
+    Boolean = bool
+    Bytes = bytes
+    Callable = callable
+
+Annotation = Type
+LCARS.Type = Type
+LCARS.Typing = Type
+LCARS.Annotation = Annotation
+
 
 # =====================================================================
 # COMPONENT CLASS - Базовий клас для компонентів

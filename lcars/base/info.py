@@ -15,7 +15,7 @@ class Version:
     Specification = "Starfleet Cybernetics Division Directive 24.5"
     Architecture = "Titanium Master Architecture"
     Design = "Michael Okuda 24th Century Canonical Vector Design"
-    Platform = "Quantum Core / Optical Transport Network (OTN)"
+    Platform = "Optical Transport Network (OTN)"
 
     @classmethod
     # Делегуємо отримання астрономічного часу спеціалізованому системному хронометру
@@ -51,12 +51,15 @@ class Version:
             "runtime": f"LCARS Quantum Core v{cls.Release} (Operational)",
         }
 
+    # Рядкове представлення паспорта системи
+    @classmethod
 
-    def __str__(self):
-        return f"{self.Title} v{self.Release} [Stardate {self.Stardate()}]"
+    def String(cls) -> str:
+        return f"{cls.Title} v{cls.Release} [Stardate {cls.Stardate()}]"
 
 # Канонічні аліаси для зворотної сумісності
 Passport = Version
+
 VersionInfo = Version
 SystemInfo = Version
 __all__ = [
