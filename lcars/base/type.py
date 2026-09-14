@@ -19,17 +19,13 @@ class Namespace(type):
         if AttributeName.startswith("_"):
             raise AttributeError(AttributeName)
 
-        ParentPath = (
-            cls.__dict__["PatternBuffer"] if "PatternBuffer" in cls.__dict__
-            else cls.__dict__["NamespacePath"] if "NamespacePath" in cls.__dict__
-            else cls.__dict__["Name"] if "Name" in cls.__dict__
-            else cls.__name__
-        )
+        Dict = cls.__dict__
+        ParentPath = Dict["PatternBuffer"] if "PatternBuffer" in Dict else cls.__name__
         FullPath = f"{ParentPath}.{AttributeName}"
-        # Створення наступної ланки або типу простору імен
+
+        # Створення наступної ланки простору імен
         return Namespace(AttributeName, (), {
             "PatternBuffer": FullPath,
-            "NamespacePath": FullPath,
         })
 
     # Системний аліас Python для підтримки оператора крапки
@@ -39,8 +35,9 @@ class Namespace(type):
 # =====================================================================
 # замінники системних типів LCARS
 class Type(metaclass=Namespace):
-    NamespacePath = "System.Type"
+    PatternBuffer = "System.Type"
     NoneType = type(None)
+
     Class = type
     Any = object
     Mapping = dict
@@ -59,6 +56,10 @@ Annotation = Type
 # LCARS CLASS - ГОЛОВНИЙ КЛАС ТА ЄДИНА ТОЧКА ВХОДУ LCARS
 # =====================================================================
 class LCARS(metaclass=Namespace):
+    def __init__(self, SystemId=None, Id=None, **kwargs):
+        self.SystemId = SystemId or Id or f"Sys{id(self)}"
+        self.Id = self.SystemId
+
     # Паспортні дані та специфікація системи
     Name = "Library Computer Access/Retrieval System"
     Title = Version.Title
@@ -364,14 +365,12 @@ class LCARS(metaclass=Namespace):
     @classmethod
     def Resolve(cls, Path: str):
         return registry.Retrieve(Path)
-
     Retrieve = Resolve
 
     # Каталог або кількість зареєстрованих компонентів
     @classmethod
     def Library(cls, Count: bool = False):
         return registry.Library(Count=Count)
-
     Catalog = Library
 
     # Реєстрація компонента в системному реєстрі LCARS
@@ -395,9 +394,17 @@ class LCARS(metaclass=Namespace):
             "stardate": cls.Stardate(),
         }
 
-    def __init__(self, SystemId=None, Id=None, **kwargs):
-        self.SystemId = SystemId or Id or f"Sys{id(self)}"
+    # Канонічний ініціалізатор системного вузла LCARS
+    def Initialize(self, SystemId=None, Id=None, Parent=None, **kwargs):
+        self.SystemId = SystemId or Id or getattr(self, "SystemId", None) or f"Sys{id(self)}"
         self.Id = self.SystemId
+        self.Parent = Parent
+        self.Config = dict(getattr(self, "Config", {}))
+        for Key, Value in kwargs.items():
+            setattr(self, Key, Value)
+
+    # Канонічний замінник конструктора
+    __init__ = Initialize
 
     # Системний ідентифікатор вузла
     def Identifier(self) -> str:
@@ -407,57 +414,54 @@ class LCARS(metaclass=Namespace):
     def Descriptor(self) -> dict:
         return {
             "id": self.Id,
-            "system_id": self.SystemId,
+            "system": self.SystemId,
             "status": getattr(self, "Status", "Operational"),
         }
 
-
 # =====================================================================
 # COMPONENT CLASS - Базовий клас для компонентів
-
 class SystemComponent(LCARS):
-    def __init__(self, SystemId=None, Id=None, **kwargs):
-        super().__init__(SystemId=SystemId, Id=Id, **kwargs)
-        self.Version = Version.Release
-        self.Enabled = True
-        self.Visible = True
-        self.Active = True
-        self.Parent = None
-        self.Module = None
-        self.Config = {}
-        self.Status = "Stopped"
+    Enabled = True
+    Visible = True
+    Active = True
+    Status = "Stopped"
+    Parent = None
+    Module = None
+    Config = {}
 
     def AssignModule(self, Module):
         self.Module = Module
         if Module:
             Module.Parent = self
         self.Status = "Running"
+        return self
 
     def Configure(self, Config):
         self.Config.update(Config)
         if self.Module and hasattr(self.Module, "Configure"):
             self.Module.Configure(Config)
+        return self
 
     def Diagnostics(self):
         return {
-            "Id": self.SystemId,
-            "Status": self.Status,
-            "Module": self.Module,
-            "Config": self.Config
+            "id": self.Id,
+            "status": self.Status,
+            "module": self.Module,
+            "config": self.Config
         }
 
     # === LIFECYCLE CONTRACT (DNA) ===
-    def Initialize(self):
-        pass
-
     def Start(self):
         self.Status = "Running"
+        return self
 
     def Stop(self):
         self.Status = "Stopped"
+        return self
 
     def Destroy(self):
-        pass
+        self.Status = "Terminated"
+        return self
 
 # =====================================================================
 # ABSTRACT MATRIX TYPE
@@ -465,16 +469,16 @@ class SystemComponent(LCARS):
 class Matrix(SystemComponent):
     TypeName = "LCARSMatrix"
 
-    def __init__(self, Parent=None, Id=None, SystemId=None, **kwargs):
+    def Initialize(self, Parent=None, Id=None, SystemId=None, **kwargs):
         EffectiveId = Id or SystemId or (Parent if isinstance(Parent, str) else None)
         EffectiveParent = Parent if not isinstance(Parent, str) else None
-        super().__init__(SystemId=EffectiveId, Id=EffectiveId)
+        super().Initialize(SystemId=EffectiveId, Id=EffectiveId, Parent=EffectiveParent, **kwargs)
         self.LcarsId = self.SystemId
-        self.Parent = EffectiveParent
         self.Nodes = {}
         self.Domains = {}
         self.Links = {}
         self.Layers = {}
+
         self.State = {}
         self.Metadata = {}
 
@@ -500,15 +504,14 @@ class Matrix(SystemComponent):
 # Базовий тип процесу.
 # Описує системний процес незалежно від його реалізації.
 class Process(LCARS):
+    Name = ""
+    Command = ""
+    State = "Created"
+    Metadata = {}
 
-    # Ініціалізує процес з ідентифікатором та порожніми полями
-    def __init__(self, Id=None):
-        super().__init__(Id)
-
-        self.Name = ""
-        self.Command = ""
-        self.State = "Created"
-        self.Metadata = {}
+    def Initialize(self, Id=None, **kwargs):
+        super().Initialize(SystemId=Id, Id=Id, **kwargs)
+        self.Metadata = dict(self.Metadata)
 
     # Валідує процес, завжди повертає True
     def Validate(self):
@@ -565,22 +568,21 @@ class Align(metaclass=AlignMeta):
 # Описує системну директиву незалежно від її реалізації.
 class Directive(LCARS):
     Align = Align
+    Name = ""
+    Category = None
+    Source = None
+    Target = None
+    Priority = 0
+    State = "Created"
+    Metadata = {}
 
     @staticmethod
     def PathDrive(*Parts):
         return LCARS.System.Path(*Parts)
 
-    def __init__(self, Id=None):
-        super().__init__(Id)
-
-        self.Name = ""
-        self.Category = None
-        self.Source = None
-        self.Target = None
-
-        self.Priority = 0
-        self.State = "Created"
-        self.Metadata = {}
+    def Initialize(self, Id=None, **kwargs):
+        super().Initialize(SystemId=Id, Id=Id, **kwargs)
+        self.Metadata = dict(self.Metadata)
 
     # Валідує директиву за даними, завжди повертає True
     def Validate(self, Data=None):
@@ -639,21 +641,17 @@ class Directive(LCARS):
 # Описує формат, правила та стан протоколу.
 class Protocol(LCARS):
     Name = "Base.Protocol"
+    Version = ""
+    Category = None
+    Encoding = None
+    Format = None
+    State = "Inactive"
+    Metadata = {}
 
-    # Ініціалізує протокол з кодуванням та форматом
-    def __init__(self, Id=None):
-        super().__init__(Id)
+    def Initialize(self, Id=None, **kwargs):
+        super().Initialize(SystemId=Id, Id=Id, **kwargs)
+        self.Metadata = dict(self.Metadata)
 
-        self.Name = ""
-        self.Version = ""
-        self.Category = None
-
-        self.Encoding = None
-        self.Format = None
-
-        self.State = "Inactive"
-
-        self.Metadata = {}
 
     # Валідує протокол за даними, завжди повертає True
     def Validate(self, Data=None):
