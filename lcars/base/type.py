@@ -428,7 +428,7 @@ class SystemComponent(LCARS):
     def Diagnostics(self) -> dict:
         return {
             "id": self.Id,
-            "system_id": self.SystemId,
+            "system": self.SystemId,
             "status": self.Status,
             "enabled": self.Enabled,
             "visible": self.Visible,
@@ -436,7 +436,6 @@ class SystemComponent(LCARS):
             "module": self.Module,
             "config": self.Config.copy(),
         }
-
 
     # === LIFECYCLE CONTRACT (DNA) ===
     def Start(self):
@@ -456,19 +455,13 @@ class SystemComponent(LCARS):
 # =====================================================================
 class Matrix(SystemComponent):
     TypeName = "LCARSMatrix"
+    Nodes = {}
+    Domains = {}
+    Links = {}
+    Layers = {}
+    State = {}
+    Metadata = {}
 
-    def Initialize(self, Parent=None, Id=None, SystemId=None, **kwargs):
-        EffectiveId = Id or SystemId or (Parent if isinstance(Parent, str) else None)
-        EffectiveParent = Parent if not isinstance(Parent, str) else None
-        super().Initialize(SystemId=EffectiveId, Id=EffectiveId, Parent=EffectiveParent, **kwargs)
-        self.LcarsId = self.SystemId
-        self.Nodes = {}
-        self.Domains = {}
-        self.Links = {}
-        self.Layers = {}
-
-        self.State = {}
-        self.Metadata = {}
 
     # === MATRIX CONTRACT ===
     def AddNode(self, Name, Node):
