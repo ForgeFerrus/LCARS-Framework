@@ -11,8 +11,6 @@
 #       6. IsolinearCompiler — центральний диспетчер та кеш ізолінійних чіпів.
 # СТАНДАРТ: Titanium LCARS (Zero-Direct-Imports, Zero-Except, Zero-Underscores, Strict PascalCase, Pure Classes).
 # =============================================================================
-
-from __future__ import annotations
 from lcars.base.type import LCARS, SystemComponent
 from lcars.base.info import Version
 from lcars.service.chronometer import Chronometer
@@ -889,15 +887,9 @@ class PythonCompiler(LCARS):
 # ═════════════════════════════════════════════════════════════════════
 class IsolinearCompiler(LCARS):
     # Головний уніфікований компілятор підтримуваних мов, скриптів та додатків
-    SystemVersion = Version.Release
-
-    def __init__(self, OptionsNode: CompileOptions | None = None, StoreNode: IsolinearArtifact | None = None):
-        super().__init__(Id="IsolinearCompiler")
-        self.Version = Version.Release
-        self.Passport = Version.Passport()
-        self.Options = OptionsNode or CompileOptions()
-        self.Store = StoreNode or IsolinearArtifact()
-        self.Compilers: list[BaseCompiler] = [
+    self.Options = OptionsNode or CompileOptions()
+    self.Store = StoreNode or IsolinearArtifact()
+    self.Compilers: list[BaseCompiler] = [
             ScriptCompiler(),
             PythonAppCompiler(),
             AndroidCompiler(),

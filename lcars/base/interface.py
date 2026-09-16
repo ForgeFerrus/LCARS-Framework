@@ -2,12 +2,6 @@
 # Готові елементи та канонічні композиції LCARS (Michael Okuda Standard).
 # У component.py лежать фізичні примітиви. Тут лежить віртуальний контейнер/оркестратор Element
 # та канонічні складені об'єкти інтерфейсу зорельота за векторними кресленнями CorelDRAW.
-
-from __future__ import annotations
-import json
-import sqlite3
-import yaml
-from pathlib import Path
 from typing import Any, Optional, Dict, List, Union, Tuple
 
 from lcars.base.component import (
@@ -17,102 +11,272 @@ from lcars.base.component import (
     LCARSElbow,
     LCARSIndicator,
     LCARSLabel,
-    Primitive,
-    SetStyle,
 )
 from lcars.base.graphic import LCARSBuilder
 from lcars.base.default import DefaultBackground, Palette
 from lcars.base.type import LCARS
 from lcars.core.signal import ODN
-from lcars.base.info import Version
-
-
+# =============================================================================
+# 5. СЕНСОРНА ОПТИЧНА ПОВЕРХНЯ LCARS (SURFACE / PANEL / WIDGET)
+Display: type = LCARS.Retrieve(LCARS.Display) or object
+# =============================================================================
+class Surface(Display):
+    TypeName = "LCARSWidget"
+    Optics = None
+    Layers = []
+    PulseTimer = None
+    # Канонічна ініціалізація консольного скла
+    Initialize = LCARS.Init
+    def Initialize(self, Optics=None, Parent=None, **kwargs):
+        if Display is not object:
+            super().Initialize(Parent)
+        self.Optics = Optics
+        self.Layers = kwargs.get("Layers", [])
+    # Калібрування фізичних параметрів скла
+        if hasattr(self, "setMinimumSize"):
+            self.setMinimumSize(1, 1)
+        Policy = getattr(LCARS, "Policy", None)
+        if hasattr(self, "setSizePolicy") and Policy is not None and hasattr(Policy, "Preferred"):
+            self.setSizePolicy(Policy.Preferred, Policy.Preferred)
+        CursorHand = getattr(LCARS, "CursorHand", None)
+        if hasattr(self, "setCursor") and CursorHand is not None:
+            self.setCursor(CursorHand)
+        # Реєстрація квантового пульсара для динамічних станів
+        if hasattr(self, "startTimer"):
+            self.PulseTimer = self.startTimer(1000)
+    # Пульсація стану поверхні
+    def Pulse(self):
+        if not self.Optics:
+            return
+        if not getattr(self.Optics, "Spectrum", getattr(self.Optics, "Color", None)):
+            self.update()
+    # Рекомендований розмір поверхні для систем компонування
+    def PreferredSize(self):
+        Node = self.Visual
+        W = getattr(Node, "Width", 100) if Node is not None else 100
+        H = getattr(Node, "Height", 30) if Node is not None else 30
+        SizeClass = LCARS.Geometry.Size
+        return SizeClass(max(10, W), max(10, H))
+    # Просторове вирівнювання сенсорного поля
+    def AlignContent(self, Flag):
+        if hasattr(self.Visual, "Align"):
+            self.Visual.Align = "center" if "Center" in str(Flag) else ("right" if "Right" in str(Flag) else "left")
+        self.update()
+        return self
+    # Зміна фізичної геометрії сенсорного скла
+    def Rescale(self, Event):
+        if self.Visual is not None:
+            self.Visual.Width = self.width()
+            self.Visual.Height = self.height()
+            if hasattr(self.Visual, "Synthesize"):
+                self.Visual.Synthesize
+            elif hasattr(self.Visual, "Generate"):
+                self.Visual.Generate
+        ParentResize = getattr(super(), "Rescale", None)
+        if callable(ParentResize):
+            ParentResize(Event)
+    # Цикл оптичного світіння (прояв фотонного поля на поверхні)
+    def OpticalDispersion(self, Event):
+        if self.Visual is None:
+            return
+        # Синхронізація просторових меж
+        CurrentW = self.width()
+        CurrentH = self.height()
+        if getattr(self.Graphic, "Width", 0) != CurrentW or getattr(self.Graphic, "Height", 0) != CurrentH:
+            self.Graphic.Width = CurrentW
+            self.Graphic.Height = CurrentH
+            if hasattr(self.Graphic, "Synthesize"):
+                self.Graphic.Synthesize
+        # Випромінення через єдиний оптичний проєктор LCARS
+        ProjectorInstance = Emitter()
+        if ProjectorInstance.Activate(self):
+            ProjectorInstance.Project(self.Graphic)
+            ProjectorInstance.Deactivate()
+    # Сенсорний контакт (натискання на скло)
+    def TouchContact(self, Event):
+        ButtonValue = getattr(Event, "button", lambda: 1)()
+        IsLeftButton = (
+            ButtonValue == 1 or
+            "Left" in str(ButtonValue) or
+            ButtonValue == getattr(getattr(LCARS, "Protocol", None), "LeftButton", 1)
+        )
+        if IsLeftButton and self.Graphic is not None:
+            TargetEngage = getattr(self.Graphic, "Engage", getattr(self.Graphic, "Trigger", None))
+            if callable(TargetEngage):
+                TargetEngage()
+            if hasattr(self, "isVisible") and self.isVisible():
+                self.update()
+        ParentMousePress = getattr(super(), "TouchContact", None)
+        if callable(ParentMousePress):
+            ParentMousePress(Event)
+    # Розрив сенсорного контакту (відпускання скла)
+    def TouchRelease(self, Event):
+        if self.Graphic is not None:
+            TargetDisengage = getattr(self.Graphic, "Disengage", getattr(self.Graphic, "Release", None))
+            if callable(TargetDisengage):
+                TargetDisengage()
+            if hasattr(self, "isVisible") and self.isVisible():
+                self.update()
+        ParentMouseRelease = getattr(super(), "TouchRelease", None)
+        if callable(ParentMouseRelease):
+            ParentMouseRelease(Event)
+    # Датчик наближення (фокус при наведенні курсора або руки)
+    def FocusDetection(self, Event):
+        if self.Graphic is not None:
+            TargetFocus = getattr(self.Graphic, "Focus", None)
+            if callable(TargetFocus):
+                TargetFocus(True)
+            self.update()
+        ParentEnter = getattr(super(), "FocusDetection", None)
+        if callable(ParentEnter):
+            ParentEnter(Event)
+    # Вихід із зони наближення
+    def Leave(self, Event):
+        if self.Graphic is not None:
+            TargetFocus = getattr(self.Graphic, "Focus", None)
+            if callable(TargetFocus):
+                TargetFocus(False)
+            self.update()
+        ParentLeave = getattr(super(), "leaveEvent", None)
+        if callable(ParentLeave):
+            ParentLeave(Event)
+    # Прив'язка системних подій до графічних методів
+    paintEvent = OpticalDispersion
+    enterEvent = FocusDetection
+    leaveEvent = Leave
+    mousePressEvent = TouchContact
+    mouseReleaseEvent = TouchRelease
 # =====================================================================
 # ЕЛЕМЕНТИ ІНТЕРФЕЙСУ — семантичні оркестратори та композиційні вузли
 # Базовий клас Element — віртуальна конструкція, що координує фізичні віджети
 # =====================================================================
 class Element(Component):
-    Type = "element"
-    ElementType = "container"
+    TypeName = "LCARSElement"
+    Type = "Element"
+    ElementType = "Composite"
+    # Склад та просторове розміщення
+    Items: Dict[str, Component] = {}
+    Spacing = 6.0       # Фірмовий зазор Окуди між компонентами
+    Orientation = "horizontal"  # horizontal або vertical
+    Title = ""
+    ActionText = ""
+    # -------------------------------------------------------------------------
+    # КОМПОЗИЦІЙНЕ КЕРУВАННЯ (ATTACH / DETACH)
+    # -------------------------------------------------------------------------
+    def Attach(self, Key: str, ComponentNode: Component):
+        if ComponentNode is None:
+            return self
+        CleanKey = str(Key or getattr(ComponentNode, "Name", "") or id(ComponentNode))
+        self.Items[CleanKey] = ComponentNode
+        ComponentNode.Parent = self
+        # Автоматична синхронізація енергетичного та тривожного стану
+        ComponentNode.Power = self.Power
+        ComponentNode.Locked = self.Locked
+        ComponentNode.State = self.State
+        self.Synthesize()
+        self.Refresh()
+        return self
 
-    def __init__(self, Parent=None, **Args):
-        super().__init__(
-            Parent=Parent,
-            WidgetType=LCARS.Widget,
-            **Args
+    def Detach(self, Key: str):
+        if Key in self.Items:
+            Node = self.Items.pop(Key)
+            if getattr(Node, "Parent", None) is self:
+                Node.Parent = None
+            self.Synthesize()
+            self.Refresh()
+        return self
+
+    def Clear(self):
+        for Node in self.Items.values():
+            if getattr(Node, "Parent", None) is self:
+                Node.Parent = None
+        self.Items.clear()
+        self.Synthesize()
+        self.Refresh()
+        return self
+        
+    def Item(self, Key: str) -> Component | None:
+        return self.Items.get(Key)
+    Item = LCARS.GetItem
+     # -------------------------------------------------------------------------
+    # СИНТЕЗ КОМПОЗИТНОГО ВУЗЛА (ПРОСТОРОВИЙ РОЗРАХУНОК)
+    # Розставляє дочірні компоненти вздовж лінії або в блок
+    # -------------------------------------------------------------------------
+    def Synthesize(self):
+        CurX = 0.0
+        CurY = 0.0
+        TotalW = 0.0
+        TotalH = 0.0
+        for Node in self.Items.values():
+            if not hasattr(Node, "Width") or not hasattr(Node, "Height"):
+                continue
+            # Задаємо локальні координати компонента
+            Node.X = int(CurX)
+            Node.Y = int(CurY)
+            if hasattr(Node, "Synthesize"):
+                Node.Synthesize()
+            if self.Orientation == "horizontal":
+                CurX += float(Node.Width) + self.Spacing
+                TotalW = CurX
+                TotalH = max(TotalH, float(Node.Height))
+            else:
+                CurY += float(Node.Height) + self.Spacing
+                TotalH = CurY
+                TotalW = max(TotalW, float(Node.Width))
+        # Оновлюємо габарити всього елемента
+        if self.Items:
+            self.Width = int(TotalW)
+            self.Height = int(TotalH)
+        return self
+
+# =============================================================================
+# LCARSHEADER — ВЕРХНЯ НЕСУЧА АРКА ПАНЕЛІ (КАНОНІЧНА ШАПКА)
+# =============================================================================
+class LCARSHeader(Element):
+    TypeName = "LCARSHeader"
+
+    def Build(self, Title="LCARS SYSTEM", Number="01-SYS", Width=800, Height=60):
+        self.Clear()
+        self.Orientation = "horizontal"
+        self.Width = Width
+        self.Height = Height
+
+        # 1. Кутовий лікоть (Elbow)
+        ElbowNode = LCARSElbow(
+            Corner="top-left",
+            Width=140,
+            Height=Height,
+            Thickness=18,
+            Number=Number
         )
-        self.Items: Dict[str, Any] = {}
-        self.Layout = None
-        self.Builder = LCARSBuilder(self)
-        self.Title = str(self.Take(Args, ["Title", "title"], ""))
-        self.ActionText = str(self.Take(Args, ["ActionText", "actionText"], ""))
-        self.ConfirmCallback = self.Take(Args, ["ConfirmCallback", "OnConfirm", "onConfirm"], None)
-        self.Owner = self.Take(Args, ["Owner", "owner"], None)
-        self.Speed = float(self.Take(Args, ["Speed", "speed"], 1.0))
-        self.Phase = 0
-        self.Scan = None
-        self.Visible = True
+        self.Attach("Elbow", ElbowNode)
 
-    def UpdateAlert(self, SignalObj=None, **kw):
-        super().UpdateAlert(SignalObj, **kw)
-        for Child in list(self.Items.values()):
-            if hasattr(Child, "UpdateAlert"):
-                Child.UpdateAlert(SignalObj, **kw)
-            elif hasattr(Child, "widget") and hasattr(Child.widget, "repaint"):
-                Child.widget.repaint()
+        # 2. Напис системи (Label)
+        LabelNode = LCARSLabel(
+            Text=Title,
+            FontSize=16,
+            Height=Height
+        )
+        self.Attach("Title", LabelNode)
+
+        # 3. Горизонтальна рейка (Bar)
+        BarWidth = max(50, Width - 140 - 200 - 30)
+        BarNode = LCARSBar(
+            Width=BarWidth,
+            Height=18
+        )
+        self.Attach("Rail", BarNode)
+
+        # 4. Кінцевий маркер-заглушка (Indicator)
+        EndCap = LCARSIndicator(
+            Form=LCARSIndicator.PillHalf,
+            Direction=0,
+            Width=24,
+            Height=18
+        )
+        self.Attach("EndCap", EndCap)
+
         return self
-
-    def UpdatePower(self, SignalObj=None, **kw):
-        super().UpdatePower(SignalObj, **kw)
-        for Child in list(self.Items.values()):
-            if hasattr(Child, "UpdatePower"):
-                Child.UpdatePower(SignalObj, **kw)
-            elif hasattr(Child, "widget") and hasattr(Child.widget, "repaint"):
-                Child.widget.repaint()
-        return self
-
-    def UpdateSecurityLock(self, SignalObj=None, **kw):
-        super().UpdateSecurityLock(SignalObj, **kw)
-        for Child in list(self.Items.values()):
-            if hasattr(Child, "UpdateSecurityLock"):
-                Child.UpdateSecurityLock(SignalObj, **kw)
-            elif hasattr(Child, "widget") and hasattr(Child.widget, "repaint"):
-                Child.widget.repaint()
-        return self
-
-    def Vertical(
-        self,
-        Left=0,
-        Top=0,
-        Right=0,
-        Bottom=0,
-        Spacing=0
-    ):
-        LayoutRef = self.Layout
-        if LayoutRef is None:
-            LayoutRef = LCARS.Vertical()
-            self.Widget.setLayout(LayoutRef)
-        LayoutRef.setContentsMargins(Left, Top, Right, Bottom)
-        LayoutRef.setSpacing(Spacing)
-        self.Layout = LayoutRef
-        return LayoutRef
-
-    def Horizontal(
-        self,
-        Left=0,
-        Top=0,
-        Right=0,
-        Bottom=0,
-        Spacing=0
-    ):
-        LayoutRef = self.Layout
-        if LayoutRef is None:
-            LayoutRef = LCARS.Horizontal()
-            self.Widget.setLayout(LayoutRef)
-        LayoutRef.setContentsMargins(Left, Top, Right, Bottom)
-        LayoutRef.setSpacing(Spacing)
-        self.Layout = LayoutRef
-        return LayoutRef
 
     def Add(self, *Arguments):
         if not Arguments:
@@ -193,14 +357,6 @@ class Element(Component):
         self.Items.clear()
         return self
 
-    def Get(self, Key: str, Default: Any = None) -> Any:
-        return self.Items.get(Key, Default)
-
-    def __getitem__(self, Key: str) -> Any:
-        return self.Items[Key]
-
-    def __setitem__(self, Key: str, Value: Any) -> None:
-        self.Items[Key] = Value
 
     def Build(self):
         return self.BuildInterface()
@@ -828,6 +984,27 @@ class Element(Component):
     setVisible = SetVisible
     isVisible = IsVisible
 
+# Побудова канонічної шапки консолі
+    def Header(self, TargetWidget, Title="", **kwargs):
+        self.Row(TargetWidget, 0, 0, 0, 0, 8)
+        self.Items["Elbow"] = Topology(Parent=TargetWidget, Type=Topology.Elbow, Corner="top-left", Spectrum=Palette.Buttons[0])
+        self.Items["Title"] = Topology(Parent=TargetWidget, Type=Topology.Text, Designation=Title, Spectrum=Palette.Buttons[2])
+        self.Items["Bar"] = Topology(Parent=TargetWidget, Type=Topology.Bar, Spectrum=Palette.Buttons[1])
+        return self.Items
+    # Побудова канонічного підвалу консолі
+    def Footer(self, TargetWidget, Status="READY", **kwargs):
+        self.Row(TargetWidget, 0, 0, 0, 0, 8)
+        self.Items["Bar"] = Topology(Parent=TargetWidget, Type=Topology.Bar, Spectrum=Palette.Buttons[1])
+        self.Items["Status"] = Topology(Parent=TargetWidget, Type=Topology.Text, Designation=Status, Spectrum=Palette.Buttons[0])
+        self.Items["Elbow"] = Topology(Parent=TargetWidget, Type=Topology.Elbow, Corner="bottom-right", Spectrum=Palette.Buttons[2])
+        return self.Items
+    # Побудова канонічної бічної панелі консолі
+    def Sidebar(self, TargetWidget, **kwargs):
+        self.Column(TargetWidget, 0, 0, 0, 0, 6)
+        self.Items["Top"] = Topology(Parent=TargetWidget, Type=Topology.Elbow, Corner="top-left", Spectrum=Palette.Buttons[0])
+        self.Items["Rail"] = Topology(Parent=TargetWidget, Type=Topology.Column, Spectrum=Palette.Buttons[1])
+        self.Items["Bottom"] = Topology(Parent=TargetWidget, Type=Topology.Elbow, Corner="bottom-left", Spectrum=Palette.Buttons[2])
+        return self.Items
 
 # =====================================================================
 # PADD — Повнофункціональний екранний термінал зорельота

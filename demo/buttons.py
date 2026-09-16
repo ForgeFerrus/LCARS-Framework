@@ -1,8 +1,5 @@
 # ◤ LCARS BUTTONS DEMO 🖖
 # Один екземпляр кожного виду/типу кнопки, передається прямо в PADD.
-
-from __future__ import annotations
-
 from lcars.base.type import LCARS
 from lcars.base.interface import PADD
 from lcars.base.component import LCARSButton, LCARSElbow
@@ -11,10 +8,8 @@ from lcars.system.power import PowerControl
 
 
 def Run():
-    App = LCARS.Application.instance() or LCARS.Application([])
-
+    App = LCARS.Application or LCARS.Application([])
     Padd = PADD(Title="LCARS BUTTON CATALOG", Width=1100, Height=720)
-
     Row = LCARS.Horizontal()
     Row.setContentsMargins(16, 16, 16, 16)
     Row.setSpacing(12)
@@ -131,7 +126,6 @@ def Run():
     Timer.start()
 
     return App.exec()
-
 
 if __name__ == "__main__":
     Run()

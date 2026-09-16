@@ -75,19 +75,16 @@ class Modulation(SystemComponent):
         Factor = WaveFunc(CurrentPhase) if callable(WaveFunc) else self.Sine(CurrentPhase)
         return tuple(v * Factor for v in Vector)
     # Модуляція кривизни просторового полігону
-    def ModulateCurve(
-        self,
+    def ModulateCurve(self,
         StartPoint: tuple,
         EndPoint: tuple,
         ControlPoint: tuple,
         Period: float = 1.0,
-        WaveFunc=None,
-    ) -> tuple:
+        WaveFunc=None,) -> tuple:
         Phase = self.Phase(Period)
         Factor = WaveFunc(Phase) if callable(WaveFunc) else self.Sine(Phase)
         T = Clamp(float(Factor), 0.0, 1.0)
         U = 1.0 - T
-
         X = (
             U * U * StartPoint[0]
             + 2.0 * U * T * ControlPoint[0]
@@ -108,12 +105,10 @@ class Modulation(SystemComponent):
         ControlA: tuple,
         ControlB: tuple,
         Period: float = 1.0,
-        WaveFunc=None,
-    ) -> tuple:
+        WaveFunc=None,) -> tuple:
         Phase = self.Phase(Period)
         Factor = WaveFunc(Phase) if callable(WaveFunc) else self.Sine(Phase)
         T = Clamp(float(Factor), 0.0, 1.0)
-
         Control = (
             Lerp(ControlA[0], ControlB[0], T),
             Lerp(ControlA[1], ControlB[1], T),
@@ -156,13 +151,10 @@ class Modulation(SystemComponent):
         Near: float = 0.1,) -> tuple | None:
         # X, Y, Z задані відносно камери.
         X, Y, Z = Point
-
         if FocalLength <= 0.0 or Near <= 0.0:
             raise ValueError("FocalLength and Near must be positive")
-
         if Z < Near:
             return None
-
         Scale = FocalLength / Z
         return (
             Center[0] + X * Scale,
@@ -385,7 +377,6 @@ class Graphic(SystemComponent):
     def Disengage(self):
         self.State = "Normal"
         return self
-
 Visual = Graphic
 # =============================================================================
 # 3. ТОПОЛОГІЧНІ СЕГМЕНТИ СВІТЛА LCARS (TOPOLOGY / PRIMITIVE)
@@ -543,6 +534,44 @@ class Topology(Graphic):
         PathClass = LCARS.Visual.PainterPath
         self.Wavefront = PathClass() if callable(PathClass) else None
         return self.Wavefront
+    # -------------------------------------------------------------------------
+    # АДАПТИВНІСТЬ ТА ПРОСТОРОВЕ КАЛІБРУВАННЯ (ДЛЯ БУДЬ-ЯКОГО КОМПОНЕНТА)
+    # -------------------------------------------------------------------------
+    Flexible = True       # Податливість до розтягування (Flexibility / Stretch)
+    MinWidth = 10
+    MinHeight = 10
+
+    def Resize(self, Width, Height):
+        # Адаптуємо розмір із дотриманням лімітів
+        self.Width = max(self.MinWidth, int(Width))
+        self.Height = max(self.MinHeight, int(Height))
+        # Перераховуємо геометрію векторів у графічному ядрі
+        if hasattr(self, "Synthesize"):
+            self.Synthesize()
+        self.Refresh()
+        return self
+    # -------------------------------------------------------------------------
+    # СИСТЕМНИЙ СТАН РЕДАГУВАННЯ (ENGINEERING MODE / CALIBRATION)
+    # -------------------------------------------------------------------------
+    Editable = False      # Чи дозволено реконфігурацію вузла оператором
+    Inspected = False     # Чи вибрано вузол інженерним сканером
+
+    def SetInspect(self, Active: bool):
+        self.Inspected = (Active)
+        self.Refresh()
+        return self
+
+    def Reconfigure(self, **Parameters):
+        # Дозволяє змінювати властивості вузла на льоту через ODN або інспектор
+        if not self.Editable and not self.Inspected:
+            return self
+        for Key, Value in Parameters.items():
+            if hasattr(self, Key):
+                setattr(self, Key, Value)
+        if hasattr(self, "Synthesize"):
+            self.Synthesize()
+        self.Refresh()
+        return self
 
     ResetTrajectory = ResetTopology
 
@@ -771,3 +800,22 @@ class Architect(SystemComponent):
 # Канонічні аліаси для зворотної сумісності
 Builder = Architect
 LCARSBuilder = Architect
+
+# Застосовує технічний стиль до графічного віджета.
+def SetStyle(TargetWidget, Style):
+    Setter = getattr(TargetWidget, "setStyleSheet", None)
+    if callable(Setter):
+        Setter(str(Style))
+
+LCARS.Types = (
+    "Modulation",
+    "Geometry",
+    "Visual",
+    "Renderer",
+    "Topology",
+    "Emitter",
+    "Builder",
+    "Architect",
+)
+# Аліас експорту модуля для Python імпортів (from lcars.base.type import *)
+All = list(LCARS.Types)

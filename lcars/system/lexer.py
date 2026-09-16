@@ -6,11 +6,8 @@
 #       аналізатора (Parser) з підтримкою команд, симуляцій Geant4 та функцій.
 # СТАНДАРТ: Titanium LCARS (Zero-Direct-Imports, Zero-Except, Zero-Underscores, Strict PascalCase, Pure Classes).
 # =============================================================================
-
-from __future__ import annotations
 from lcars.base.type import LCARS
 from lcars.base.info import Version
-
 # ═════════════════════════════════════════════════════════════════════
 # 1. ТИПИ ТОКЕНІВ (TOKEN TYPES)
 # ═════════════════════════════════════════════════════════════════════
@@ -127,7 +124,6 @@ class LexerError(Exception, LCARS):
     def __init__(self, Message: str, Line: int, Column: int):
         super().__init__(f"LexerError at line {Line}, col {Column}: {Message}")
         self.Message = Message
-        self.Line = Line
         self.Column = Column
 
 # ═════════════════════════════════════════════════════════════════════

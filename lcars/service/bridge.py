@@ -1,5 +1,5 @@
 from lcars.base.register import registry
-from lcars.base.type import SystemComponent
+from lcars.base.type import LCARS, SystemComponent
 from lcars.base.info import Version
 from lcars.core.conduit import Service
 from lcars.core.signal import Transmission, ODN
@@ -49,7 +49,7 @@ class Proxy(Service):
 
     @staticmethod
     def ResolveExecutable() -> str:
-        SysExecEntry = registry.Resolve("System.Core.Executable")
+        SysExecEntry = LCARS.Retrieve("System.Core.Executable")
         if SysExecEntry and isinstance(SysExecEntry, tuple) and SysExecEntry[0]:
             SysMod = __import__(SysExecEntry[0], fromlist=[SysExecEntry[1]] if SysExecEntry[1] else [])
             ExecPath = getattr(SysMod, SysExecEntry[1], None) if SysExecEntry[1] else SysMod
@@ -116,7 +116,7 @@ class Proxy(Service):
             raise RuntimeError("Proxy.EnsureQvacWorker: System.Process.Run not available")
         # Знаходимо npm через shutil.which
         ExecPath = "npm"
-        ShutilEntry = registry.Resolve("System.Shutil")
+        ShutilEntry = LCARS.Retrieve("System.Shutil")
         if ShutilEntry and isinstance(ShutilEntry, tuple) and ShutilEntry[0]:
             ShutilMod = __import__(ShutilEntry[0], fromlist=[ShutilEntry[1]] if ShutilEntry[1] else [])
             WhichFn = getattr(ShutilMod, "which", None) if ShutilEntry[1] is None else getattr(ShutilMod, ShutilEntry[1], None)
@@ -141,15 +141,15 @@ class Proxy(Service):
         if not Key:
             return None
 
-        Entry = self.Register.Resolve(Key)
+        Entry = LCARS.Retrieve(Key)
 
         if Entry is None and not Key.lower().startswith("bridge."):
-            Entry = self.Register.Resolve(f"Bridge.{Key}")
+            Entry = LCARS.Retrieve(f"Bridge.{Key}")
 
         return Entry
 
     def ResolveImporter(self):
-        Entry = self.Register.Resolve(
+        Entry = LCARS.Retrieve(
             "System.Module.Import"
         )
 
@@ -218,7 +218,7 @@ class Proxy(Service):
         Installed = False
         
         # Отримуємо find_spec з реєстру
-        FindSpecEntry = self.Register.Resolve("System.Module.Specification")
+        FindSpecEntry = LCARS.Retrieve("System.Module.Specification")
         FindSpecFunc = None
         if isinstance(FindSpecEntry, tuple) and FindSpecEntry[0]:
             FindSpecMod = __import__(FindSpecEntry[0], fromlist=[FindSpecEntry[1]] if FindSpecEntry[1] else [])
@@ -464,7 +464,7 @@ class Link(SystemComponent):
         if self.Target is not None:
             return self.Target
         Inst = Bridge.GetInstance()
-        if Inst.Register is None or Inst.Register.Resolve(self.Key) is None:
+        if LCARS.Retrieve(self.Key) is None:
             return None
         if Inst.Proxy is None:
             Inst.Proxy = Proxy(Inst.Register, bridge=Inst)
@@ -555,7 +555,7 @@ class Bridge(Service):
             return LinkNode.Target
 
         # Якщо зворотний сигнал / жива ціль відсутня — запускаємо Proxy як fallback
-        if Inst.Register is None or Inst.Register.Resolve(Key) is None:
+        if LCARS.Retrieve(Key) is None:
             return None
 
         if Inst.Proxy is None:
@@ -588,7 +588,7 @@ class Bridge(Service):
 
         # Перевіряємо лише реєстрацію.
         # Ніякого імпорту.
-        Entry = self.Register.Resolve(
+        Entry = LCARS.Retrieve(
             Key
         )
 

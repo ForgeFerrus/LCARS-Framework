@@ -2582,3 +2582,6 @@ registry: dict[str, Any] = {
     "Bridge.Pandas":                   ("pandas", None),
     "Bridge.Matplotlib":               ("matplotlib", None),
 }
+
+REGISTRY = registry
+__all__ = ["registry", "REGISTRY"]

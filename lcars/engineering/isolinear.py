@@ -217,7 +217,7 @@ class BlackBox(IsolinearChip):
             Array=Array,
             Metadata=Meta,
             Status=ChipStatus.OFFLINE,
-            FilePath=Directive.PathDrive(FilePath) if FilePath else Directive.PathDrive("lcars/data/00/00-0004-odn-black-box.db"),
+            FilePath=ResolveChipPath(FilePath) if FilePath else ResolveChipPath("00-0004"),
         )
         self.ChipName = "ODN Black Box"
         self.Prepare()
@@ -259,7 +259,7 @@ class BlackBox(IsolinearChip):
             "LastStamp REAL"
             ")"
         )
-        Now = LCARS.System.Time.time()
+        Now = LCARS.System.Time.Now()
         Cursor.execute(
             "INSERT OR IGNORE INTO ChipIdentity (ChipId, ChipName, Sector, Role, Created) VALUES (?, ?, ?, ?, ?)",
             (self.Id, self.ChipName, self.Array, "ODN_TRANSMISSION_RECORDER", Now),
@@ -272,7 +272,7 @@ class BlackBox(IsolinearChip):
         return Json.dumps(Value, ensure_ascii=False, default=str) if Json else str(Value)
     # Реєстрація каналу в чорній скриньці
     def RegisterChannel(self, Name: str) -> None:
-        Stamp = LCARS.System.Time.time()
+        Stamp = LCARS.System.Time.Now()
         if not self.Connect():
             return
         Threading = LCARS.System.Thread
@@ -304,7 +304,7 @@ class BlackBox(IsolinearChip):
         if Conn is None:
             return
 
-        Stamp = LCARS.System.Time.time()
+        Stamp = LCARS.System.Time.Now()
         Cursor = Conn.cursor()
         Cursor.execute(
             "INSERT INTO ODNLog (Stamp, Channel, GroupName, SignalName, Args, Kwargs) VALUES (?, ?, ?, ?, ?, ?)",
