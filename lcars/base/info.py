@@ -3,7 +3,6 @@
 # ФАЙЛ: lcars/base/info.py
 # ОПИС: Єдиний канонічний паспорт та специфікація системи LCARS Framework.
 #       Містить глобальну версію, метадані та делегує обчислення часу хронометру.
-# СТАНДАРТ: Titanium (Zero-Except, Zero-Underscores, Strict PascalCase, Pure Classes).
 # =============================================================================
 # Офіційна глобальна версія проекту (встановлюється розробником)
 class Version:
@@ -16,53 +15,42 @@ class Version:
     Design = "Michael Okuda 24th Century Canonical Vector Design"
     Platform = "Optical Transport Network (OTN)"
 
-    @classmethod
-    # Делегуємо отримання астрономічного часу спеціалізованому системному хронометру
-    def Stardate(cls) -> str:
+    # Астрономічний час (канонічні функції вузла — замінник classmethod)
+    def Stardate() -> str: # Зоряна дата
         from lcars.service.chronometer import StardateCalculator
         return str(StardateCalculator.Stardate())
 
-    @classmethod
-    def EarthDate(cls) -> str:
+    # Земна дата
+    def EarthDate() -> str:
         from lcars.service.chronometer import StardateCalculator
         return StardateCalculator.EarthDate()
 
-    @classmethod
-    def Metadata(cls) -> dict:
-        return cls.Passport()
+    # Метадані
+    def Metadata() -> dict:
+        return Version.Passport()
 
     # Повний паспорт системи
-    @classmethod
-    def Passport(cls) -> dict:
+    def Passport() -> dict:
         return {
-            "title": cls.Title,
-            "release": cls.Release,
-            "version": cls.Release,
-            "status": cls.Status,
-            "stardate": cls.Stardate(),
-            "earth_date": cls.EarthDate(),
-            "system": cls.System,
-            "specification": cls.Specification,
-            "architecture": cls.Architecture,
-            "design": cls.Design,
-            "platform": cls.Platform,
-            "runtime": f"LCARS Quantum Core v{cls.Release} (Operational)",
+            "title": Version.Title,
+            "release": Version.Release,
+            "version": Version.Release,
+            "status": Version.Status,
+            "stardate": Version.Stardate(), # Зоряна дата
+            "earth_date": Version.EarthDate(), # Земна дата
+            "system": Version.System, # Система
+            "specification": Version.Specification, # Специфікація
+            "architecture": Version.Architecture, # Архітектура
+            "design": Version.Design, # Дизайн
+            "platform": Version.Platform, # Платформа
+            "runtime": f"LCARS Quantum Core v{Version.Release} (Operational)",
         }
 
     # Рядкове представлення паспорта системи
-    @classmethod
-
-    def String(cls) -> str:
-        return f"{cls.Title} v{cls.Release} [Stardate {cls.Stardate()}]"
+    def String() -> str:
+        return f"{Version.Title} v{Version.Release} [Stardate {Version.Stardate()}]"
 
 # Канонічні аліаси для зворотної сумісності
 Passport = Version
 VersionInfo = Version
 SystemInfo = Version
-__all__ = [
-    "Version",
-    "Passport",
-    "VersionInfo",
-    "SystemInfo",
-]
-

@@ -1,479 +1,309 @@
-# LCARS COMPONENT & READY PHYSICAL OBJECTS (MICHAEL OKUDA VECTOR STANDARD)
-# ОПИС: Сенсорне ядро (Component) та готові фізичні класи LCARS за кресленнями CorelDraw/StarTrek.
-# ПРИНЦИП: Усі форми кнопок, ліктів, шин та індикаторів будуються за строгими параметрами пропорцій Окуди.
-# ─────────────────────────────────────────────────────────────────────────────
-# Titanium Bridge Migration: 
-from typing import Any, Optional
-from lcars.base.type import LCARS
-from lcars.base.graphic import Graphic, Primitive, SetStyle
-from lcars.base.default import (
-    Palette, RandomButtonColor, DefaultFontFamily, SystemTheme
-)
-from lcars.core.signal import Transmission, ODN
-from lcars.modules.sound import ActiveAudio
-from lcars.system.alert import GetAlertSystem, AlertLevel
-from lcars.base.register import registry
+# LCARS FRAMEWORK TITANIUM COMPONENT (Базовий сенсорний вузол)
+# ОПИС: Фундаментальний компонент інтерфейсу LCARS (Okuda Touch Standard).
+# СТАНДАРТ: Titanium (Zero-Except, Pure PascalCase, Vector Surface Rendering).
+
+from lcars.base.type import LCARS, Type
+from lcars.base.graphic import Visual, Topology
+from lcars.base.default import SystemTheme, Palette, DefaultBackground, DefaultFontFamily
+from lcars.core.signal import ODN
+
+Mapping = Type.Mapping
+List = Type.List
+String = Type.String
+Integer = Type.Integer
+Float = Type.Float
+Boolean = Type.Boolean
+Any = Type.Any
+
+# -----------------------------------------------------------------------------
+# ЧИСТІ УТИЛІТИ КОМПОНЕНТА
+# -----------------------------------------------------------------------------
+
+def NormalizeValue(Value: Any) -> String:
+    if Value is None:
+        return ""
+    return str(Value).strip().lower()
+
+def ValidateIndex(Index: Any) -> Boolean:
+    if not Index:
+        return True
+    Re = getattr(LCARS.System, "Regex", None) or getattr(LCARS.System, "Re", None)
+    if Re and hasattr(Re, "match"):
+        return bool(Re.match(r"^[A-Za-z0-9]{1,8}([-:][A-Za-z0-9]{1,8})*$", str(Index).strip()))
+    return True
+
+def NormalizeDirection(Direction: Any) -> Integer | String:
+    if isinstance(Direction, (int, float)):
+        return int(Direction) % 360
+    DirStr = str(Direction or "0").strip().lower()
+    if DirStr in ("right", "east", "0", "0deg"): return 0
+    if DirStr in ("bottom", "down", "south", "90", "90deg"): return 90
+    if DirStr in ("left", "west", "180", "180deg"): return 180
+    if DirStr in ("top", "up", "north", "270", "270deg"): return 270
+    return str(Direction)
+
 # =============================================================================
-# 1. COMPONENT — БАЗОВИЙ СЕНСОРНИй об'єкт
-class Component(Graphic):
-    Type = "component"
-    Form = "default"
-    State = "normal"
-    Default = {}
+# ГОЛОВНИЙ КЛАС COMPONENT (СЕНСОРНИЙ ОПТИЧНИЙ ВУЗОЛ LCARS)
+# =============================================================================
+class Component(Visual):
+    TypeName = "LCARSComponent"
+    Type = "Component"
+    Form = "Default"
+    State = "Normal"
+
+    # Канонічні статуси зорельота
+    NORMAL = "Normal"
+    DISABLED = "Disabled"
+    YELLOW = "YellowAlert"
+    ALERT = "RedAlert"
+    STASIS = "Stasis"
+
+    # Алгоритмічний життєвий цикл
     Algorithm = ("Mount", "Refresh", "Alert", "Purge")
 
-    NORMAL = "normal"
-    DISABLED = "disabled"
-    YELLOW = "yellow"
-    ALERT = "alert"
-
-    Sensitivity = "normal"
+    # Сенсорний та енергетичний профіль
+    Power = True
+    Locked = False
+    Tactile = True
+    Interactive = True
     SensorActive = False
-    Transmission = None
+    IsWakeupTrigger = False
+
+    # Просторова геометрія та семантика
+    Name = ""
+    Number = ""
+    Code = None
+    Direction = 0
     Channel = None
 
-    @staticmethod
-    def Normalize(Value: Any) -> str:
-        if Value is None:
-            return ""
-        return str(Value).strip().lower()
+    # Прив'язка утиліт
+    Normalize = NormalizeValue
+    ValidateIndex = ValidateIndex
+    NormalizeDirection = NormalizeDirection
 
-    @staticmethod
-    def Take(Source: dict, Keys: list, Default: Any = None) -> Any:
-        if not isinstance(Source, dict):
-            return Default
-        for Key in Keys:
-            if Key in Source:
-                return Source[Key]
-        return Default
+    # -------------------------------------------------------------------------
+    # МОНТАЖ ТА СИСТЕМНА ШИНА ODN
+    # -------------------------------------------------------------------------
 
-    @staticmethod
-    def ValidateIndex(Index: str) -> bool:
-        if not Index:
-            return True
-        Re = getattr(LCARS.System, "Regex", None) or getattr(LCARS.System, "Re", None)
-        if Re and hasattr(Re, "match"):
-            # Підтримує як складові чіп-коди (47-01, SEC-09), так і чисті номери/індекси (01, 47, 1071)
-            return bool(Re.match(r"^[A-Za-z0-9]{1,8}([-:][A-Za-z0-9]{1,8})*$", str(Index).strip()))
-        return True
-
-    @classmethod
-    def NormalizeDirection(cls, Direction: Any):
-        if isinstance(Direction, (int, float)):
-            return int(Direction) % 360
-        DirStr = cls.Normalize(Direction)
-        if DirStr in ("right", "east", "0", "0deg"): return 0
-        if DirStr in ("bottom", "down", "south", "90", "90deg"): return 90
-        if DirStr in ("left", "west", "180", "180deg"): return 180
-        if DirStr in ("top", "up", "north", "270", "270deg"): return 270
-        return Direction # Return string as-is for elbows ("top-left", etc)
-
-    def __init__(
-        self,
-        parent=None,
-        Form=None,
-        Properties=None,
-        State=None,
-        Transmission=None,
-        Channel=None,
-        Name=None,
-        Number=None,
-        Code=None,
-        Direction=0,
-        Sensory=True,
-        Id=None,
-        **Args):
-        super().__init__(
-            parent=parent,
-            **Args
-        )
-
-        self.Id = (
-            Id
-            or f"{self.Type.capitalize()}_{id(self)}"
-        )
-
-        self.Form = (
-            Form
-            if Form is not None
-            else type(self).Form
-        )
-
-        self.Properties = dict(
-            Properties or {}
-        )
-
-        self.State = (
-            State
-            if State is not None
-            else type(self).State
-        )
-
-        self.Transmission = Transmission
-
-        self.Channel = (
-            str(Channel)
-            if Channel
-            else f"{self.Type}.{id(self)}"
-        )
-
-        self.Name = Name
-
-        Num = (
-            str(Number)
-            if Number
-            else ""
-        )
-
-        if Num and not self.ValidateIndex(Num):
-            Num = ""
-
-        self.Number = Num
-        self.Code = Code
-        self.Direction = self.NormalizeDirection(Direction)
-        self.Sensory = bool(Sensory)
-
-        self.Algorithm = tuple(
-            type(self).Algorithm
-        )
-
-        self.Power = Args.get("Power", True)
-        self.Locked = Args.get("Locked", False)
-        self.IsWakeupTrigger = bool(Args.get("IsWakeupTrigger", False))
-        self.DarkCycle = bool(Args.get("DarkCycle", False))
-
-        ODN.Listen(
-            "UI.AlertChanged",
-            self.UpdateAlert
-        )
-
-        ODN.Listen(
-            "UI.PaletteChanged",
-            self.UpdateAlert
-        )
-
-        ODN.Listen(
-            "UI.Power",
-            self.UpdatePower
-        )
-
-        ODN.Listen(
-            "UI.SecurityLock",
-            self.UpdateSecurityLock
-        )
-
-    def UpdateAlert(self, SignalObj=None, **kw):
-        Level = None
-        if hasattr(SignalObj, "Flags"):
-            Level = SignalObj.Flags.get("Level")
-        elif "Level" in kw:
-            Level = kw["Level"]
-        elif SignalObj is not None and hasattr(SignalObj, "Data"):
-            Level = SignalObj.Data
-        W = getattr(self, "Widget", None)
-        if W is not None and hasattr(W, "repaint"):
-            W.repaint()
+    def Mount(self):
+        ODN.Listen("UI.AlertChanged", self.UpdateAlert)
+        ODN.Listen("UI.PaletteChanged", self.UpdateAlert)
+        ODN.Listen("UI.Power", self.UpdatePower)
+        ODN.Listen("UI.SecurityLock", self.UpdateSecurityLock)
+        self.Refresh()
         return self
 
-    def UpdatePower(self, SignalObj=None, **kw):
+    def Purge(self):
+        ODN.Mute("UI.AlertChanged", self.UpdateAlert)
+        ODN.Mute("UI.PaletteChanged", self.UpdateAlert)
+        ODN.Mute("UI.Power", self.UpdatePower)
+        ODN.Mute("UI.SecurityLock", self.UpdateSecurityLock)
+        return self
+
+    # Оновлення та перемалювання поверхні
+    def Refresh(self):
+        ParentWidget = getattr(self, "Parent", None) or getattr(self, "Widget", None)
+        if ParentWidget is not None:
+            if hasattr(ParentWidget, "repaint"):
+                ParentWidget.repaint()
+            elif hasattr(ParentWidget, "update"):
+                ParentWidget.update()
+        return self
+
+    Update = Refresh
+
+    def UpdateAlert(self, SignalObj=None, **kwargs):
+        self.Refresh()
+        return self
+
+    def UpdatePower(self, SignalObj=None, **kwargs):
         PowerVal = True
         if hasattr(SignalObj, "Flags") and "Power" in SignalObj.Flags:
             PowerVal = bool(SignalObj.Flags["Power"])
-        elif "Power" in kw:
-            PowerVal = bool(kw["Power"])
+        elif "Power" in kwargs:
+            PowerVal = bool(kwargs["Power"])
         elif SignalObj is not None and hasattr(SignalObj, "Data") and isinstance(SignalObj.Data, bool):
             PowerVal = SignalObj.Data
+
         self.Power = PowerVal
-        self.Sensory = bool(PowerVal and not getattr(self, "Locked", False))
-        W = getattr(self, "Widget", None)
-        if W is not None and hasattr(W, "repaint"):
-            W.repaint()
+        self.Tactile = PowerVal and not self.Locked
+        self.Refresh()
         return self
 
-    def UpdateSecurityLock(self, SignalObj=None, **kw):
+    def UpdateSecurityLock(self, SignalObj=None, **kwargs):
         LockVal = False
         if hasattr(SignalObj, "Flags") and "Locked" in SignalObj.Flags:
             LockVal = bool(SignalObj.Flags["Locked"])
-        elif "Locked" in kw:
-            LockVal = bool(kw["Locked"])
-        elif "Action" in kw:
-            LockVal = str(kw["Action"]).upper() == "LOCK"
+        elif "Locked" in kwargs:
+            LockVal = bool(kwargs["Locked"])
+        elif "Action" in kwargs:
+            LockVal = str(kwargs["Action"]).upper() == "LOCK"
+
         self.Locked = LockVal
-        self.Sensory = bool(getattr(self, "Power", True) and not LockVal)
-        W = getattr(self, "Widget", None)
-        if W is not None and hasattr(W, "repaint"):
-            W.repaint()
+        self.Tactile = self.Power and not LockVal
+        self.Refresh()
         return self
 
     def PowerOn(self):
-        return self.Activate(Sensory=not getattr(self, "Locked", False))
+        self.Power = True
+        self.Tactile = not self.Locked
+        self.Refresh()
+        return self
 
     def PowerOff(self):
-        return self.Deactivate()
+        self.Power = False
+        self.Tactile = False
+        self.Refresh()
+        return self
 
     def Lock(self):
         self.Locked = True
-        # При блокуванні кнопки блокування/розблокування зберігають сенсорику
-        if not getattr(self, "IsWakeupTrigger", False):
-            self.Sensory = False
-        W = getattr(self, "Widget", None)
-        if W is not None and hasattr(W, "repaint"):
-            W.repaint()
+        if not self.IsWakeupTrigger:
+            self.Tactile = False
+        self.Refresh()
         return self
 
     def Unlock(self):
         self.Locked = False
-        self.Sensory = bool(getattr(self, "Power", True))
-        W = getattr(self, "Widget", None)
-        if W is not None and hasattr(W, "repaint"):
-            W.repaint()
+        self.Tactile = self.Power
+        self.Refresh()
         return self
 
-    def Activate(self, Sensory: bool = True):
-        self.Power = True
-        self.Sensory = bool(Sensory)
-        W = getattr(self, "Widget", None)
-        if W is not None and hasattr(W, "repaint"):
-            W.repaint()
+    # -------------------------------------------------------------------------
+    # ДИНАМІЧНИЙ СПЕКТР СВІТЛА ТА СТАНИ
+    # -------------------------------------------------------------------------
+
+    def GetState(self) -> String:
+        return str(getattr(self, "State", "Normal") or "Normal")
+
+    def SetState(self, State: String):
+        self.State = str(State or "Normal")
+        self.Refresh()
         return self
 
-    def Deactivate(self):
-        self.Power = False
-        self.Sensory = False
-        W = getattr(self, "Widget", None)
-        if W is not None and hasattr(W, "repaint"):
-            W.repaint()
-        return self
+    def GetColor(self) -> String:
+        StateStr = str(getattr(self, "State", "Normal") or "Normal").lower()
+        if not self.Power or StateStr in ("off", "stasis", "black"):
+            return Palette.Disabled[0]
 
-    def InductTransmission(self, Transmission):
-        self.Transmission = Transmission
-        return self
+        if StateStr in ("disabled", "inactive") or not self.Tactile:
+            return Palette.Disabled[0]
 
-    def ActivateSensor(self):
-        self.SensorActive = True
-        return self
-
-    def DeactivateSensor(self):
-        self.SensorActive = False
-        return self
-
-    def SetSensitivity(self, Level):
-        self.Sensitivity = str(Level)
-        return self
-
-    def SenseTransmit(self, Data):
-        if self.SensorActive and self.Transmission:
-            return self.Transmission.Emit(Data)
-        return None
-
-    def SenseReceive(self, Listener):
-        if self.SensorActive and self.Transmission:
-            self.Transmission.Connect(Listener)
-        return self
-
-    def Connect(self, Listener):
-        return self.Clicked.Connect(Listener)
-
-    def SetProperty(self, Name, Value):
-        self.Properties[str(Name)] = Value
-        return self
-
-    def GetProperty(self, Name, Default=None):
-        return self.Properties.get(str(Name), Default)
-
-    def GetNumber(self) -> str:
-        return str(getattr(self, "Number", "") or "")
-
-    def SetNumber(self, Number: str):
-        Num = str(Number).strip()
-        if self.ValidateIndex(Num):
-            self.Number = Num
-            self.Update()
-        return self
-
-    def GetColor(self) -> str:
-        StateStr = str(getattr(self, "State", "normal") or "normal").lower()
-        if not getattr(self, "Power", True) or StateStr in ("off", "dark", "black"):
-            return SystemTheme.DynamicColor("dark", Dynamic=False)
-
-        # Якщо елемент в режимі періодичного затемнення (DarkCycle / Stealth / Lock)
-        if getattr(self, "DarkCycle", False):
-            # Періодично зникає (стає чорним кольором фону на деякий час)
-            from lcars.base.default import CycleDark, CycleNormal
-            Time = LCARS.System.Time
-            if Time:
-                Now = Time.time()
-                # Вимкнений (чорний) 5.0с, нормальний (видимий) 4.0с (сумарний період 9.0с)
-                Period = CycleDark + CycleNormal
-                PhaseInCycle = Now % Period
-                if PhaseInCycle < CycleDark:
-                    return "#000000"
-
-        if StateStr in ("disabled", "inactive") or not getattr(self, "Sensory", True):
-            return SystemTheme.DynamicColor("disabled", Dynamic=False)
-        if StateStr in ("alert", "red", "critical", "emergency"):
+        if StateStr in ("alert", "red", "critical", "emergency", "redalert"):
             return SystemTheme.DynamicColor("red", Dynamic=True, Key=str(id(self)))
-        if StateStr in ("yellow", "warning", "caution", "standby"):
+
+        if StateStr in ("yellow", "warning", "caution", "yellowalert"):
             return SystemTheme.DynamicColor("yellow", Dynamic=True, Key=str(id(self)))
 
-        ExplicitColor = getattr(self, "Color", None)
+        ExplicitColor = getattr(self, "Spectrum", getattr(self, "Color", None))
         if ExplicitColor:
             return ExplicitColor
-
         return SystemTheme.DynamicColor("buttons", Dynamic=True, Key=str(id(self)))
 
-    def SetColor(self, Color):
+    def SetColor(self, Color: String):
         self.Color = Color
-        self.Update()
+        self.Spectrum = Color
+        self.Refresh()
         return self
 
-    def GetState(self) -> str:
-        return str(getattr(self, "State", "normal") or "normal")
+    def GetText(self) -> String:
+        return str(getattr(self, "Text", "") or getattr(self, "Designation", "") or "")
 
-    def SetState(self, State: str):
-        self.State = str(State or "normal").lower()
-        if hasattr(self, "Update"):
-            self.Update()
-        return self
-
-    def GetText(self) -> str:
-        return str(getattr(self, "Text", "") or "")
-
-    def SetText(self, Text):
+    def SetText(self, Text: String):
         self.Text = str(Text)
-        self.Update()
+        self.Designation = self.Text
+        self.Refresh()
         return self
 
-    def GetForm(self):
-        return getattr(self, "Form", None)
+    def GetNumber(self) -> String:
+        return str(getattr(self, "Number", "") or "")
 
-    def SetFontSize(self, Size):
-        self.FontSize = int(Size)
-        self.Update()
-        return self
-    # Адаптивний розмір шрифту залежно від розміру компонента
-    def GetAdaptiveFontSize(self, Width, Height, BaseSize=None):
-        Base = int(BaseSize or self.FontSize or 16)
-        if Width < 60 or Height < 20:
-            return max(8, Base - 6)
-        elif Width < 100 or Height < 28:
-            return max(10, Base - 4)
-        elif Width < 140 or Height < 36:
-            return max(12, Base - 2)
-        return Base
-
-    # Розрахунок внутрішньої геометрії — перевизначається підкласами
-
-
-    # Алгоритмічний життєвий цикл базового компонента LCARS (чисті системні команди)
-    def Mount(self):
-        self.Update()
+    def SetNumber(self, Number: Any):
+        NumStr = str(Number).strip() if Number is not None else ""
+        if ValidateIndex(NumStr):
+            self.Number = NumStr
+            self.Refresh()
         return self
 
-    def Refresh(self):
-        self.Update()
-        return self
+    # -------------------------------------------------------------------------
+    # ІНТЕРАКТИВНА СЕНСОРНА ШИНА (ODN CHANNELS & TOUCH DISPATCH)
+    # -------------------------------------------------------------------------
 
-    def Alert(self, Level=None):
-        if hasattr(self, "UpdateAlert"):
-            self.UpdateAlert(Data=Level)
-        return self
+    def InteractionPath(self, Event: String) -> String:
+        return f"Component.{getattr(self, 'Id', id(self))}.{Event}"
 
-    def Purge(self):
-        try:
-            ODN.Disconnect("UI.AlertChanged", self.UpdateAlert)
-            ODN.Disconnect("UI.PaletteChanged", self.UpdateAlert)
-            ODN.Disconnect("UI.Power", self.UpdatePower)
-            ODN.Disconnect("UI.SecurityLock", self.UpdateSecurityLock)
-        except:
-            pass
-            
-        if hasattr(self, "Destroy"):
-            self.Destroy()
-        return self
-
-    # Диспетчер алгоритмів LCARS: викликає зареєстрований алгоритм за іменем
-    def Dispatch(self, AlgorithmName: str, *args, **kwargs):
-        CleanName = str(AlgorithmName or "").strip()
-        if hasattr(self, "Algorithms") and isinstance(self.Algorithms, dict):
-            alg = self.Algorithms.get(CleanName)
-            if callable(alg):
-                return alg(*args, **kwargs)
-
-        alg = getattr(self, CleanName, None)
-        if callable(alg):
-            return alg(*args, **kwargs)
-        return None
-
-    def __getattr__(self, name: str) -> Any:
-        if name.startswith("_") or name == "widget":
-            raise AttributeError(name)
-        WidgetRef = getattr(self, "widget", None)
-        if WidgetRef is not None and WidgetRef is not self and hasattr(WidgetRef, name):
-            return getattr(WidgetRef, name)
-        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
-# =============================================================================
-# 2. INTERACTABLE COMPONENT — БАЗОВИЙ ТИП КОМПОНЕНТІВ ДЛЯ ВЗАЄМОДІЇ
-class Interactable(Component):
-    Interactive = True
-    Sensory = True
-
-    # Повертає ODN-маршрут конкретної інтерактивної події.
-    def InteractionPath(self, Event):
-        ComponentId = getattr(self, "Id", id(self))
-        return f"Component.{ComponentId}.{Event}"
-
-    # Підключає слухача до події натискання компонента.
     def Connect(self, Listener):
         ODN.Connect(self.InteractionPath("Clicked"), Listener)
         return self
 
-    # Відключає слухача від події натискання компонента.
     def Disconnect(self, Listener):
         ODN.Disconnect(self.InteractionPath("Clicked"), Listener)
         return self
 
-    # Передає дані через подію натискання компонента.
-    def TransmitClick(self, Data):
-        return ODN.Transmit(
-            self.InteractionPath("Clicked"),
-            Data
-        )
-
-    # Передає дані через подію відпускання компонента.
-    def TransmitRelease(self, Data):
-        return ODN.Transmit(
-            self.InteractionPath("Released"),
-            Data
-        )
-
-    # Передає дані через подію наведення компонента.
-    def TransmitHover(self, Data):
-        return ODN.Transmit(
-            self.InteractionPath("Hovered"),
-            Data
-        )
-
-    # Квантові канали шини ODN для інтерактивних подій
-    @property
-    def Clicked(self) -> Transmission:
+    def Clicked(self):
         return ODN.Channel(self.InteractionPath("Clicked"))
 
-    @property
-    def Released(self) -> Transmission:
+    def Released(self):
         return ODN.Channel(self.InteractionPath("Released"))
 
-    @property
-    def Hovered(self) -> Transmission:
+    def Hovered(self):
         return ODN.Channel(self.InteractionPath("Hovered"))
 
-    # Канонічні аліаси під дієслова дій
     Engaged = Clicked
     Focused = Hovered
+
+    def TransmitClick(self, Data=None):
+        return ODN.Transmit(self.InteractionPath("Clicked"), Data)
+
+    def TransmitRelease(self, Data=None):
+        return ODN.Transmit(self.InteractionPath("Released"), Data)
+
+    def TransmitHover(self, Data=None):
+        return ODN.Transmit(self.InteractionPath("Hovered"), Data)
+
+    # Фізичний сенсорний контакт поверхні
+    def TouchContact(self, Event):
+        if not self.Interactive or not self.Tactile or not self.Power:
+            return
+        self.Engage()
+        self.TransmitClick(Event)
+        self.Refresh()
+
+    def TouchRelease(self, Event):
+        if not self.Interactive or not self.Tactile or not self.Power:
+            return
+        self.Disengage()
+        self.TransmitRelease(Event)
+        self.Refresh()
+
+    def FocusDetection(self, Event):
+        if self.Interactive and self.Tactile and self.Power:
+            self.Focus(True)
+            self.TransmitHover(Event)
+            self.Refresh()
+
+    def Leave(self, Event):
+        if self.Interactive:
+            self.Focus(False)
+            self.Refresh()
+
+    # Диспетчер системних алгоритмів LCARS
+    def Dispatch(self, AlgorithmName: String, *args, **kwargs):
+        CleanName = str(AlgorithmName or "").strip()
+        Handler = getattr(self, CleanName, None)
+        if callable(Handler):
+            return Handler(*args, **kwargs)
+        return None
+
+# Канонічний аліас для зворотної сумісності
+Interactable = Component
 # =============================================================================
 # 2. ГОТОВІ ФІЗИЧНІ ОБ'ЄКТИ LCARS ЗА КРЕСЛЕННЯМИ ОКУДИ
 # =============================================================================
 class LCARSButton(Interactable):
+    TypeName = "LCARSButton"
+    Type = "Button"
+    # Форми кнопки (Okuda Geometry)
     Type = "button"
     Rect = 1
     Pill = 2
@@ -481,15 +311,13 @@ class LCARSButton(Interactable):
     PillHalf = 4
     SoftHalf = 5
     Elbow = 6
-
-    DISABLED = 0
-    ACTIVE = 1
-    CONFIRM = 2
-    YELLOW = 3
-    ALERT = 4
-
-    Algorithm = ("Engage", "Release", "Focus", "Modulate")
-
+     # Дефолтні розміри та оформлення
+    Width = 140
+    Height = 36
+    FontSize = 16
+    CornerRadius = 4.0
+    Side = "left"
+    
     def __init__(self, Text="", parent=None, Form=None, Color=None, Direction=0,
                  Number=None, Width=140, Height=36, FontSize=16, Sound="click",
                  SwapMode=True, CornerRadius=None, Handler=None, Action=None,
@@ -1562,12 +1390,6 @@ Component.LCARSElbow = LCARSElbow
 Component.LCARSButton = LCARSButton
 Component.LCARSIndicator = LCARSIndicator
 
-# 3. Рівень Системного Реєстру (ODN / Proxy resolution)
-registry.Register("LCARS.Component.Button", "lcars.base.component", "LCARSButton")
-registry.Register("LCARS.Component.Indicator", "lcars.base.component", "LCARSIndicator")
-registry.Register("LCARS.Component.Bar", "lcars.base.component", "LCARSBar")
-registry.Register("LCARS.Component.Label", "lcars.base.component", "LCARSLabel")
-registry.Register("LCARS.Component.Elbow", "lcars.base.component", "LCARSElbow")
 
 __all__ = [
     "Component",

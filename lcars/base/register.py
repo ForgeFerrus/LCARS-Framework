@@ -1,86 +1,24 @@
 # LCARS FRAMEWORK REGISTER — CENTRAL REGISTRY
 # ПРИНЦИП: Єдина точка доступу до всіх системних об'єктів
-from .info import Version
-
-# Центральний реєстр LCARS (Library Computer Access and Retrieval System)
-# Забезпечує зберігання системних сутностей, швидкий пошук та прямий доступ до компонентів.
-class LCARSRegister(dict):
-    # Ініціалізація реєстру з опціональним первинним мапінгом системних ключів
-    def __init__(self, Mapping: dict = None):
-        super().__init__()
-        self.Version = Version
-        self.Mapping = self
-        self.Keys = {}
-        if Mapping:
-            for Key, (Module, Attribute) in Mapping.items():
-                self.Register(Key, Module, Attribute)
-
-    # Реєстрація нового вузла або системної сутності в реєстрі
-    def Register(self, Key: str, Module: any, Attribute: any = None) -> "LCARSRegister":
-        Value = (Module, Attribute)
-        self[Key] = Value
-        self.Keys[str(Key).lower()] = Key
-        return self
-
-    # Отримання (резолвінг) зареєстрованого вузла за ключем або регістронезалежним аліасом
-    def Retrieve(self, Key: str, Default=None):
-        Res = None
-        if Key in self:
-            Res = self[Key]
-        else:
-            LowerKey = str(Key).lower()
-            if LowerKey in self.Keys:
-                Res = self[self.Keys[LowerKey]]
-        if Res is None:
-            return Default
-        if isinstance(Res, tuple) and len(Res) == 2 and Res[1] is None and not isinstance(Res[0], str):
-            return Res[0]
-        return Res
-    Resolve = Retrieve
-
-    # Бібліотека зареєстрованих ключів або їхня кількість (якщо Count=True)
-    def Library(self, Count: bool = False):
-        if Count:
-            return len(self)
-        return list(self.keys())
-    Catalog = Library
-    List = Library
-    Count = lambda self: len(self)
-
-    # Вилучення (дереєстрація) запису за вказаним ключем
-    def Deregister(self, Key: str) -> "LCARSRegister":
-        self.pop(Key, None)
-        self.Keys.pop(str(Key).lower(), None)
-        return self
-
-
-# Ініціалізація
-registry = REGISTRY = LCARSRegister({
+from typing import Any
+registry: dict[str, Any] = {
 # ════════════════════════════════════════════════════════════════════════════
 # 1. ГОЛОВНЕ КОМП'ЮТЕРНЕ ЯДРО ЗОРЕЛЬОТА // MAIN COMPUTER CORE (System.*)
 # ОПИС: Низькорівневе обчислювальне ядро LCARS, керування процесами,
 #       оптичною пам'яттю, хронометром Федерації, шиною ODN та безпекою.
 # ════════════════════════════════════════════════════════════════════════════
     "System.Operating"                : ("os", None),
-    "System.LCARS"                    : ("os", None),
     "System.IO"                       : ("io", None),
     "System.Regex"                    : ("re", None),
     "System.Re"                       : ("re", None),
     "System.Math"                     : ("math", None),
     "System.Winsound"                 : ("winsound", None),
-    "System.Ctypes"                   : ("ctypes", None),
-    "System.Ctypes.Struct"            : ("ctypes", "Structure"),
+    "System.Native"                   : ("ctypes", None),
+    "System.Native.Struct"            : ("ctypes", "Structure"),
     "System.Shutil"                   : ("shutil", None), # shutil    
     "System.Core"                     : ("sys", None),
     "System.String"                   : ("string", None),
     "System.Type"                     : ("typing", None),
-    # Класи та абстракції
-    "System.ABC"                      : ("abc", "ABC"),
-    "System.AbstractMethod"           : ("abc", "abstractmethod"),
-    "System.ABC.Module"               : ("abc", None),
-    "System.DataClass"                : ("dataclasses", "dataclass"),
-    "System.DataClass.Field"          : ("dataclasses", "field"),
-    "System.DataClass.Module"         : ("dataclasses", None),
 # ────────────────────────────────────────────────────────────────────────────
 # 1.1 МАТРИЦЯ СИСТЕМНИХ РЕГІСТРІВ // SYSTEM REGISTERS (System.Environment.*)
 # Глобальні змінні стану зорельота, бойові режими (Condition Green/Yellow/Red)
@@ -107,6 +45,7 @@ registry = REGISTRY = LCARSRegister({
     "System.Directory.Scan"           : ("os", "scandir"),
     "System.Directory.Make"           : ("os", "makedirs"),
     "System.Directory.Remove"         : ("os", "removedirs"),
+    
     "System.Remove"                   : ("os", "remove"),
     "System.Rename"                   : ("os", "rename"),
     "System.Replace"                  : ("os", "replace"),
@@ -295,6 +234,9 @@ registry = REGISTRY = LCARSRegister({
 
     # Debug
     "System.Memory.Debug"             : ("gc", "set_debug"),
+    "System.DataClass"                : ("dataclasses", "dataclass"),
+    "System.DataClass.Field"          : ("dataclasses", "field"),
+    "System.DataClass.Module"         : ("dataclasses", None),
 # ────────────────────────────────────────────────────────────────────────────
 # 1.10 ДИНАМІЧНИЙ ЗАВАНТАЖУВАЧ МОДУЛІВ // SUBSYSTEM LOADER (System.Module.*)
 # Гаряче підключення нових сервісів та модулів палуб без зупинки ядра
@@ -338,11 +280,9 @@ registry = REGISTRY = LCARSRegister({
     # ABSTRACT
     # ============================================================================
     "System.Abstract"                : ("abc", None),
-
     "System.Abstract.Meta"           : ("abc", "ABCMeta"),
     "System.Abstract.Class"          : ("abc", "ABC"),
     "System.Abstract.Method"         : ("abc", "abstractmethod"),
-
     # ============================================================================
     # CONTEXT
     # ============================================================================
@@ -396,22 +336,52 @@ registry = REGISTRY = LCARSRegister({
 # Кешування обчислень траєкторій, шаблони підпрограм швидкого реагування
 # ────────────────────────────────────────────────────────────────────────────
     "System.Function"               : ("functools", None),
-
     "System.Function.Partial"       : ("functools", "partial"),
     "System.Function.Wraps"         : ("functools", "wraps"),
-
     "System.Function.Cache"         : ("functools", "cache"),
     "System.Function.LRUCache"      : ("functools", "lru_cache"),
-
     "System.Function.CachedProperty": ("functools", "cached_property"),
-
     "System.Function.Reduce"        : ("functools", "reduce"),
 
-    # ============================================================================
-    # OPERATOR
-    # ============================================================================
-    "System.Operator"               : ("operator", None),
+    # === SYSTEM BUILTIN & PROTOCOL DUNDERS ===
+    "System.Method.Static"          : ("builtins", "staticmethod"),
+    "System.Method.Class"           : ("builtins", "classmethod"),
+    "System.Method.Property"        : ("builtins", "property"),
 
+    "System.Protocol.Import"        : ("builtins", "__import__"),
+    "System.Protocol.Init"           : ("builtins", "__init__"),
+    "System.Protocol.All"            : ("builtins", "__all__"),
+    "System.Protocol.Dictionary"     : ("builtins", "__dict__"),
+    "System.Protocol.Directory"      : ("builtins", "__dir__"),
+    "System.Protocol.Name"             : ("builtins", "__name__"),
+    "System.Protocol.Doc"              : ("builtins", "__doc__"),
+    "System.Protocol.File"             : ("builtins", "__file__"),
+    "System.Protocol.Module"           : ("builtins", "__module__"),
+    "System.Protocol.Class"            : ("builtins", "__class__"),
+    "System.Protocol.Bases"            : ("builtins", "__bases__"),
+    "System.Protocol.Slots"            : ("builtins", "__slots__"),
+    "System.Protocol.Annotations"      : ("builtins", "__annotations__"),
+
+    # === SYSTEM EXECUTION DUNDERS ===
+    "System.Protocol.Call"           : ("builtins", "__call__"),
+    "System.Protocol.Enter"          : ("builtins", "__enter__"),
+    "System.Protocol.Exit"           : ("builtins", "__exit__"),
+    "System.Protocol.GetAttr"        : ("builtins", "__getattr__"),
+    "System.Protocol.SetAttr"        : ("builtins", "__setattr__"),
+    "System.Protocol.DelAttr"        : ("builtins", "__delattr__"),
+    # ============================================================================
+    # SYSTEM OPERATOR DUNDERS
+    "System.Operator"               : ("operator", None),
+    "System.Operator.Equal"           : ("operator", "eq"),
+    "System.Operator.NotEqual"        : ("operator", "ne"),
+    "System.Operator.LessThan"        : ("operator", "lt"),
+    "System.Operator.GreaterThan"     : ("operator", "gt"),
+    "System.Operator.LessOrEqual"     : ("operator", "le"),
+    "System.Operator.GreaterOrEqual"  : ("operator", "ge"),
+    "System.Operator.Contains"        : ("operator", "contains"),
+    "System.Operator.GetItem"         : ("operator", "getitem"),
+    "System.Operator.SetItem"         : ("operator", "setitem"),
+    "System.Operator.DelItem"         : ("operator", "delitem"),
     "System.Operator.Attribute"     : ("operator", "attrgetter"),
     "System.Operator.Item"          : ("operator", "itemgetter"),
     "System.Operator.Method"        : ("operator", "methodcaller"),
@@ -480,7 +450,52 @@ registry = REGISTRY = LCARSRegister({
     "System.URL.Decode"                   : ("urllib.parse", "unquote"),
     "System.URL.Join"                     : ("urllib.parse", "urljoin"),
     "System.URL.Quote"                    : ("urllib.parse", "quote"),
-
+# ────────────────────────────────────────────────────────────────────────────
+# 1.14 АПАРАТНА ТЕЛЕМЕТРІЯ ЗОРЕЛЬОТА // HARDWARE TELEMETRY (System.Hardware.*)
+# Низькорівневий стан заліза: процесор, пам'ять, накопичувачі, сенсори, енергія
+# ────────────────────────────────────────────────────────────────────────────
+    "System.Hardware"                 : ("psutil", None),
+    "System.Hardware.CPU"             : ("psutil", "cpu_percent"),
+    "System.Hardware.CPUCount"        : ("psutil", "cpu_count"),
+    "System.Hardware.CPUFreq"         : ("psutil", "cpu_freq"),
+    "System.Hardware.CPUTimes"        : ("psutil", "cpu_times_percent"),
+    "System.Hardware.Memory"          : ("psutil", "virtual_memory"),
+    "System.Hardware.Swap"            : ("psutil", "swap_memory"),
+    "System.Hardware.Disk"            : ("psutil", "disk_usage"),
+    "System.Hardware.DiskPartitions"  : ("psutil", "disk_partitions"),
+    "System.Hardware.DiskIO"          : ("psutil", "disk_io_counters"),
+    "System.Hardware.NetworkIO"       : ("psutil", "net_io_counters"),
+    "System.Hardware.NetworkStats"    : ("psutil", "net_if_stats"),
+    "System.Hardware.NetworkAddress"  : ("psutil", "net_if_addrs"),
+    "System.Hardware.Battery"         : ("psutil", "sensors_battery"),
+    "System.Hardware.Sensors"         : ("psutil", "sensors_temperatures"),
+    "System.Hardware.Fans"            : ("psutil", "sensors_fans"),
+    "System.Hardware.Processes"       : ("psutil", "process_iter"),
+    "System.Hardware.Process"         : ("psutil", "Process"),
+    "System.Hardware.Users"           : ("psutil", "users"),
+    "System.Hardware.BootTime"        : ("psutil", "boot_time"),
+# ────────────────────────────────────────────────────────────────────────────
+# 1.15 ГОЛОСОВИЙ СИНТЕЗАТОР КОМП'ЮТЕРА // VOICE INTERFACE (System.Voice.*)
+# Локальний синтез мови LCARS (Majel Barrett) без інтернету на будь-якій ОС
+# ────────────────────────────────────────────────────────────────────────────
+    "System.Voice"                    : ("pyttsx3", None),
+    "System.Voice.Engine"             : ("pyttsx3", "init"),
+# ────────────────────────────────────────────────────────────────────────────
+# 1.16 МІЖПРОЦЕСНА ШИНА // INTER-PROCESS CONDUIT (System.IPC.*)
+# Спільна оперативна пам'ять, міжпроцесні черги, низькорівневі сокети
+# ────────────────────────────────────────────────────────────────────────────
+    "System.IPC"                      : ("multiprocessing", None),
+    "System.IPC.Process"              : ("multiprocessing", "Process"),
+    "System.IPC.Queue"                : ("multiprocessing", "Queue"),
+    "System.IPC.Pipe"                 : ("multiprocessing", "Pipe"),
+    "System.IPC.Value"                : ("multiprocessing", "Value"),
+    "System.IPC.Array"                : ("multiprocessing", "Array"),
+    "System.IPC.Manager"              : ("multiprocessing", "Manager"),
+    "System.IPC.SharedMemory"         : ("mmap", "mmap"),
+    "System.IPC.Socket"               : ("socket", "socket"),
+    "System.IPC.AF_INET"              : ("socket", "AF_INET"),
+    "System.IPC.SOCK_STREAM"          : ("socket", "SOCK_STREAM"),
+    "System.IPC.SOCK_DGRAM"           : ("socket", "SOCK_DGRAM"),
 # ────────────────────────────────────────────────────────────────────────────
 # 1.14 ХРОНОМЕТР ФЕДЕРАЦІЇ ТА ЗОРЯНИЙ ЧАС // STARFLEET CHRONOMETER (System.Time.*)
 # Наносекундні такти варп-ядра, календарний час та розрахунок Stardate
@@ -961,7 +976,42 @@ registry = REGISTRY = LCARSRegister({
     "Base.Visual.Drop.Event":          ("PyQt6.QtGui", "QDropEvent"),
     "Base.Visual.Input.Method":          ("PyQt6.QtGui", "QInputMethod"),
     "Base.Visual.Input.Method.Event":    ("PyQt6.QtGui", "QInputMethodEvent"),
+    # ────────────────────────────────────────────────────────────────────────────
+# 2.9 ДЕСКТОП ТА ВІКОННИЙ МЕНЕДЖЕР // DESKTOP MANAGER (Base.Desktop.*)
+# Керування фізичними моніторами, вікнами оболонки ОС, системним треєм
+# ────────────────────────────────────────────────────────────────────────────
+    "Base.Desktop"                    : ("PyQt6.QtGui", "QGuiApplication"),
+    "Base.Desktop.Screen"             : ("PyQt6.QtGui", "QScreen"),
+    "Base.Desktop.Screens"            : ("PyQt6.QtGui.QGuiApplication", "screens"),
+    "Base.Desktop.PrimaryScreen"      : ("PyQt6.QtGui.QGuiApplication", "primaryScreen"),
+    "Base.Desktop.Display"            : ("PyQt6.QtGui", "QWindow"),
+    "Base.Desktop.Cursor"             : ("PyQt6.QtGui", "QCursor"),
+    "Base.Desktop.Clipboard"          : ("PyQt6.QtGui", "QClipboard"),
+    "Base.Desktop.Service"            : ("PyQt6.QtGui", "QDesktopServices"),
+    "Base.Desktop.Open"               : ("PyQt6.QtGui.QDesktopServices", "openUrl"),
+    "Base.Desktop.Icon"               : ("PyQt6.QtWidgets", "QSystemTrayIcon"),
 
+# ────────────────────────────────────────────────────────────────────────────
+# 2.10 АУДІОМАТРИЦЯ МІСТКА // LCARS AUDIO MATRIX (Base.Audio.*)
+# Миттєві біпи без затримок, ембієнти варп-ядра, тривоги
+# ────────────────────────────────────────────────────────────────────────────
+    "Base.Audio"                      : ("PyQt6.QtMultimedia", None),
+    "Base.Audio.Effect"               : ("PyQt6.QtMultimedia", "QSoundEffect"),
+    "Base.Audio.Player"               : ("PyQt6.QtMultimedia", "QMediaPlayer"),
+    "Base.Audio.Output"               : ("PyQt6.QtMultimedia", "QAudioOutput"),
+    "Base.Audio.Devices"              : ("PyQt6.QtMultimedia", "QMediaDevices"),
+
+# ────────────────────────────────────────────────────────────────────────────
+# 2.11 СЕНСОРНЕ ТА ЖЕСТОВЕ ВВЕДЕННЯ // TOUCH & GESTURE (Base.Input.*)
+# Мультитач-панелі консолей PADD, жести збільшення та свайпи
+# ────────────────────────────────────────────────────────────────────────────
+    "Base.Input.Touch"                : ("PyQt6.QtGui", "QTouchEvent"),
+    "Base.Input.TouchEvent"           : ("PyQt6.QtGui.QTouchEvent", "TouchPoint"),
+    "Base.Input.Gesture"              : ("PyQt6.QtWidgets", "QGesture"),
+    "Base.Input.Pinch"                : ("PyQt6.QtWidgets", "QPinchGesture"),
+    "Base.Input.Pan"                  : ("PyQt6.QtWidgets", "QPanGesture"),
+    "Base.Input.Swipe"                : ("PyQt6.QtWidgets", "QSwipeGesture"),
+    "Base.Input.Recognizer"           : ("PyQt6.QtWidgets", "QGestureRecognizer"),
     # ═══════════════════════════════════════════════════════════════════════
     # 3. INTERFACE — UI компоненти
     "Base.Interface": ("PyQt6.QtWidgets", None),
@@ -1091,23 +1141,17 @@ registry = REGISTRY = LCARSRegister({
     "Base.Graphics.SimpleText":               ("PyQt6.QtWidgets", "QGraphicsSimpleTextItem"),
     "Base.Graphics.Image":                    ("PyQt6.QtWidgets", "QGraphicsPixmapItem"),
     # ============================================================================
-    # Interactive
+    # Interactive / Effects
     "Base.Graphics.Widget":                   ("PyQt6.QtWidgets", "QGraphicsWidget"),
     "Base.Graphics.Effect":                   ("PyQt6.QtWidgets", "QGraphicsEffect"),
-    # ============================================================================
-    # Effects
     "Base.Graphics.Effect.Blur":              ("PyQt6.QtWidgets", "QGraphicsBlurEffect"),
     "Base.Graphics.Effect.Colorize":          ("PyQt6.QtWidgets", "QGraphicsColorizeEffect"),
-    "Base.Graphics.Effect.DropShadow":        ("PyQt6.QtWidgets", "QGraphicsDropShadowEffect"),
+    "Base.Graphics.Effect.Shadow":        ("PyQt6.QtWidgets", "QGraphicsDropShadowEffect"),
     "Base.Graphics.Effect.Opacity":           ("PyQt6.QtWidgets", "QGraphicsOpacityEffect"),
     # ============================================================================
     # Animation
-    "Base.Graphics.Animation":             ("PyQt6.QtWidgets", None),
     "Base.Graphics.Animation.Item":        ("PyQt6.QtWidgets", "QGraphicsItemAnimation"),
 
-    "Base.Animation":                     ("PyQt6.QtCore", None),
-
-    # Base
     "Base.Animation.Abstract":            ("PyQt6.QtCore", "QAbstractAnimation"),
     "Base.Animation.Property":            ("PyQt6.QtCore", "QPropertyAnimation"),
     "Base.Animation.Variant":             ("PyQt6.QtCore", "QVariantAnimation"),
@@ -1122,18 +1166,7 @@ registry = REGISTRY = LCARSRegister({
 
     # Pause
     "Base.Animation.Pause":               ("PyQt6.QtCore", "QPauseAnimation"),
-    # ============================================================================
-    # Scene Events
-    "Base.Graphics.Scene.Event":              ("PyQt6.QtWidgets", "QGraphicsSceneEvent"),
-    "Base.Graphics.Scene.Mouse":              ("PyQt6.QtWidgets", "QGraphicsSceneMouseEvent"),
-    "Base.Graphics.Scene.Hover":              ("PyQt6.QtWidgets", "QGraphicsSceneHoverEvent"),
-    "Base.Graphics.Scene.ContextMenu":        ("PyQt6.QtWidgets", "QGraphicsSceneContextMenuEvent"),
-    "Base.Graphics.Scene.DragDrop":           ("PyQt6.QtWidgets", "QGraphicsSceneDragDropEvent"),
-    "Base.Graphics.Scene.Help":               ("PyQt6.QtWidgets", "QGraphicsSceneHelpEvent"),
-    "Base.Graphics.Scene.Resize":             ("PyQt6.QtWidgets", "QGraphicsSceneResizeEvent"),
-    "Base.Graphics.Scene.Move":               ("PyQt6.QtWidgets", "QGraphicsSceneMoveEvent"),
-    "Base.Graphics.Scene.Wheel":              ("PyQt6.QtWidgets", "QGraphicsSceneWheelEvent"),
-    # ============================================================================
+ 
     # Scene Rendering
     "Base.Rendering":                     ("PyQt6.QtOpenGL", None),
     # Functions
@@ -1174,14 +1207,12 @@ registry = REGISTRY = LCARSRegister({
     # Print
     "Base.Print":                             ("PyQt6.QtPrintSupport", None),
     "Base.Print.Printer":                     ("PyQt6.QtPrintSupport", "QPrinter"),
-    # ============================================================================
     # Preview
     "Base.Print.Preview":                     ("PyQt6.QtPrintSupport", "QPrintPreviewDialog"),
     "Base.Print.Preview.Widget":              ("PyQt6.QtPrintSupport", "QPrintPreviewWidget"),
 
     # ============================================================================
     # Dialogs
-    # ============================================================================
     "Base.Print.Dialog":                      ("PyQt6.QtPrintSupport", "QPrintDialog"),
     "Base.Print.Page.Setup":                  ("PyQt6.QtPrintSupport", "QPageSetupDialog"),
 
@@ -2014,7 +2045,7 @@ registry = REGISTRY = LCARSRegister({
     # EVALUATION
     # ---------------------------------------------------------------------------
     "Bridge.AI.Evaluation":                     (None, None),
-    "Bridge.AI.Evaluation.DeepEval":            ("deepeval", None),
+    "Bridge.AI.Evaluation.Deepeval":            ("deepeval", None),
     "Bridge.AI.Evaluation.Ragas":               ("ragas", None),
     # ---------------------------------------------------------------------------
     # TRAINING
@@ -2047,7 +2078,6 @@ registry = REGISTRY = LCARSRegister({
     "Bridge.CLI.Qwen":                      ("qwen", None),
     "Bridge.CLI.Ollama":                    ("ollama", None),
     "Bridge.CLI.Aider":                     ("aider", None),
-    "Bridge.CLI.Goose":                     ("goose", None),
     "Bridge.CLI.Warp":                      ("warp", None),
     # ---------------------------------------------------------------------------
     # IDE
@@ -2055,12 +2085,8 @@ registry = REGISTRY = LCARSRegister({
     "Bridge.IDE":                           (None, None),
     "Bridge.IDE.Cursor":                    ("cursor", None),
     "Bridge.IDE.Windsurf":                  ("windsurf", None),
-    "Bridge.IDE.Cline":                     ("cline", None),
-    "Bridge.IDE.RooCode":                   ("roo", None),
-    "Bridge.IDE.Continue":                  ("continue", None),
     "Bridge.IDE.Copilot":                   ("github_copilot", None),
     "Bridge.IDE.CodeGPT":                   ("codegpt", None),
-    "Bridge.IDE.Tabby":                     ("tabby", None),
     # ════════════════════════════════════════════════════════════════════════════
 # 3. ЗОВНІШНІЙ МІСТ, ІЗОЛІНІЙНІ НОСІЇ ТА НАУКОВІ ЛАБОРАТОРІЇ (Bridge.*)
 # ОПИС: Шлюз до зовнішніх форматів (JSON, YAML, SQLite, ZIP),
@@ -2074,7 +2100,6 @@ registry = REGISTRY = LCARSRegister({
 
     # Embedded
     "Bridge.Storage.Sqlite":           ("sqlite3", None),
-    "Bridge.Storage.SQLite":           ("sqlite3", None),
     "Bridge.Storage.TinyDB":           ("tinydb", None),
     "Bridge.Storage.LMDB":             ("lmdb", None),
 
@@ -2085,15 +2110,11 @@ registry = REGISTRY = LCARSRegister({
 
     # Structured
     "Bridge.Storage.Json":             ("json", None),
-    "Bridge.Storage.JSON":             ("json", None),
     "Bridge.Storage.Msgpack":          ("msgpack", None),
-    "Bridge.Storage.MsgPack":          ("msgpack", None),
     "Bridge.Storage.Protobuf":         ("google.protobuf", None),
 
     # Configuration
-    "Bridge.Storage.Yaml":             ("yaml", None),
     "Bridge.Storage.YAML":             ("yaml", None),
-    "Bridge.Storage.Toml":             ("toml", None),
     "Bridge.Storage.TOML":             ("toml", None),
 
     # Scientific
@@ -2113,7 +2134,6 @@ registry = REGISTRY = LCARSRegister({
 
     # Structured Documents (XML)
     "Bridge.Storage.XML":              ("xml.etree.ElementTree", None),
-    "Bridge.Storage.Xml":              ("xml.etree.ElementTree", None),
     "Bridge.Storage.XML.Parse":        ("xml.etree.ElementTree", "parse"),
     "Bridge.Storage.XML.FromString":   ("xml.etree.ElementTree", "fromstring"),
     "Bridge.Storage.XML.ToString":     ("xml.etree.ElementTree", "tostring"),
@@ -2123,7 +2143,6 @@ registry = REGISTRY = LCARSRegister({
 
     # Tabular Data (CSV)
     "Bridge.Storage.CSV":              ("csv", None),
-    "Bridge.Storage.Csv":              ("csv", None),
     "Bridge.Storage.CSV.Reader":       ("csv", "reader"),
     "Bridge.Storage.CSV.Writer":       ("csv", "writer"),
     "Bridge.Storage.CSV.DictReader":   ("csv", "DictReader"),
@@ -2131,13 +2150,11 @@ registry = REGISTRY = LCARSRegister({
 
     # INI Configuration Formats
     "Bridge.Storage.INI":              ("configparser", None),
-    "Bridge.Storage.Ini":              ("configparser", None),
     "Bridge.Storage.Config":           ("configparser", "ConfigParser"),
     "Bridge.Storage.INI.Parser":       ("configparser", "ConfigParser"),
 
     # Media & Format Detection
     "Bridge.Storage.MIME":             ("mimetypes", None),
-    "Bridge.Storage.Mime":             ("mimetypes", None),
     "Bridge.Storage.MIME.Guess":       ("mimetypes", "guess_type"),
     "Bridge.Storage.MIME.Extension":   ("mimetypes", "guess_extension"),
 
@@ -2560,15 +2577,8 @@ registry = REGISTRY = LCARSRegister({
 
     # Hardware Telemetry Bridge Alias
     "Bridge.Psutil":                   ("psutil", None),
-
     # ── SHORTCUT ALIASES ────────────────────────────────────────────
     "Bridge.Numpy":                    ("numpy", None),
     "Bridge.Pandas":                   ("pandas", None),
     "Bridge.Matplotlib":               ("matplotlib", None),
-    "Bridge.PyYAML":                   ("yaml", None),
-    "Bridge.Regex":                    ("regex", None),
-    "Bridge.LXML":                     ("lxml", None),
-})
-
-__all__ = ["registry", "REGISTRY", "LCARSRegister"]
-
+}

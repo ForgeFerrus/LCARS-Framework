@@ -1,115 +1,83 @@
-# LCARS TYPE READABILITY — DYNAMIC FULL SCAN
-# Читаємо LCARS клас та реєстр і виводимо ВСЕ що є.
-# Titanium Standard: без try/except, без _varname, без docstrings
-
+# test_chain.py
 import sys
-from pathlib import Path
-
-ProjectRoot = Path(__file__).resolve().parent.parent
-if str(ProjectRoot) not in sys.path:
-    sys.path.insert(0, str(ProjectRoot))
-
 from lcars.base.type import LCARS
-from lcars.service.bridge import Link
-from lcars.base.register import registry
 
-W  = "\033[0m"
-G  = "\033[92m"
-R  = "\033[91m"
-Y  = "\033[93m"
-C  = "\033[96m"
-B  = "\033[1m"
-DIM = "\033[2m"
+def RunChainDiagnostics():
+    print("=" * 60)
+    print("  LCARS DOT-CHAIN & RETRIEVE DIAGNOSTIC PROTOCOL")
+    print("=" * 60)
+    
+    Errors = []
 
-LINE = "─" * 72
+    # ТЕСТ 1: Перевірка існування кореня LCARS
+    print("\n[ТЕСТ 1] Перевірка ядра LCARS...")
+    if hasattr(LCARS, "Name"):
+        print(f"  -> OK: Базове ядро активне: {LCARS.Name}")
+    else:
+        Errors.append("LCARS не має базових атрибутів")
 
-def TypeName(Val):
-    if Val is None:
-        return f"{R}NONE{W}"
-    if hasattr(Val, "__name__"):
-        return f"{G}{Val.__name__}{W}"
-    return f"{G}{type(Val).__name__}{W}"
+    # ТЕСТ 2: Побудова ланцюжка Geometry (RectF / PointF)
+    print("\n[ТЕСТ 2] Побудова ланцюжка Geometry -> RectF...")
+    try:
+        RectFClass = LCARS.Geometry.RectF
+        print(f"  -> Отримано вузол: {RectFClass}")
+        if RectFClass is not None:
+            # Перевірка працездатності екземпляра
+            Instance = RectFClass(0.0, 0.0, 100.0, 50.0)
+            print(f"  -> OK: Створено екземпляр: {Instance}, ширина={Instance.width()}")
+        else:
+            Errors.append("LCARS.Geometry.RectF повернув None")
+    except Exception as e:
+        Errors.append(f"Помилка LCARS.Geometry.RectF: {e}")
 
-def RunTypeReadTest():
-    print(f"\n{B}{'=' * 72}{W}")
-    print(f"{B}◤ LCARS TYPE READABILITY — FULL CLASS + REGISTRY SCAN ◢{W}")
-    print(f"{B}{'=' * 72}{W}")
+    # ТЕСТ 3: Побудова ланцюжка Visual -> PainterPath
+    print("\n[ТЕСТ 3] Побудова ланцюжка Visual -> PainterPath...")
+    try:
+        PainterPathClass = LCARS.Visual.PainterPath
+        print(f"  -> Отримано вузол: {PainterPathClass}")
+        if PainterPathClass is not None:
+            PathInstance = PainterPathClass()
+            print(f"  -> OK: Створено траєкторію PainterPath: {PathInstance}")
+        else:
+            Errors.append("LCARS.Visual.PainterPath повернув None")
+    except Exception as e:
+        Errors.append(f"Помилка LCARS.Visual.PainterPath: {e}")
 
-    # ── 1. SUBSTITUTE ДЕСКРИПТОРИ В КЛАСІ LCARS ─────────────────────────
-    # Читаємо __dict__ класу щоб побачити всі Substitute записи
+    # ТЕСТ 4: Глибокий системний ланцюжок System -> Module -> Import
+    print("\n[ТЕСТ 4] Глибокий системний ланцюг: LCARS.System.Module.Import...")
+    try:
+        ModuleImportFunc = LCARS.System.Module.Import
+        print(f"  -> Отримано функцію: {ModuleImportFunc}")
+        if callable(ModuleImportFunc):
+            TestMod = ModuleImportFunc("math")
+            print(f"  -> OK: Імпорт через ланцюг спрацював: модуль {TestMod.__name__}, pi={TestMod.pi}")
+        else:
+            Errors.append("LCARS.System.Module.Import не є функцією")
+    except Exception as e:
+        Errors.append(f"Помилка LCARS.System.Module.Import: {e}")
 
-    print(f"\n{B}{C}◢ SECTOR A — LCARS CLASS SUBSTITUTES (клас LCARS){W}")
-    print(f"  {DIM}Всі атрибути LCARS що є Substitute дескрипторами{W}")
-    print(f"  {LINE}")
+    # ТЕСТ 5: Перевірка проміжної ланки (не листок, а буфер)
+    print("\n[ТЕСТ 5] Перевірка проміжної ланки (Namespace)...")
+    try:
+        VisualNode = LCARS.Visual
+        Buffer = getattr(VisualNode, "PatternBuffer", None)
+        print(f"  -> Вузол LCARS.Visual: {VisualNode}, PatternBuffer='{Buffer}'")
+        if Buffer == "Base.Visual":
+            print("  -> OK: Буфер побудовано коректно: Base.Visual")
+        else:
+            Errors.append(f"Невірний буфер для Visual: {Buffer}")
+    except Exception as e:
+        Errors.append(f"Помилка буфера Visual: {e}")
 
-    SubKeys   = {}   # name → key
-    for AttrName, AttrVal in sorted(LCARS.__dict__.items()):
-        if isinstance(AttrVal, Link):
-            ResolvedKey = AttrVal.Key or f"LCARS.{AttrName}"
-            SubKeys[AttrName] = ResolvedKey
-
-    TotalSub = 0
-    PassedSub = 0
-    for AttrName, RegKey in sorted(SubKeys.items()):
-        Val = registry.Resolve(RegKey)
-        Ok  = Val is not None
-        Ind = f"{G}●{W}" if Ok else f"{R}○{W}"
-        TotalSub  += 1
-        PassedSub += int(Ok)
-        print(f"  {Ind}  {('LCARS.' + AttrName):<36} {DIM}→ {RegKey:<36}{W} {TypeName(Val)}")
-
-    print(f"\n  Substitute descriptors:  {G if PassedSub == TotalSub else Y}{PassedSub}/{TotalSub}{W}")
-
-    # ── 2. ПРЯМІ ПРИЗНАЧЕННЯ В LCARS (не Substitute — реальні класи) ────
-    # Це ті що зроблені через LCARS.Chassis = Chassis тощо
-
-    print(f"\n{B}{C}◢ SECTOR B — LCARS CLASS DIRECT ASSIGNMENTS (не Substitute){W}")
-    print(f"  {DIM}Атрибути LCARS що мають реальне значення (не дескриптор){W}")
-    print(f"  {LINE}")
-
-    Skip = {
-        "Name", "Dependencies", "Platform", "Version", "IsWindows",
-        "Cache", "SystemId", "Active", "Parent", "Children",
-    }
-    SkipCallable = {
-        "Get", "Register", "Has", "Path", "PathLib", "WorkDir",
-        "HomeDir", "GetCached", "ListRegistered", "DebugInfo",
-        "AddChild", "RemoveChild", "Shutdown",
-    }
-    TotalDir = 0
-    PassedDir = 0
-    for AttrName in sorted(LCARS.__dict__.keys()):
-        if AttrName.startswith("_"):
-            continue
-        if AttrName in Skip or AttrName in SkipCallable:
-            continue
-        AttrVal = LCARS.__dict__[AttrName]
-        if isinstance(AttrVal, Link):
-            continue
-        if callable(AttrVal) and not isinstance(AttrVal, type):
-            continue
-        Ok  = AttrVal is not None
-        Ind = f"{G}●{W}" if Ok else f"{R}○{W}"
-        TotalDir  += 1
-        PassedDir += int(Ok)
-        TName = TypeName(AttrVal)
-        print(f"  {Ind}  {('LCARS.' + AttrName):<36} {DIM}(direct){W}          {TName}")
-
-    print(f"\n  Direct class attrs:  {G if PassedDir == TotalDir else Y}{PassedDir}/{TotalDir}{W}")
-
-    # ── ПІДСУМОК ─────────────────────────────────────────────────────────
-    TotalAll  = TotalSub + TotalDir
-    PassedAll = PassedSub + PassedDir
-    PctAll    = int(PassedAll / TotalAll * 100) if TotalAll else 0
-    ColAll    = G if PctAll == 100 else (Y if PctAll >= 80 else R)
-
-    print(f"\n{B}{'=' * 72}{W}")
-    print(f"{B}◤ SCAN COMPLETE ◢{W}")
-    print(f"{B}{'=' * 72}{W}")
-    print(f"  {ColAll}Total resolved:  {PassedAll} / {TotalAll}  ({PctAll}%){W}")
-    print(f"  A) Substitute descriptors : {PassedSub}/{TotalSub}")
-    print(f"  B) Direct assignments     : {PassedDir}/{TotalDir}")
-    print(f"{B}{'=' * 72}{W}\n")
+    # ПІДСУМОК
+    print("\n" + "=" * 60)
+    if not Errors:
+        print("  РЕЗУЛЬТАТ: УСІ ТЕСТИ ПРОЙДЕНО! Ланцюжки будуються і читаються!")
+    else:
+        print(f"  РЕЗУЛЬТАТ: ВИЯВЛЕНО ПОМИЛОК: {len(Errors)}")
+        for err in Errors:
+            print(f"    [X] {err}")
+    print("=" * 60)
 
 if __name__ == "__main__":
-    RunTypeReadTest()
+    RunChainDiagnostics()

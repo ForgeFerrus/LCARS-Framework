@@ -1,26 +1,34 @@
 # LCARS FRAMEWORK CATALOG
 # Каталог підтримуваних технологій та платформ.
 # СТАНДАРТ: Titanium (Zero-Except, No Underscores, Strict PascalCase, Pure LCARS Classes).
-
-from __future__ import annotations
 from lcars.base.type import LCARS
 from lcars.base.info import Version
 
 # Категорії системи
-class LCARSCategory(LCARS):
-    def __init__(self, Name: str, Registry: str, Description: str, Members: tuple = ()):
-        super().__init__()
+class LCARSCategory(SystemComponent):
+    Registry = ""
+    Description = ""
+    Members = ()
+
+    def Initialize(self, Name: str = "", Registry: str = "", Description: str = "", Members: tuple = (), **kwargs):
+        super().Initialize(SystemId=Name, Id=Name, **kwargs)
         self.Name = str(Name)
         self.Registry = str(Registry)
         self.Description = str(Description)
         self.Members = tuple(Members)
 
-Category = LCARSCategory
+    def Descriptor(self) -> dict:
+        return {
+            "name": self.Name,
+            "registry": self.Registry,
+            "description": self.Description,
+            "members": len(self.Members),
+        }
 
+Category = LCARSCategory
 # Перелік підтримуваних систем
 class LCARSCatalog(LCARS):
     Version = Version.Release
-
     Core = Category(
         Name="Core",
         Registry="Bridge.Core",
@@ -185,11 +193,7 @@ class LCARSCatalog(LCARS):
     )
 
     @classmethod
-    def Categories(cls) -> dict:
-        return {
-            Value.Name: Value
-            for Value in cls.__dict__.values()
-            if isinstance(Value, Category)
-        }
+    def AllCategories(cls) -> list:
+        return [val for val in vars(cls).values() if isinstance(val, LCARSCategory)]
 
 Catalog = LCARSCatalog

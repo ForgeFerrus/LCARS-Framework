@@ -6,30 +6,70 @@
 from .register import registry
 from .info import Version, Passport
 # =====================================================================
-# Простір імен LCARS (будівник ланцюжків та маршрутизація через Реєстр)
+# ПРОСТІР ІМЕН LCARS (ЛАНЦЮГОВИЙ МАРШРУТИЗАТОР ТА ОПТИЧНИЙ ПРОВІДНИК)
+# =====================================================================
 class Namespace(type):
     PatternBuffer: str = ""
+    Entity: object = None
 
-    # Прямий резолвінг вузла або ланцюжка
+    # Прямий резолвінг вузла за повним шляхом
     def Pattern(cls, Path: str):
-        return registry.Retrieve(Path)
+        return LCARS.Retrieve(Path)
 
-    # LCARS Буфер для побудови ланцюжка
+    # Побудова ланцюжка та прохід углиб через крапку
     def ResolvePattern(cls, AttributeName: str):
-        if AttributeName.startswith("_"):
-            raise AttributeError(AttributeName)
+        if AttributeName.startswith("mro") or AttributeName.startswith("class") or AttributeName.startswith("_"):
+            return None
 
-        Dict = cls.__dict__
-        ParentPath = Dict["PatternBuffer"] if "PatternBuffer" in Dict else cls.__name__
-        FullPath = f"{ParentPath}.{AttributeName}"
+        ParentPath = getattr(cls, "PatternBuffer", "")
+        
+        # Канонічні кореневі точки входу в реєстр
+        RootMap = {
+            "Visual": "Base.Visual",
+            "Geometry": "Base.Geometry",
+            "Core": "Base.Core",
+            "Interface": "Base.Interface",
+            "Graphics": "Base.Graphics",
+        }
 
-        # Створення наступної ланки простору імен
-        return Namespace(AttributeName, (), {
-            "PatternBuffer": FullPath,
-        })
+        if not ParentPath:
+            CurrentPath = RootMap.get(AttributeName, AttributeName)
+        else:
+            CurrentPath = f"{ParentPath}.{AttributeName}"
 
-    # Системний аліас Python для підтримки оператора крапки
-    __getattr__ = ResolvePattern
+        # 1. Шукаємо запис у Реєстрі LCARS
+        Resolved = LCARS.Retrieve(CurrentPath)
+
+        # 2. Якщо в Реєстрі немає окремого запису, але поточна сутність має такий атрибут:
+        CurrentEntity = getattr(cls, "Entity", None)
+        if Resolved is None and CurrentEntity is not None and hasattr(CurrentEntity, AttributeName):
+            Resolved = getattr(CurrentEntity, AttributeName)
+
+        # 3. Перевіряємо, чи продовжується ланцюг далі в реєстрі
+        Prefix = f"{CurrentPath}."
+        Branch = any(k.startswith(Prefix) for k in LCARS.Registry.keys())
+
+        # Розгалуження триває далі (простір імен — переносій ланцюга)
+        if Branch:
+            return Namespace(AttributeName, (), {
+                "PatternBuffer": CurrentPath,
+                "Entity": Resolved,
+            })
+
+        # Листова вершина повертається як живий об'єкт напряму (без обгортки):
+        # LCARS.Visual.PainterPath -> сам клас QPainterPath, готовий до виклику
+        if Resolved is not None:
+            return Resolved
+
+        # Канонічний фолбек: останній сегмент ланцюга може бути шляховою
+        # константою кореня LCARS (наприклад RectF -> "Base.Geometry.Rect")
+        CanonicalPath = LCARS.__dict__.get(AttributeName)
+        if isinstance(CanonicalPath, str) and CanonicalPath:
+            return LCARS.Retrieve(CanonicalPath)
+
+        return None
+    # автоматична реєстрація 
+    locals()["__getattr__"] = ResolvePattern
 # =====================================================================
 # LCARS TYPE & ANNOTATION (ЗАМІННИКИ ТИПІВ)
 # =====================================================================
@@ -37,7 +77,6 @@ class Namespace(type):
 class Type(metaclass=Namespace):
     PatternBuffer = "System.Type"
     NoneType = type(None)
-
     Class = type
     Any = object
     Mapping = dict
@@ -50,12 +89,111 @@ class Type(metaclass=Namespace):
     Boolean = bool
     Bytes = bytes
     Callable = callable
-
 Annotation = Type
+# =====================================================================
+# ВУЗЛОВІ ФУНКЦІЇ РЕЄСТРУ LCARS (МОДУЛЬНИЙ РІВЕНЬ)
+# =====================================================================
+# Вузлові функції живуть поза тілом класу: так аналізатори типів не
+# сприймають перший параметр як self, а доступ лишається канонічним —
+# LCARS.Import / LCARS.Retrieve / LCARS.Expand.
+# Замість typing використано замінники LCARS (Type.Any, Type.String).
+# Канонічний замінник прямих імпортів (вузол "System.Module.Import").
+# Ядро — вбудований завантажувач Python: жодної import-інструкції, Zero-Except.
+def Import(ModuleName: str):
+    CleanName = ModuleName.strip() if isinstance(ModuleName, str) else ""
+    if not CleanName:
+        return None
+    # Машинерія перевірки існування (канонічний вузол System.Module.Util)
+    UtilNode = __import__("importlib.util", fromlist=("util",))
+    # Відсутній корінь шляху -> тихо None
+    RootName = CleanName.split(".")[0]
+    if UtilNode.find_spec(RootName) is None:
+        return None
+    # Відсутній модуль -> тихо None
+    if UtilNode.find_spec(CleanName) is None:
+        return None
+    # Кешований завантажувач (канонічний вузол System.Module.Import)
+    ModuleNode = __import__("importlib")
+    return ModuleNode.import_module(CleanName)
+# Базове розгортання кортежу реєстру в живий об'єкт (Expand)
+def Expand(Target: Type.Any):
+    if not isinstance(Target, tuple):
+        return Target
+    ModName = Target[0]
+    AttrName = Target[1] if len(Target) > 1 else None
+    if isinstance(ModName, str):
+        Mod = LCARS.Import(ModName)
+        if Mod is not None and AttrName:
+            return getattr(Mod, AttrName, None)
+        return Mod
+    return Target[0]
+# Системна функція вилучення вузла LCARS
+def Retrieve(Key: str, Default=None):
+    if not isinstance(LCARS.Registry, dict) or not Key:
+        return Default
+    Res = LCARS.Registry.get(Key)
+    if Res is None:
+        LowerKey = Key.lower() if isinstance(Key, str) else ""
+        if LowerKey in LCARS.RegistryKeys:
+            RealKey = LCARS.RegistryKeys[LowerKey]
+            Res = LCARS.Registry.get(RealKey)
+    if Res is None:
+        return Default
+    # Якщо це кортеж із реєстру — розгортаємо в живий об'єкт
+    if isinstance(Res, tuple) and len(Res) == 2 and isinstance(Res[0], str):
+        return LCARS.Expand(Res)
+    return Res
+# Розгортання запису реєстру в живий об'єкт за ключем (Materialize)
+def Materialize(Key: str, Default=None):
+    Entry = LCARS.Retrieve(Key)
+    if Entry is not None:
+        return Entry
+    return Default
+# Системний заповнювач-константа (канонічний маркер LCARS або вузол реєстру)
+def Constant(Name: str, Default=None):
+    if not Name:
+        return Default
+    return LCARS.Retrieve(Name, Name)
+# Реєстрація нового вузла або системної сутності в системі
+def Register(Key: str, Value: Type.Any, Attribute: Type.Any = None):
+    if isinstance(Value, tuple):
+        Entry = (Value[0], Value[1] if len(Value) > 1 else None)
+    else:
+        Entry = (Value, Attribute)
+    LCARS.Registry[Key] = Entry
+    LCARS.RegistryKeys[Key.lower()] = Key
+    return Value
+# Вилучення (дереєстрація) запису за ключем
+def Deregister(Key: str):
+    LCARS.Registry.pop(Key, None)
+    LCARS.RegistryKeys.pop(Key.lower(), None)
+    return LCARS
+# Список зареєстрованих ключів або їхня кількість
+def Catalog(Count: bool = False):
+    if Count:
+        return len(LCARS.Registry)
+    return list(LCARS.Registry.keys())
 # =====================================================================
 # LCARS CLASS - ГОЛОВНИЙ КЛАС ТА ЄДИНА ТОЧКА ВХОДУ LCARS
 # =====================================================================
 class LCARS(metaclass=Namespace):
+    # Паспортні дані та специфікація системи
+    Name = "Library Computer Access/Retrieval System"
+    Title = Version.Title
+    Status = "Operational"
+    Annotation = Annotation
+    # Типи та анотації
+    Typing = Type
+    Passport = Passport
+    Specification = Version.Specification
+    Architecture = Version.Architecture
+    Design = Version.Design
+    Platform = Version.Platform
+    Stardate = Version.Stardate
+    EarthDate = Version.EarthDate
+    Metadata = Version.Metadata
+    Version = Version.Release
+
     # Канонічний ініціалізатор системного вузла LCARS
     def Initialize(self, SystemId=None, Id=None, Parent=None, **kwargs):
         self.SystemId = SystemId or Id or getattr(self, "SystemId", None) or f"Sys{id(self)}"
@@ -64,35 +202,68 @@ class LCARS(metaclass=Namespace):
         self.Config = dict(getattr(self, "Config", {}))
         for Key, Value in kwargs.items():
             setattr(self, Key, Value)
-
     # Канонічний замінник конструктора
-    __init__ = Initialize
-    # Паспортні дані та специфікація системи
-    Name = "Library Computer Access/Retrieval System"
-    Title = Version.Title
-    Status = "Operational"
-    Passport = Passport
-    Specification = Version.Specification
-    Architecture = Version.Architecture
-    Design = Version.Design
-    Platform = Version.Platform
-    Stardate = Version.Stardate
-    EarthDate = Version.EarthDate
-    Metadata = Version.Passport
-    Version = Version.Release
-    Annotation = Annotation
-    # Типи та анотації
-    Typing = Type
-    # Канонічні простори імен — живі Namespace-об'єкти для dot-chain резолюції
-    System   = Namespace("System",   (), {"PatternBuffer": "System"})
-    Bridge   = Namespace("Bridge",   (), {"PatternBuffer": "Bridge"})
-    Core     = Namespace("Core",     (), {"PatternBuffer": "Base.Core"})
-    Visual   = Namespace("Visual",   (), {"PatternBuffer": "Base.Visual"})
-    Interface = Namespace("Interface", (), {"PatternBuffer": "Base.Interface"})
-    Protocol = Namespace("Protocol", (), {"PatternBuffer": "Base.Protocol"})
-    Geometry = Namespace("Geometry", (), {"PatternBuffer": "Base.Geometry"})
-    Storage  = Namespace("Storage",  (), {"PatternBuffer": "Bridge.Storage"})
-    Runtime  = Namespace("Runtime",  (), {"PatternBuffer": "System.Core"})
+    Init = Initialize
+    locals()["__init__"] = Initialize
+    Registry = registry
+    Keys = {k.lower(): k for k in registry.keys()} if isinstance(registry, dict) else {}
+    # Канонічний синонім індексу (його читають Retrieve / Register)
+    RegistryKeys = Keys
+    # Службовий метод первинної індексації реєстру (викликається автоматично)
+    def MountRegistry(self, cls):
+        if isinstance(cls.Registry, dict) and not cls.Keys:
+            Index = {k.lower(): k for k in cls.Registry.keys()}
+            cls.Keys = Index
+            cls.RegistryKeys = Index
+        return cls.Registry
+    # -----------------------------------------------------------------
+    # СИСТЕМНІ ІНСТРУМЕНТИ КЕРУВАННЯ РЕЄСТРОМ
+    # Реалізація вузлових функцій — на рівні модуля (блок вище класу),
+    # канонічна прив'язка до кореня — одразу після оголошення класу.
+    # -----------------------------------------------------------------
+    # Системний ідентифікатор вузла
+    def Identifier(self) -> str:
+        return str(getattr(self, "Id", id(self)))
+    # Повний дескриптор сутності
+    def Descriptor(self) -> dict:
+        return {
+            "id": getattr(self, "Id", None),
+            "system": getattr(self, "SystemId", None),
+            "status": getattr(self, "Status", "Operational"),
+        }
+        
+    # === СИСТЕМНІ ЗМАГАЛЬНІ ТА ДАНДЕР-ЗАМІННИКИ (BUILTINS & OPERATORS) ===
+    # Шляхові канонії зібрано у вкладені контейнери, щоб не перекривати
+    # справжні атрибути класу (Init, Name, Import, Directory тощо).
+    StaticMethod = "System.Method.Static"
+    ClassMethod = "System.Method.Class"
+    MethodProperty = "System.Method.Property"
+
+    class Protocol:
+        Init = "System.Protocol.Init"
+        All = "System.Protocol.All"
+        Dictionary = "System.Protocol.Dictionary"
+        Directory = "System.Protocol.Directory"
+        Name = "System.Protocol.Name"
+        Doc = "System.Protocol.Doc"
+        File = "System.Protocol.File"
+        Annotations = "System.Protocol.Annotations"
+        Call = "System.Protocol.Call"
+        Enter = "System.Protocol.Enter"
+        Exit = "System.Protocol.Exit"
+        GetAttr = "System.Protocol.GetAttr"
+        SetAttr = "System.Protocol.SetAttr"
+        DelAttr = "System.Protocol.DelAttr"
+
+    class Operator:
+        Equal = "System.Operator.Equal"
+        NotEqual = "System.Operator.NotEqual"
+        LessThan = "System.Operator.LessThan"
+        GreaterThan = "System.Operator.GreaterThan"
+        Contains = "System.Operator.Contains"
+        GetItem = "System.Operator.GetItem"
+        SetItem = "System.Operator.SetItem"
+        DelItem = "System.Operator.DelItem"
 
     # === СИСТЕМНІ КОРЕНІ (ОПЕРАЦІЙНА СИСТЕМА) ===
     ABC = "System.ABC"
@@ -112,9 +283,9 @@ class LCARS(metaclass=Namespace):
     Field = "System.DataClass.Field"
     Threading = "System.Threading"
     DateTime = "System.DateTime"
+    Attribute = "System.Attribute"
     Module = "System.Module"
     Util = "System.Module.Util"
-    Import = "System.Module.Import"
     Loader = "System.Module.Loader"
     Deepcopy = "System.Copy.Deep"
     Directory = "System.Directory"
@@ -128,7 +299,6 @@ class LCARS(metaclass=Namespace):
     Collection = "System.Collection"
     Iterator = "System.Iterator"
     Function = "System.Function"
-    Operator = "System.Operator"
     Traceback = "System.Traceback"
     Temporary = "System.Temporary"
     Uuid = "System.Identifier.UUID"
@@ -174,33 +344,67 @@ class LCARS(metaclass=Namespace):
     
     # === LOCALE ===
     Locale = "Base.Core.Locale"
-    
+    # === DATA STRUCTURES ===
+    ByteArray = "Base.Core.Data.ByteArray"
+    MimeData = "Base.Core.Data.Mime"
     # === EVENTS / TIME ===
     Event = "Base.Core.Event"
     Date = "Base.Core.Time.Date"
     DateTime = "Base.Core.Time.DateTime"
     Time = "Base.Core.Time.Clock"
     
-    # === GEOMETRY - Базові фігури ===
-    Size = "Base.Geometry.Size.Int"
-    SizeInt = "Base.Geometry.Size.Int"
-    SizeF = "Base.Geometry.Size"
-    Rect = "Base.Geometry.Rect.Int"
-    RectInt = "Base.Geometry.Rect.Int"
-    RectF = "Base.Geometry.Rect"
-    PointF = "Base.Geometry.Point"
-    Line = "Base.Geometry.Line"
-    Margins = "Base.Geometry.Margins"
-    
-    # === DATA STRUCTURES ===
-    ByteArray = "Base.Core.Data.ByteArray"
-    MimeData = "Base.Core.Data.Mime"
-    
+    # === GEOMETRY - Базові фігури (Вікна: Int, Векторне малювання: Float) ===
+    Point = "Base.Geometry.Point.Int"      # QPoint
+    PointF = "Base.Geometry.Point"         # QPointF
+    Size = "Base.Geometry.Size.Int"        # QSize
+    SizeF = "Base.Geometry.Size"           # QSizeF
+    Rect = "Base.Geometry.Rect.Int"        # QRect
+    RectF = "Base.Geometry.Rect"           # QRectF
+    Line = "Base.Geometry.Line.Int"        # QLine
+    LineF = "Base.Geometry.Line"           # QLineF
+    Margins = "Base.Geometry.Margins.Int"  # QMargins
+    MarginsF = "Base.Geometry.Margins"     # QMarginsF
+    Easing = "Base.Geometry.Easing"        # QEasingCurve
+    # === VISUAL - Векторна оптика та рендеринг ===
+    Painter = "Base.Visual.Painter"        # QPainter
+    PainterPath = "Base.Visual.PainterPath"# QPainterPath (головний контур!)
+    Pen = "Base.Visual.Pen"                # QPen
+    Brush = "Base.Visual.Brush"            # QBrush
+    Color = "Base.Visual.Color"            # QColor
+    Palette = "Base.Visual.Palette"        # QPalette
+    Font = "Base.Visual.Font"              # QFont
+    FontDatabase = "Base.Visual.FontDatabase"
+    Pixmap = "Base.Visual.Pixmap"          # QPixmap
+    Image = "Base.Visual.Image"            # QImage
+    Bitmap = "Base.Visual.Bitmap"          # QBitmap
+    Icon = "Base.Visual.Icon"              # QIcon
+    Polygon = "Base.Visual.Polygon"        # QPolygon
+    PolygonF = "Base.Visual.PolygonF"      # QPolygonF
+    Gradient = "Base.Visual.Gradient.Linear" # QLinearGradient
+    Transform = "Base.Visual.Transform"    # QTransform
+    Region = "Base.Visual.Region"          # QRegion
+    # === GRAPHICS SCENE & TACTICAL GRID ===
+    Scene = "Base.Graphics.Scene"          # QGraphicsScene
+    View = "Base.Graphics.View"            # QGraphicsView
+    Item = "Base.Graphics.Item"            # QGraphicsItem
+    # === TACTICAL ITEMS (Тактичні сутності зорельота) ===
+    Course = "Base.Graphics.Line"          # Курс на карті
+    Perimeter = "Base.Graphics.Rect"       # Зона / периметр
+    Orbit = "Base.Graphics.Ellipse"        # Орбіта
+    Trajectory = "Base.Graphics.Path"      # Траєкторія польоту
+    Territory = "Base.Graphics.Polygon"    # Сектор / територія
+    Designation = "Base.Graphics.Text"     # Бортовий напис
+    Telemetry = "Base.Graphics.SimpleText" # Текстовий індикатор
+    Sprite = "Base.Graphics.Image"         # Спрайт об'єкта
+    # === PHOTONIC & SUBSPACE EFFECTS ===
+    Cloak = "Base.Graphics.Effect.Opacity"         # Маскування / прозорість
+    Glow = "Base.Graphics.Effect.DropShadow"       # Фотонне світіння
+    Distortion = "Base.Graphics.Effect.Blur"       # Сенсорне розмиття
+    Spectrum = "Base.Graphics.Effect.Colorize"     # Спектральний зсув
+
     # === LCARS SURFACE & DISPLAY TOPOLOGY ===
-    Display = "Base.Interface.Viewport"
-    Screen = "Base.Interface.Viewport"
     Viewport = "Base.Interface.Viewport"
-    Widget = "Base.Interface.Widget"
+    Display = "Base.Interface.Widget"
     Buffer = "Base.Interface.Scroll"
     Tab = "Base.Interface.Tab"
     Stacked = "Base.Interface.Stack"
@@ -254,9 +458,7 @@ class LCARS(metaclass=Namespace):
     
     # === LISTS / TABLES ===
     List = "Base.Interface.List"
-    ListWidget = "Base.Interface.List"
-    Manifest = "Base.Interface.List"
-    Record = "Base.Interface.Item.List"
+    Inventory = "Base.Interface.Item.List"
     Hierarchy = "Base.Interface.Tree"
     Table = "Base.Interface.Table"
     Combo = "Base.Interface.Combo"
@@ -272,37 +474,7 @@ class LCARS(metaclass=Namespace):
     Form = "Base.Interface.Layout.Form"
     FormLayout = "Base.Interface.Layout.Form"
     StackLayout = "Base.Interface.Layout.Stacked"
-    Gap = "Base.Interface.Layout.Spacer"
-    
-    # === VISUAL - Графіка та рендеринг ===
-    Painter = "Base.Visual.Painter"
-    PainterPath = "Base.Visual.PainterPath"
-    Pen = "Base.Visual.Pen"
-    Brush = "Base.Visual.Brush"
-    Color = "Base.Visual.Color"
-    Palette = "Base.Visual.Palette"
-    Font = "Base.Visual.Font"
-    FontDatabase = "Base.Visual.FontDatabase"
-    Pixmap = "Base.Visual.Pixmap"
-    Image = "Base.Visual.Image"
-    Bitmap = "Base.Visual.Bitmap"
-    Icon = "Base.Visual.Icon"
-    Polygon = "Base.Visual.Polygon"
-    Gradient = "Base.Visual.Gradient.Linear"
-    Transform = "Base.Visual.Transform"
-    Region = "Base.Visual.Region"
-    
-    # === GRAPHICS VIEW ===
-    View = "Base.Graphics.View"
-    Scene = "Base.Graphics.Scene"
-    Item = "Base.Graphics.Item"
-    Line = "Base.Graphics.Line"
-    Rect = "Base.Graphics.Rect"
-    Ellipse = "Base.Graphics.Ellipse"
-    Polygon = "Base.Graphics.Polygon"
-    Text = "Base.Graphics.Text"
-    GraphicObject = "Base.Graphics.Object"
-    GraphicsImage = "Base.Graphics.Image"
+    Spacer = "Base.Interface.Layout.Spacer"
     
     # === ANIMATION ===
     Animation = "Base.Animation"
@@ -366,49 +538,44 @@ class LCARS(metaclass=Namespace):
     XML = "Bridge.Storage.Xml"
     INI = "Bridge.Storage.Ini"
     MIME = "Bridge.Storage.Mime"
-
-    # === МЕТОДИ ДОСТУПУ ТА РЕЗОЛВІНГУ (LCARS RETRIEVAL) ===
-    # Прямий резолвінг ключа з реєстру LCARS
-    @classmethod
-    def Resolve(cls, Path: str):
-        return registry.Retrieve(Path)
-    Retrieve = Resolve
-
-    # Каталог або кількість зареєстрованих компонентів
-    @classmethod
-    def Library(cls, Count: bool = False):
-        return registry.Library(Count=Count)
-    Catalog = Library
-
-    # Реєстрація компонента в системному реєстрі LCARS
-    @staticmethod
-    def Register(Key, Value, Attribute=None):
-        if isinstance(Value, tuple):
-            registry.Register(Key, Value[0], Value[1] if len(Value) > 1 else None)
-        else:
-            registry.Register(Key, Value, Attribute)
-        return Value
-    
-    # Системний ідентифікатор вузла
-    def Identifier(self) -> str:
-        return str(self.Id)
-
-    # Повний дескриптор сутності
-    def Descriptor(self) -> dict:
-        return {
-            "id": self.Id,
-            "system": self.SystemId,
-            "status": getattr(self, "Status", "Operational"),
-        }
+# =====================================================================
+# КАНОНІЧНА ПРИВ'ЯЗКА ВУЗЛОВИХ ФУНКЦІЙ РЕСТРУ ДО КОРЕНЯ LCARS
+# =====================================================================
+# Прив'язка виконується після оголошення класу: тіло класу лишається чистим,
+# а доступ до вузлів — канонічний: LCARS.Import / LCARS.Retrieve / LCARS.Expand.
+LCARS.Import = Import
+LCARS.Expand = Expand
+LCARS.Retrieve = Retrieve
+LCARS.Materialize = Materialize
+LCARS.Register = Register
+LCARS.Deregister = Deregister
+LCARS.Catalog = Catalog
+LCARS.Library = Catalog
+LCARS.Constant = Constant
+# Обгортка в канонічний замінник static-вузла з реєстру (System.Method.Static):
+# жодних декораторів у коді — лише системний вузол реєстру.
+StaticNode = LCARS.Materialize(LCARS.StaticMethod)
+if StaticNode is not None:
+    LCARS.Import = StaticNode(Import)
+    LCARS.Expand = StaticNode(Expand)
+    LCARS.Retrieve = StaticNode(Retrieve)
+    LCARS.Materialize = StaticNode(Materialize)
+    LCARS.Register = StaticNode(Register)
+    LCARS.Deregister = StaticNode(Deregister)
+    CatalogNode = StaticNode(Catalog)
+    LCARS.Catalog = CatalogNode
+    LCARS.Library = CatalogNode
+    LCARS.Constant = StaticNode(Constant)
 # =====================================================================
 # COMPONENT CLASS - Базовий клас для компонентів
 class SystemComponent(LCARS):
+    TypeName = "LCARSComponent"
     Enabled = True
     Visible = True
     Active = True
     Status = "Stopped"
     Parent = None
-    Module = None
+    Subsystem = None
     Config = {}
 
     def AssignModule(self, Module):
@@ -459,255 +626,96 @@ class Matrix(SystemComponent):
     Domains = {}
     Links = {}
     Layers = {}
-    State = {}
-    Metadata = {}
-
-
-    # === MATRIX CONTRACT ===
-    def AddNode(self, Name, Node):
-        self.Nodes[Name] = Node
-        return Node
-
-    def ReadNode(self, Name):
-        return self.Nodes.get(Name)
-
-    def AddDomain(self, Name, Domain=None):
-        self.Domains[Name] = Domain
-        return Domain
-
-    def LinkNodes(self, Source, Target):
-        pass
-        
-    def UnlinkNodes(self, Source, Target):
-        pass
-
+    # === MATRIX ABSTRACT CONTRACT ===
+    def AddNode(self, Name, Node): pass
+    def ReadNode(self, Name): pass
+    def RemoveNode(self, Name): pass
+    def AddDomain(self, Name, Domain=None): pass
+    def RemoveDomain(self, Name): pass
+    def AddLayer(self, Name, Layer=None): pass
+    def ReadLayer(self, Name): pass
+    def RemoveLayer(self, Name): pass
+    def LinkNodes(self, Source, Target): pass
+    def UnlinkNodes(self, Source, Target): pass
 # =====================================================================
-# Базовий тип процесу.
-# Описує системний процес незалежно від його реалізації.
-class Process(LCARS):
-    Name = ""
+# ABSTRACT PROCESS TYPE
+# Базовий тип процесу. Описує системний процес незалежно від його реалізації.
+class Process(SystemComponent):
+    TypeName = "LCARSProcess"
     Command = ""
-    State = "Created"
-    Metadata = {}
-
-    def Initialize(self, Id=None, **kwargs):
-        super().Initialize(SystemId=Id, Id=Id, **kwargs)
-        self.Metadata = dict(self.Metadata)
-
-    # Валідує процес, завжди повертає True
-    def Validate(self):
-        return True
-
-    # Скидає стан процесу до "Created"
-    def Reset(self):
-        self.State = "Created"
-
-    # Серіалізує процес у словник
-    def ToDict(self):
-        return {
-            "id": self.Id,
-            "name": self.Name,
-            "command": self.Command,
-            "state": self.State,
-            "metadata": self.Metadata.copy()
-        }
-
-    # Десеріалізує процес з словника
-    @classmethod
-    def FromDict(cls, Data):
-        Obj = cls(Data.get("id"))
-
-        Obj.Name = Data.get("name", "")
-        Obj.Command = Data.get("command", "")
-        Obj.State = Data.get("state", "Created")
-        Obj.Metadata = Data.get("metadata", {}).copy()
-
-        return Obj
-
-    # Системний ідентифікатор процесу
-    def Identifier(self) -> str:
-        return str(self.Id)
-
-    # Повний дескриптор процесу
-    def Descriptor(self) -> dict:
-        return self.ToDict()
-# =====================================================================
-class AlignMeta(type):
-    def __getattr__(cls, Name: str):
-        return getattr(LCARS, "AlignCenter", 0x0004) if "Center" in Name else (getattr(LCARS, "AlignRight", 0x0002) if "Right" in Name else getattr(LCARS, "AlignLeft", 0x0001))
-
-class Align(metaclass=AlignMeta):
-    AlignCenter = 0x0004
-    AlignLeft = 0x0001
-    AlignRight = 0x0002
-    AlignTop = 0x0020
-    AlignBottom = 0x0040
-    AlignVCenter = 0x0080
-    AlignHCenter = 0x0004
+    Inputs: dict         # Вхідні дані
+    Outputs: dict        # Вихідні дані
+    Stages: dict         # Іменовані етапи процесу
+    Transitions: dict    # Переходи та умови між етапами
+    # === PROCESS ABSTRACT CONTRACT ===
+    def Validate(self): pass
+    def Execute(self, Command=None): pass
+    def Reset(self): pass
 
 # Базовий тип директиви.
 # Описує системну директиву незалежно від її реалізації.
 class Directive(LCARS):
-    Align = Align
-    Name = ""
+    TypeName = "LCARSDirective"
     Category = None
     Source = None
     Target = None
     Priority = 0
-    State = "Created"
-    Metadata = {}
-
-    @staticmethod
-    def PathDrive(*Parts):
-        return LCARS.System.Path(*Parts)
-
-    def Initialize(self, Id=None, **kwargs):
-        super().Initialize(SystemId=Id, Id=Id, **kwargs)
-        self.Metadata = dict(self.Metadata)
-
-    # Валідує директиву за даними, завжди повертає True
-    def Validate(self, Data=None):
-        return True
-
-    # Виконує директиву за даними
-    def Execute(self, Data=None):
-        self.State = "Executed"
-        return True
-
-    # Скасовує виконання директиви
-    def Cancel(self):
-        self.State = "Cancelled"
-
-    # Скидає стан директиви до "Created"
-    def Reset(self):
-        self.State = "Created"
-
-    # Серіалізує директиву у словник
-    def ToDict(self):
-        return {
-            "id": self.Id,
-            "name": self.Name,
-            "category": self.Category,
-            "source": self.Source,
-            "target": self.Target,
-            "priority": self.Priority,
-            "state": self.State,
-            "metadata": self.Metadata.copy()
-        }
-
-    # Десеріалізує директиву з словника
-    @classmethod
-    def FromDict(cls, Data):
-        Obj = cls(Data.get("id"))
-
-        Obj.Name = Data.get("name", "")
-        Obj.Category = Data.get("category")
-        Obj.Source = Data.get("source")
-        Obj.Target = Data.get("target")
-        Obj.Priority = Data.get("priority", 0)
-        Obj.State = Data.get("state", "Created")
-        Obj.Metadata = Data.get("metadata", {}).copy()
-
-        return Obj
-
-    # Системний ідентифікатор директиви
-    def Identifier(self) -> str:
-        return str(self.Id)
-
-    # Повний дескриптор директиви
-    def Descriptor(self) -> dict:
-        return self.ToDict()
+    # === DIRECTIVE ABSTRACT CONTRACT ===
+    def Validate(self, Data=None): pass
+    def Execute(self, Data=None): pass
+    def Cancel(self): pass
+    def Reset(self): pass
 
 # Базовий тип протоколу.
 # Описує формат, правила та стан протоколу.
 class Protocol(LCARS):
-    Name = "Base.Protocol"
-    Version = ""
-    Category = None
-    Encoding = None
-    Format = None
-    State = "Inactive"
-    Metadata = {}
+    TypeName = "LCARSProtocol"
+    Encoding = "UTF-8"
+    Format = "Raw"
+    Participants: dict    # Учасники взаємодії та їхні ролі
+    Scope: dict           # Область застосування протоколу
+    Rules: dict           # Правила взаємодії
+    Operations: dict      # Допустимі операції
+    Messages: dict        # Формати повідомлень і даних
+    Phases: dict          # Фази взаємодії
+    Transitions: dict     # Допустимі переходи між фазами
+    Conditions: dict      # Умови застосування та завершення
+    Constraints: dict     # Обмеження взаємодії
+    Exceptions: dict      # Виняткові ситуації та правила реагування
+    # === PROTOCOL ABSTRACT CONTRACT ===
+    def Validate(self, Data=None): pass
+    def Encode(self, Data): pass
+    def Decode(self, Data): pass
+    def Serialize(self, Data): pass
+    def Deserialize(self, Data): pass
+    def Reset(self): pass
 
-    def Initialize(self, Id=None, **kwargs):
-        super().Initialize(SystemId=Id, Id=Id, **kwargs)
-        self.Metadata = dict(self.Metadata)
-
-
-    # Валідує протокол за даними, завжди повертає True
-    def Validate(self, Data=None):
-        return True
-
-    # Кодує дані відповідно до протоколу
-    def Encode(self, Data):
-        return Data
-
-    # Декодує дані з протоколу
-    def Decode(self, Data):
-        return Data
-
-    # Серіалізує дані протоколу
-    def Serialize(self, Data):
-        return Data
-
-    # Десеріалізує дані протоколу
-    def Deserialize(self, Data):
-        return Data
-
-    # Скидає стан протоколу до "Inactive"
-    def Reset(self):
-        self.State = "Inactive"
-
-    # Серіалізує протокол у словник
-    def ToDict(self):
-        return {
-            "id": self.Id,
-            "name": self.Name,
-            "version": self.Version,
-            "category": self.Category,
-            "encoding": self.Encoding,
-            "format": self.Format,
-            "state": self.State,
-            "metadata": self.Metadata.copy()
-        }
-
-    # Десеріалізує протокол з словника
-    @classmethod
-    def FromDict(cls, Data):
-
-        Obj = cls(Data.get("id"))
-        Obj.Name = Data.get("name", "")
-        Obj.Version = Data.get("version", "")
-        Obj.Category = Data.get("category")
-        Obj.Encoding = Data.get("encoding")
-        Obj.Format = Data.get("format")
-        Obj.State = Data.get("state", "Inactive")
-        Obj.Metadata = Data.get("metadata", {}).copy()
-        return Obj
-
-    # Системний ідентифікатор протоколу
-    def Identifier(self) -> str:
-        return str(self.Id)
-
-    # Повний дескриптор протоколу
-    def Descriptor(self) -> dict:
-        return self.ToDict()
-
-        
 # =====================================================================
-# ЕКСПОРТОВАНІ ТИПИ БАЗОВОГО ШАРУ (DNA)
+# ABSTRACT SESSION TYPE
 # =====================================================================
-__all__ = [
+class Session(SystemComponent):
+    TypeName = "LCARSSession"
+    Token = ""
+    Active = True
+    User = None
+    Participants: dict    # Учасники та їхні ролі
+    Protocols: dict       # Застосовані протоколи
+    Scope: dict           # Межі взаємодії
+    Lifecycle: dict       # Умови відкриття, підтримання та завершення
+# =====================================================================
+# ЕКСПОРТОВАНИЙ МАНІФЕСТ ТИПІВ LCARS (DNA)
+# =====================================================================
+LCARS.Types = (
     "LCARS",
     "SystemComponent",
     "Matrix",
     "Directive",
     "Protocol",
     "Process",
-    "Align",
+    "Program",
+    "Session",
     "Type",
     "Annotation",
-]
-
-
-
+)
+# Аліас експорту модуля для Python імпортів (from lcars.base.type import *)
+All = list(LCARS.Types)
