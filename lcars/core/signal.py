@@ -7,11 +7,13 @@ from lcars.base.type import Directive, SystemComponent, LCARS
 
 # Квантово-оптичний потік передачі даних LCARS (Двосторонній імпульс / Пакет)
 class Transmission(Directive):
-    Channel: Optional[str] = None
-    TypeArgs: tuple = ()
-    Protocols = "Optical"
+    TypeName = "LCARSTransmission"
+    Type = "Transmission"
     State = "Idle"
     Source = "System"
+    Channel: Optional[str] = None
+    TypeArgs: tuple = ()
+    Protocols = None
     Target = None
     Route: list = []
     Data: Any = None
@@ -20,8 +22,18 @@ class Transmission(Directive):
     Priority = 0
     Timestamp = 0.0
 
-    # Позначити виконання як завершене
-    def Complete(self):
+    # Доставка сигналу до вузла-приймача
+    def Deliver(self, Receiver: Callable) -> Any:
+        self.State = "Delivered"
+        Result = Receiver(self)
+        if Result is not None:
+            self.Response = Result
+        return Result
+
+    # Позначення виконання успішно завершеним
+    def Complete(self, ResponseData: Any = None) -> "Transmission":
+        if ResponseData is not None:
+            self.Response = ResponseData
         self.State = "Completed"
         return self
 
@@ -29,11 +41,13 @@ class Transmission(Directive):
     def Cancelled(self) -> "Transmission":
         self.State = "Cancelled"
         return self
+
     # Фіксація збою під час передачі в кондуїті   
     def Fail(self, Reason: Any = None) -> "Transmission":
         self.Response = Reason
         self.State = "Failed"
         return self
+        
     # Випустити результат у цей сигнал. Встановлює дані та завершений стан.
     def Transmit(self, *Args, Channel: Optional[str] = None, **Flags) -> Any:
         Path = Channel or Flags.pop("Channel", None) or self.Channel or f"Transmission.{id(self)}"
