@@ -322,186 +322,108 @@ class Element(Component):
             return self.BuildBracket()
         return self.BuildPanel()
 # =============================================================================
-# LCARSHEADER — ВЕРХНЯ НЕСУЧА АРКА ПАНЕЛІ (КАНОНІЧНА ШАПКА)
+# HEADER — ВЕРХНЯ КОМПОЗИЦІЯ / ШАПКА ПАНЕЛІ ТЕРМІНАЛА
+# Підтримує всі варіації несучих арок Окуди
 # =============================================================================
-class LCARSHeader(Element):
-    TypeName = "LCARSHeader"
+class Header(Element):
+    TypeName = "Header"
+    Type = "Header"
 
-    def Build(self, Title="LCARS SYSTEM", Number="01-SYS", Width=800, Height=60):
+    # --- ВАРІАЦІЇ ФОРМИ ШАПКИ ---
+    ElbowLeft = 1       # Класична: лікоть зліва, напис, шина, кінцевик справа
+    ElbowRight = 2      # Дзеркальна: кінцевик зліва, шина, напис, лікоть справа
+    DoubleElbow = 3     # Подвійна арка: лікті з обох боків
+    PillCap = 4         # Без ліктя: пряма шина із закругленими краями
+
+    # Варіації розміщення
+    ElbowLeft = 1
+    ElbowRight = 2
+    DoubleElbow = 3
+    PillCap = 4
+    # Композиці
+    def Compose(self, *Objects, Form=ElbowLeft):
+        self.Clear()
+        
+        # 1. Якщо передали готові об'єкти списком — компонуємо їх по порядку
+        if Objects:
+            for Obj in Objects:
+                # Якщо це балка (Bar) — даємо їй розтягнення Stretch=1
+                if getattr(Obj, "Type", "") == "Bar" or "Bar" in type(Obj).__name__:
+                    self.Add(Obj, 1)
+                else:
+                    self.Add(Obj)
+            return self
+        return self
+# =============================================================================
+# FOOTER — НИЖНЯ КОМПОЗИЦІЯ / ПІДВАЛ ПАНЕЛІ ТЕРМІНАЛА
+# =============================================================================
+class Footer(Element):
+    TypeName = "Footer"
+    Type = "Footer"
+
+    # --- ВАРІАЦІЇ ФОРМИ ПІДВАЛУ ---
+    ElbowBottomLeft = 1
+    ElbowBottomRight = 2
+    DoubleElbow = 3
+    Divider = 4
+
+    Form = ElbowBottomLeft
+    Height = 40
+    Thickness = 16
+    Title = ""
+    Number = "SYS-47"
+
+    def Synthesize(self):
         self.Clear()
         self.Orientation = "horizontal"
-        self.Width = Width
-        self.Height = Height
+        W = float(self.Width or 800)
+        H = float(self.Height or 40)
+        Thick = float(self.Thickness or 16)
 
-        # 1. Кутовий лікоть (Elbow)
-        ElbowNode = LCARSElbow(
-            Corner="top-left",
-            Width=140,
-            Height=Height,
-            Thickness=18,
-            Number=Number
-        )
-        self.Attach("Elbow", ElbowNode)
+        if self.Form == self.ElbowBottomLeft:
+            self.Attach("Elbow", LCARSElbow(
+                Corner=LCARSElbow.BottomLeft,
+                Width=140, Height=H, Thickness=Thick,
+                Number=self.Number
+            ))
+            RailWidth = max(40.0, W - 140.0 - 30.0)
+            self.Attach("Rail", LCARSBar(Width=int(RailWidth), Height=int(Thick)))
+            self.Attach("EndCap", LCARSIndicator(
+                Form=LCARSIndicator.PillHalf, Direction=0, Width=24, Height=int(Thick)
+            ))
 
-        # 2. Напис системи (Label)
-        LabelNode = LCARSLabel(
-            Text=Title,
-            FontSize=16,
-            Height=Height
-        )
-        self.Attach("Title", LabelNode)
+        elif self.Form == self.ElbowBottomRight:
+            self.Attach("EndCap", LCARSIndicator(
+                Form=LCARSIndicator.PillHalf, Direction=180, Width=24, Height=int(Thick)
+            ))
+            RailWidth = max(40.0, W - 140.0 - 30.0)
+            self.Attach("Rail", LCARSBar(Width=int(RailWidth), Height=int(Thick)))
+            self.Attach("Elbow", LCARSElbow(
+                Corner=LCARSElbow.BottomRight,
+                Width=140, Height=H, Thickness=Thick,
+                Number=self.Number
+            ))
 
-        # 3. Горизонтальна рейка (Bar)
-        BarWidth = max(50, Width - 140 - 200 - 30)
-        BarNode = LCARSBar(
-            Width=BarWidth,
-            Height=18
-        )
-        self.Attach("Rail", BarNode)
+        elif self.Form == self.DoubleElbow:
+            self.Attach("ElbowLeft", LCARSElbow(
+                Corner=LCARSElbow.BottomLeft, Width=120, Height=H, Thickness=Thick, Number=self.Number
+            ))
+            RailWidth = max(40.0, W - 240.0)
+            self.Attach("Rail", LCARSBar(Width=int(RailWidth), Height=int(Thick)))
+            self.Attach("ElbowRight", LCARSElbow(
+                Corner=LCARSElbow.BottomRight, Width=120, Height=H, Thickness=Thick
+            ))
 
-        # 4. Кінцевий маркер-заглушка (Indicator)
-        EndCap = LCARSIndicator(
-            Form=LCARSIndicator.PillHalf,
-            Direction=0,
-            Width=24,
-            Height=18
-        )
-        self.Attach("EndCap", EndCap)
-
-        return self
-
-
-
-    def BuildPanel(self):
-        if hasattr(self.Widget, "setStyleSheet"):
-            self.Widget.setStyleSheet("background-color: #000000; border: none;")
-        return self
-
-    def BuildScreen(self):
-        if hasattr(self.Widget, "setStyleSheet"):
-            self.Widget.setStyleSheet("background-color: #000000; border: none;")
-        if "Content" not in self.Items:
-            ContentSeg = Segment(Parent=self.Widget)
-            self.Items["Content"] = ContentSeg
-            RootLayout = getattr(self.Widget, "layout", lambda: None)()
-            if RootLayout is None:
-                RootLayout = LCARS.Vertical(self.Widget)
-                RootLayout.setContentsMargins(0, 0, 0, 0)
-                RootLayout.setSpacing(0)
-                self.Layout = RootLayout
-            Policy = getattr(LCARS, "Policy", None)
-            if Policy and hasattr(ContentSeg.Widget, "setSizePolicy"):
-                ContentSeg.Widget.setSizePolicy(Policy.Expanding, Policy.Expanding)
-            RootLayout.addWidget(ContentSeg.Widget, 1)
-        return self
-
-    def BuildSegment(self):
-        if hasattr(self.Widget, "setStyleSheet"):
-            self.Widget.setStyleSheet("background-color: transparent; border: none;")
-        return self
-
-    def BuildPadd(self):
-        if hasattr(self.Widget, "setStyleSheet"):
-            self.Widget.setStyleSheet(f"background-color: #000000; border: none; color: {Palette.Buttons[0]};")
-        if "Content" not in self.Items:
-            ContentSeg = Segment(Parent=self.Widget)
-            ContentSeg.Vertical(0, 0, 0, 0, 0)
-            self.Items["Content"] = ContentSeg
-            RootLayout = getattr(self.Widget, "layout", lambda: None)()
-            if RootLayout is None:
-                RootLayout = LCARS.Vertical(self.Widget)
-                RootLayout.setContentsMargins(0, 0, 0, 0)
-                RootLayout.setSpacing(0)
-                self.Layout = RootLayout
-            Policy = getattr(LCARS, "Policy", None)
-            if Policy and hasattr(ContentSeg.Widget, "setSizePolicy"):
-                ContentSeg.Widget.setSizePolicy(Policy.Expanding, Policy.Expanding)
-            RootLayout.addWidget(ContentSeg.Widget, 1)
-        return self
-
-    # Канонічний верхній фрейм за кресленням CorelDRAW:
-    # PillHalf(180°) + Заголовок + Код + Шина + PillHalf(0°)
-    def BuildHeader(self):
-        if hasattr(self.Widget, "setStyleSheet"):
-            self.Widget.setStyleSheet("background-color: #000000; border: none;")
-        LayoutRef = self.Horizontal(0, 0, 0, 0, 8)
-        TitleText = self.Title or "USS ENTERPRISE"
-        SubText = getattr(self, "SubTitle", "") or getattr(self, "Code", "") or "NCC 1071-D"
-
-        self.Items["CapLeft"] = LCARSIndicator(
-            IndicatorType=LCARSIndicator.PillHalf,
-            Direction=180,
-            Width=28,
-            Height=34,
-            Color=Palette.Buttons[0],
-            Parent=self.Widget
-        )
-        self.Items["Title"] = LCARSLabel(
-            Text=TitleText,
-            Color=Palette.Buttons[2],
-            FontSize=16,
-            Parent=self.Widget
-        )
-        self.Items["Code"] = LCARSLabel(
-            Text=SubText,
-            Color=Palette.Buttons[1],
-            FontSize=14,
-            Parent=self.Widget
-        )
-        self.Items["Bar"] = LCARSBar(
-            Type="bar",
-            Height=12,
-            Color=Palette.Buttons[1],
-            Parent=self.Widget
-        )
-        self.Items["CapRight"] = LCARSIndicator(
-            IndicatorType=LCARSIndicator.PillHalf,
-            Direction=0,
-            Width=28,
-            Height=34,
-            Color=Palette.Buttons[0],
-            Parent=self.Widget
-        )
-
-        self.Add(LayoutRef, self.Items["CapLeft"])
-        self.Add(LayoutRef, self.Items["Title"])
-        self.Add(LayoutRef, self.Items["Code"])
-        self.Add(LayoutRef, self.Items["Bar"], 1)
-        self.Add(LayoutRef, self.Items["CapRight"])
-        return self
-
-    def BuildFooter(self):
-        if hasattr(self.Widget, "setStyleSheet"):
-            self.Widget.setStyleSheet("background-color: #000000; border: none;")
-        if hasattr(self.Widget, "setFixedHeight"):
-            self.Widget.setFixedHeight(36)
-        LayoutRef = self.Horizontal(0, 0, 0, 0, 8)
-        self.Items["Bar"] = LCARSBar(
-            Type="divider",
-            Height=8,
-            Color=Palette.Buttons[1],
-            Parent=self.Widget
-        )
-        self.Items["Status"] = LCARSIndicator(
-            Text=self.Title or "READY",
-            Form=LCARSIndicator.SoftHalf,
-            Direction=180,
-            Height=28,
-            Color=Palette.Buttons[0],
-            Parent=self.Widget
-        )
-        self.Items["Cap"] = LCARSIndicator(
-            IndicatorType=LCARSIndicator.PillHalf,
-            Direction=0,
-            Width=28,
-            Height=28,
-            Color=Palette.Buttons[0],
-            Parent=self.Widget
-        )
-        self.Add(LayoutRef, self.Items["Bar"], 1)
-        self.Add(LayoutRef, self.Items["Status"])
-        self.Add(LayoutRef, self.Items["Cap"])
-        return self
+        else:  # Divider
+            self.Attach("CapLeft", LCARSIndicator(
+                Form=LCARSIndicator.PillHalf, Direction=180, Width=20, Height=int(Thick)
+            ))
+            RailWidth = max(40.0, W - 40.0)
+            self.Attach("Rail", LCARSBar(Width=int(RailWidth), Height=int(Thick)))
+            self.Attach("CapRight", LCARSIndicator(
+                Form=LCARSIndicator.PillHalf, Direction=0, Width=20, Height=int(Thick)
+            ))
+        return super().Synthesize()
 
     def BuildSidebar(self):
         if hasattr(self.Widget, "setStyleSheet"):
