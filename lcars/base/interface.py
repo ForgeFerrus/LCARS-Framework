@@ -32,22 +32,12 @@ class Surface(Display):
             self.PulseTimer = self.startTimer(1000)
 
     Init = Initialize
-
-    @property
-    def Visual(self):
-        return getattr(self, "Optics", None)
-
-    @Visual.setter
-    def Visual(self, Value):
+    def SetOptics(self, Value):
         self.Optics = Value
+        return self
 
-    @property
-    def Graphic(self):
-        return getattr(self, "Optics", None)
-
-    @Graphic.setter
-    def Graphic(self, Value):
-        self.Optics = Value
+    Visual = None
+    Graphic = None
 
     # Пульсація стану поверхні
     def Pulse(self):
@@ -55,50 +45,51 @@ class Surface(Display):
             return
         if not getattr(self.Optics, "Spectrum", getattr(self.Optics, "Color", None)):
             self.update()
+
     # Рекомендований розмір поверхні для систем компонування
     def PreferredSize(self):
-        Node = self.Visual
+        Node = self.Optics
         W = getattr(Node, "Width", 100) if Node is not None else 100
         H = getattr(Node, "Height", 30) if Node is not None else 30
         SizeClass = LCARS.Geometry.Size
         return SizeClass(max(10, W), max(10, H))
     # Просторове вирівнювання сенсорного поля
     def AlignContent(self, Flag):
-        if hasattr(self.Visual, "Align"):
-            self.Visual.Align = "center" if "Center" in str(Flag) else ("right" if "Right" in str(Flag) else "left")
+        if hasattr(self.Optics, "Align"):
+            self.Optics.Align = "center" if "Center" in str(Flag) else ("right" if "Right" in str(Flag) else "left")
         self.update()
         return self
     # Зміна фізичної геометрії сенсорного скла
     def Rescale(self, Event):
-        if self.Visual is not None:
-            self.Visual.Width = self.width()
-            self.Visual.Height = self.height()
-            if hasattr(self.Visual, "Synthesize") and callable(self.Visual.Synthesize):
-                self.Visual.Synthesize()
-            elif hasattr(self.Visual, "Generate") and callable(self.Visual.Generate):
-                self.Visual.Generate()
+        if self.Optics is not None:
+            self.Optics.Width = self.width()
+            self.Optics.Height = self.height()
+            if hasattr(self.Optics, "Synthesize") and callable(self.Optics.Synthesize):
+                self.Optics.Synthesize()
+            elif hasattr(self.Optics, "Generate") and callable(self.Optics.Generate):
+                self.Optics.Generate()
         ParentResize = getattr(super(), "Rescale", None)
         if callable(ParentResize):
             ParentResize(Event)
     # Цикл оптичного світіння (прояв фотонного поля на поверхні)
     def OpticalDispersion(self, Event):
         # Малює свій Optics / Graphic
-        if self.Visual is None:
+        if self.Optics is None:
             return
         # Синхронізація просторових меж
         CurrentW = self.width()
         CurrentH = self.height()
-        if getattr(self.Visual, "Width", 0) != CurrentW or getattr(self.Visual, "Height", 0) != CurrentH:
-            self.Visual.Width = CurrentW
-            self.Visual.Height = CurrentH
-            if hasattr(self.Visual, "Synthesize") and callable(self.Visual.Synthesize):
-                self.Visual.Synthesize()
+        if getattr(self.Optics, "Width", 0) != CurrentW or getattr(self.Optics, "Height", 0) != CurrentH:
+            self.Optics.Width = CurrentW
+            self.Optics.Height = CurrentH
+            if hasattr(self.Optics, "Synthesize") and callable(self.Optics.Synthesize):
+                self.Optics.Synthesize()
         # Випромінення через єдиний оптичний проєктор LCARS
         ProjectorInstance = Emitter()
 
         if ProjectorInstance.Activate(self):
-            # Проєктор бере self.Visual і малює його на підкладці
-            ProjectorInstance.Project(self.Visual)
+            # Проєктор бере self.Optics і малює його на підкладці
+            ProjectorInstance.Project(self.Optics)
             ProjectorInstance.Deactivate()
     # Сенсорний контакт (натискання на скло)
     def TouchContact(self, Event):
@@ -108,8 +99,8 @@ class Surface(Display):
             "Left" in str(ButtonValue) or
             ButtonValue == getattr(getattr(LCARS, "Protocol", None), "LeftButton", 1)
         )
-        if IsLeftButton and self.Graphic is not None:
-            TargetEngage = getattr(self.Graphic, "Engage", getattr(self.Graphic, "Trigger", None))
+        if IsLeftButton and self.Optics is not None:
+            TargetEngage = getattr(self.Optics, "Engage", getattr(self.Optics, "Trigger", None))
             if callable(TargetEngage):
                 TargetEngage()
             if hasattr(self, "isVisible") and self.isVisible():
@@ -119,8 +110,8 @@ class Surface(Display):
             ParentMousePress(Event)
     # Розрив сенсорного контакту (відпускання скла)
     def TouchRelease(self, Event):
-        if self.Graphic is not None:
-            TargetDisengage = getattr(self.Graphic, "Disengage", getattr(self.Graphic, "Release", None))
+        if self.Optics is not None:
+            TargetDisengage = getattr(self.Optics, "Disengage", getattr(self.Optics, "Release", None))
             if callable(TargetDisengage):
                 TargetDisengage()
             if hasattr(self, "isVisible") and self.isVisible():
@@ -130,8 +121,8 @@ class Surface(Display):
             ParentMouseRelease(Event)
     # Датчик наближення (фокус при наведенні курсора або руки)
     def FocusDetection(self, Event):
-        if self.Graphic is not None:
-            TargetFocus = getattr(self.Graphic, "Focus", None)
+        if self.Optics is not None:
+            TargetFocus = getattr(self.Optics, "Focus", None)
             if callable(TargetFocus):
                 TargetFocus(True)
             self.update()
@@ -140,8 +131,8 @@ class Surface(Display):
             ParentEnter(Event)
     # Вихід із зони наближення
     def Leave(self, Event):
-        if self.Graphic is not None:
-            TargetFocus = getattr(self.Graphic, "Focus", None)
+        if self.Optics is not None:
+            TargetFocus = getattr(self.Optics, "Focus", None)
             if callable(TargetFocus):
                 TargetFocus(False)
             self.update()
@@ -269,6 +260,8 @@ class Element(Component):
                 TargetWidget = SurfaceClass()
                 if hasattr(TargetWidget, "Initialize"):
                     TargetWidget.Initialize(Optics=Item)
+                Item.Widget = TargetWidget
+                Item.Parent = self
             else:
                 TargetWidget = Item
 
@@ -871,11 +864,12 @@ class Frame(Element):
 # =============================================================================
 class PADD(Element):
     Type = "PADD"
-    Type = "PADD"
     Width = 920
     Height = 580
     MinWidth = 320
     MinHeight = 240
+    PaddMinWidth = 320
+    PaddMinHeight = 240
     Portable = True
     PaddAction = ""
     PaddStartGlobal = (0, 0)
@@ -907,6 +901,7 @@ class PADD(Element):
             Policy = getattr(LCARS, "Policy", None)
             if Policy and hasattr(Policy, "Expanding"):
                 Host.setSizePolicy(Policy.Expanding, Policy.Expanding)
+        self.EnablePortablePadd(Host)
 
     def Show(self):
         self.ConfigurePadd()
@@ -967,11 +962,24 @@ class PADD(Element):
             return int(Point.x()), int(Point.y())
         return 0, 0
 
-    def PaddPress(self, LX, LY):
+    def PaddPress(self, *Args, **Kwargs):
+        Event = None
+        LX = 0
+        LY = 0
+        if len(Args) >= 2 and isinstance(Args[0], (int, float)) and isinstance(Args[1], (int, float)):
+            LX = int(Args[0])
+            LY = int(Args[1])
+        elif len(Args) >= 1:
+            Event = Args[0]
+            PosMethod = getattr(Event, "position", None) or getattr(Event, "pos", None)
+            Pos = PosMethod() if callable(PosMethod) else None
+            LX = int(Pos.x()) if Pos else 0
+            LY = int(Pos.y()) if Pos else 0
+
         Margin = 8
         Host = self.Widget
-        W = Host.width()
-        H = Host.height()
+        W = Host.width() if hasattr(Host, "width") else 0
+        H = Host.height() if hasattr(Host, "height") else 0
         
         Action = ""
         if LY < Margin: Action += "top"
@@ -979,7 +987,14 @@ class PADD(Element):
         
         if LX < Margin: Action += "left"
         elif LX > W - Margin: Action += "right"
-        return Action or "move"
+        self.PaddAction = Action or "move"
+        self.PaddOffset = (LX, LY)
+        if Event is not None:
+            self.PaddStartGlobal = self.EventGlobal(Event)
+        if hasattr(Host, "geometry"):
+            Geom = Host.geometry()
+            self.PaddStartRect = (Geom.x(), Geom.y(), Geom.width(), Geom.height())
+        return self.PaddAction
 
     def PaddMove(self, Event):
         if not self.PaddAction:
@@ -1031,26 +1046,6 @@ class PADD(Element):
         AcceptMethod = getattr(Event, "accept", None)
         if AcceptMethod:
             AcceptMethod()
-
-    def ToggleFullscreen(self):
-        Host = self.Widget
-        if not Host:
-            return
-        if not self.PaddFullscreen:
-            Geometry = getattr(Host, "geometry", None)
-            if Geometry:
-                self.PaddSavedGeometry = Geometry()
-            ShowFull = getattr(Host, "showFullScreen", None)
-            if ShowFull:
-                ShowFull()
-            self.PaddFullscreen = True
-            return
-        ShowNormal = getattr(Host, "showNormal", None)
-        if ShowNormal:
-            ShowNormal()
-        if self.PaddSavedGeometry is not None and hasattr(Host, "setGeometry"):
-            Host.setGeometry(self.PaddSavedGeometry)
-        self.PaddFullscreen = False
 
     def PaddEdgeAction(self, X, Y):
         Host = self.Widget
