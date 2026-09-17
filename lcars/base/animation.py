@@ -1358,6 +1358,7 @@ class Starfield(Component):
 # Аліаси для зворотної сумісності з імпортами
 Impulse = Starfield
 Warp = Starfield
+ScanningBar = Scanning
 LCARS.Types = [
     "Driver",
     "Sequencer",

@@ -1,21 +1,12 @@
-# LCARS FRAMEWORK
+# LCARS FRAMEWORK 
 # Готові елементи та канонічні композиції LCARS (Michael Okuda Standard).
 # У component.py лежать фізичні примітиви. Тут лежить віртуальний контейнер/оркестратор Element
 # та канонічні складені об'єкти інтерфейсу зорельота за векторними кресленнями CorelDRAW.
 from typing import Any, Optional, Dict, List, Union, Tuple
-
-from lcars.base.component import (
-    Component,
-    LCARSBar,
-    LCARSButton,
-    LCARSElbow,
-    LCARSIndicator,
-    LCARSLabel,
-)
+from lcars.base.component import Component
 from lcars.base.graphic import Visual, Emitter
 from lcars.base.default import DefaultBackground, Palette
 from lcars.base.type import LCARS
-from lcars.core.signal import ODN
 # =============================================================================
 # 5. СЕНСОРНА ОПТИЧНА ПОВЕРХНЯ LCARS (SURFACE / PANEL / WIDGET)
 Display: type = LCARS.Retrieve(LCARS.Display) or object
@@ -1033,6 +1024,13 @@ class PADD(Element):
 # =====================================================================
 # ЕКСПОРТНІ СИНОНІМИ ТА СИМВОЛИ
 # =====================================================================
+Segment = Element
+StatusLine = StatBar
+HeaderFrame = Header
+FrameBracket = Bracket
+AccessCode = AccessPanel
+Access = AccessPanel
+
 LCARS.All = [
     "Element",
     "PADD",

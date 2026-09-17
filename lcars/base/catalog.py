@@ -1,7 +1,7 @@
 # LCARS FRAMEWORK CATALOG
 # Каталог підтримуваних технологій та платформ.
 # СТАНДАРТ: Titanium (Zero-Except, No Underscores, Strict PascalCase, Pure LCARS Classes).
-from lcars.base.type import LCARS
+from lcars.base.type import LCARS, SystemComponent
 from lcars.base.info import Version
 
 # Категорії системи
@@ -12,9 +12,9 @@ class LCARSCategory(SystemComponent):
 
     def Initialize(self, Name: str = "", Registry: str = "", Description: str = "", Members: tuple = (), **kwargs):
         super().Initialize(SystemId=Name, Id=Name, **kwargs)
-        self.Name = str(Name)
-        self.Registry = str(Registry)
-        self.Description = str(Description)
+        self.Name = (Name)
+        self.Registry = (Registry)
+        self.Description = (Description)
         self.Members = tuple(Members)
 
     def Descriptor(self) -> dict:
@@ -24,7 +24,6 @@ class LCARSCategory(SystemComponent):
             "description": self.Description,
             "members": len(self.Members),
         }
-
 Category = LCARSCategory
 # Перелік підтримуваних систем
 class LCARSCatalog(LCARS):
@@ -191,8 +190,6 @@ class LCARSCatalog(LCARS):
             "Android", "React",
         ),
     )
-
-    @classmethod
     def AllCategories(cls) -> list:
         return [val for val in vars(cls).values() if isinstance(val, LCARSCategory)]
 
