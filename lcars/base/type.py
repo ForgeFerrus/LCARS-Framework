@@ -40,6 +40,10 @@ class Namespace(type):
         # 1. Шукаємо запис у Реєстрі LCARS
         Resolved = LCARS.Retrieve(CurrentPath)
 
+        # Якщо знайдено дійсний клас або функцію — віддаємо напряму
+        if Resolved is not None and (callable(Resolved) or isinstance(Resolved, type)):
+            return Resolved
+
         # 2. Якщо в Реєстрі немає окремого запису, але поточна сутність має такий атрибут:
         CurrentEntity = getattr(cls, "Entity", None)
         if Resolved is None and CurrentEntity is not None and hasattr(CurrentEntity, AttributeName):
@@ -56,8 +60,6 @@ class Namespace(type):
                 "Entity": Resolved,
             })
 
-        # Листова вершина повертається як живий об'єкт напряму (без обгортки):
-        # LCARS.Visual.PainterPath -> сам клас QPainterPath, готовий до виклику
         if Resolved is not None:
             return Resolved
 
@@ -122,10 +124,14 @@ def Expand(Target: Type.Any):
     ModName = Target[0]
     AttrName = Target[1] if len(Target) > 1 else None
     if isinstance(ModName, str):
-        Mod = LCARS.Import(ModName)
-        if Mod is not None and AttrName:
-            return getattr(Mod, AttrName, None)
-        return Mod
+        Obj = LCARS.Import(ModName)
+        if Obj is not None and AttrName:
+            for Part in str(AttrName).split("."):
+                Obj = getattr(Obj, Part, None)
+                if Obj is None:
+                    break
+            return Obj
+        return Obj
     return Target[0]
 # Системна функція вилучення вузла LCARS
 def Retrieve(Key: str, Default=None):
@@ -232,22 +238,25 @@ class LCARS(metaclass=Namespace):
             "status": getattr(self, "Status", "Operational"),
         }
 
-    def Launch(EntryPoint: Type.Any, *Args, **Flags) -> Type.Any:
     # Отримання канонічного екземпляра додатку через ядро
-        Application = LCARS.Retrieve("Base.Interface.Application")
-        if callable(Application) and not hasattr(Application, "exec"):
-            App = Application()
+    def Launch(EntryPoint: Type.Any, *Args, **Flags) -> Type.Any:
+    # 1. СПЕРШУ створюємо / отримуємо головний додаток (QApplication)
+        AppClass = LCARS.Retrieve("Base.Interface.Application")
+        App = AppClass.instance() if AppClass and hasattr(AppClass, "instance") else None
+        if App is None and AppClass:
+            App = AppClass([])
 
-        # Запуск інтерфейсу або системного процесу
+        # 2. ТІЛЬКИ ТЕПЕР викликаємо інтерфейс — тепер створення QWidget дозволено!
         Instance = EntryPoint(*Args, **Flags) if callable(EntryPoint) else EntryPoint
 
-        # Якщо це візуальний інтерфейс — забезпечуємо показ
         if hasattr(Instance, "Show"):
             Instance.Show()
+        elif hasattr(Instance, "show"):
+            Instance.show()
 
-        # Запуск головного циклу операцій зорельота
-        if hasattr(Application, "exec"):
-            return Application.exec()
+        # 3. Запускаємо головний цикл подій
+        if App and hasattr(App, "exec"):
+            return App.exec()
         return Instance
 
     # === СИСТЕМНІ ЗМАГАЛЬНІ ТА ДАНДЕР-ЗАМІННИКИ (BUILTINS & OPERATORS) ===

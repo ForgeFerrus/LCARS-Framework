@@ -17,24 +17,38 @@ class Surface(Display):
     Layers = []
     PulseTimer = None
     # Канонічна ініціалізація консольного скла
-    Initialize = LCARS.Init
     def Initialize(self, Optics=None, Parent=None, **kwargs):
-        if Display is not object:
-            super().Initialize(Parent)
         self.Optics = Optics
         self.Layers = kwargs.get("Layers", [])
-    # Калібрування фізичних параметрів скла
         if hasattr(self, "setMinimumSize"):
             self.setMinimumSize(1, 1)
         Policy = getattr(LCARS, "Policy", None)
         if hasattr(self, "setSizePolicy") and Policy is not None and hasattr(Policy, "Preferred"):
             self.setSizePolicy(Policy.Preferred, Policy.Preferred)
-        CursorHand = getattr(LCARS, "CursorHand", None)
-        if hasattr(self, "setCursor") and CursorHand is not None:
-            self.setCursor(CursorHand)
-        # Реєстрація квантового пульсара для динамічних станів
+        CursorTarget = LCARS.Retrieve(getattr(LCARS, "CursorHand", None))
+        if hasattr(self, "setCursor") and CursorTarget is not None and not isinstance(CursorTarget, str):
+            self.setCursor(CursorTarget)
         if hasattr(self, "startTimer"):
             self.PulseTimer = self.startTimer(1000)
+
+    Init = Initialize
+
+    @property
+    def Visual(self):
+        return getattr(self, "Optics", None)
+
+    @Visual.setter
+    def Visual(self, Value):
+        self.Optics = Value
+
+    @property
+    def Graphic(self):
+        return getattr(self, "Optics", None)
+
+    @Graphic.setter
+    def Graphic(self, Value):
+        self.Optics = Value
+
     # Пульсація стану поверхні
     def Pulse(self):
         if not self.Optics:
@@ -59,10 +73,10 @@ class Surface(Display):
         if self.Visual is not None:
             self.Visual.Width = self.width()
             self.Visual.Height = self.height()
-            if hasattr(self.Visual, "Synthesize"):
-                self.Visual.Synthesize
-            elif hasattr(self.Visual, "Generate"):
-                self.Visual.Generate
+            if hasattr(self.Visual, "Synthesize") and callable(self.Visual.Synthesize):
+                self.Visual.Synthesize()
+            elif hasattr(self.Visual, "Generate") and callable(self.Visual.Generate):
+                self.Visual.Generate()
         ParentResize = getattr(super(), "Rescale", None)
         if callable(ParentResize):
             ParentResize(Event)
@@ -77,8 +91,8 @@ class Surface(Display):
         if getattr(self.Visual, "Width", 0) != CurrentW or getattr(self.Visual, "Height", 0) != CurrentH:
             self.Visual.Width = CurrentW
             self.Visual.Height = CurrentH
-            if hasattr(self.Visual, "Synthesize"):
-                self.Visual.Synthesize
+            if hasattr(self.Visual, "Synthesize") and callable(self.Visual.Synthesize):
+                self.Visual.Synthesize()
         # Випромінення через єдиний оптичний проєктор LCARS
         ProjectorInstance = Emitter()
 
@@ -162,7 +176,9 @@ class Element(Component):
             SurfaceClass = LCARS.Retrieve("Base.Interface.Surface") or Surface
             ParentRef = getattr(self, "Parent", None)
             ParentWidget = getattr(ParentRef, "Widget", getattr(ParentRef, "widget", ParentRef))
-            self._Widget = SurfaceClass(Optics=self, Parent=ParentWidget)
+            self._Widget = SurfaceClass(ParentWidget) if ParentWidget is not None else SurfaceClass()
+            if hasattr(self._Widget, "Initialize"):
+                self._Widget.Initialize(Optics=self, Parent=ParentWidget)
         return self._Widget
 
     widget = Widget
@@ -245,7 +261,17 @@ class Element(Component):
         if Item is None or TargetLayout is None:
             return self
 
-        TargetWidget = getattr(Item, "Widget", getattr(Item, "widget", Item))
+        TargetWidget = getattr(Item, "Widget", getattr(Item, "widget", None))
+        if TargetWidget is None:
+            from lcars.base.component import Component
+            if isinstance(Item, Component):
+                SurfaceClass = LCARS.Retrieve("Base.Interface.Surface") or Surface
+                TargetWidget = SurfaceClass()
+                if hasattr(TargetWidget, "Initialize"):
+                    TargetWidget.Initialize(Optics=Item)
+            else:
+                TargetWidget = Item
+
         if hasattr(TargetLayout, "addWidget") and (not hasattr(Item, "addWidget") or TargetWidget is not Item):
             if Stretch is None:
                 TargetLayout.addWidget(TargetWidget)
@@ -872,17 +898,23 @@ class PADD(Element):
                 OriginalResize(Event)
         Host.resizeEvent = PaddResizeHook
 
-        if self.PaddPortable:
-            FramelessFlag = getattr(LCARS, "Frameless", None)
-            if hasattr(Host, "setWindowFlags") and FramelessFlag is not None:
-                Host.setWindowFlags(Host.windowFlags() | FramelessFlag)
-            if hasattr(Host, "setStyleSheet"):
-                Host.setStyleSheet(f"background-color: #000000; color: {Palette.Buttons[0]};")
-            if hasattr(Host, "setSizePolicy"):
-                Policy = getattr(LCARS, "Policy", None)
-                if Policy:
-                    Host.setSizePolicy(Policy.Expanding, Policy.Expanding)
-            self.EnablePortablePadd(Host)
+        FramelessFlag = LCARS.Retrieve(getattr(LCARS, "Frameless", None))
+        if hasattr(Host, "setWindowFlags") and FramelessFlag is not None and not isinstance(FramelessFlag, str):
+            Host.setWindowFlags(Host.windowFlags() | FramelessFlag)
+        if hasattr(Host, "setStyleSheet"):
+            Host.setStyleSheet("background-color: #000000;")
+        if hasattr(Host, "setSizePolicy"):
+            Policy = getattr(LCARS, "Policy", None)
+            if Policy and hasattr(Policy, "Expanding"):
+                Host.setSizePolicy(Policy.Expanding, Policy.Expanding)
+
+    def Show(self):
+        self.ConfigurePadd()
+        if hasattr(self.Widget, "show"):
+            self.Widget.show()
+        return self
+
+    show = Show
 
     def AdaptPaddGeometry(self, Event):
         Host = self.Widget

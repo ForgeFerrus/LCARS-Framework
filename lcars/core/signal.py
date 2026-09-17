@@ -139,6 +139,18 @@ class Transmission(SystemComponent):
     def IsStreaming(self) -> bool:
         return self.State in ("Idle", "Streaming")
 
+    # Підключення приймача до кондуїту цього сигналу через ODN
+    def Connect(self, Callback: Callable) -> "Transmission":
+        if self.Channel:
+            ODN.Connect(self.Channel, Callback)
+        return self
+
+    # Відключення приймача від кондуїту
+    def Disconnect(self, Callback: Callable) -> "Transmission":
+        if self.Channel:
+            ODN.Disconnect(self.Channel, Callback)
+        return self
+
 
 # =============================================================================
 # 2. OPTICAL TRANSPORT LINE (OTN) — ФІЗИЧНА ОПТИЧНА ТРАНСПОРТНА ЛІНІЯ
