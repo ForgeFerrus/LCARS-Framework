@@ -6,20 +6,39 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from lcars.base.component import Normalize, Take
 from lcars.base.default import Palette
-from lcars.base.graphic import Easing, Graphic, Primitive, Renderer
+from lcars.base.graphic import Modulation, Graphic, Primitive, Renderer
 from lcars.base.type import LCARS, SystemComponent
 # =============================================================================
-# 1. БАЗОВИЙ ДРАЙВЕР МОДУЛЯЦІЇ (DRIVER)
+# УНІВЕРСАЛЬНИЙ РУШІЙ АНІМАЦІЙ ТА ЧАСОВОЇ МОДУЛЯЦІЇ LCARS
+# Поєднує системний квантовий таймер із математичною модуляцією Graphic
 # =============================================================================
-class Driver(SystemComponent):
-    Speed = 1.0
-    Interval = 40
+class DriverAnimation(SystemComponent):
+    TypeName = "LCARSAnimation"
+    Type = "Animation"
+
+    # Параметри руху
+    Speed = 1.0         # Коефіцієнт швидкості
+    Period = 1.0        # Період коливання (сек)
+    Interval = 40       # 25 кадрів/сек (інтервал таймера в мс)
     Running = False
+    Loop = True
     Phase = 0.0
     Target = None
 
-    # ЖОДНОГО __init__! Тільки чисті методи:
-    def Start(self):
+    # Колбеки життєвого циклу
+    OnUpdate = None
+    OnComplete = None
+    # -------------------------------------------------------------------------
+    # КЕРУВАННЯ ЧАСОВИМ ПРИВОДОМ
+    # -------------------------------------------------------------------------
+    def Start(self, Target=None, Period=None, Loop=None):
+        if Target is not None:
+            self.Target = Target
+        if Period is not None:
+            self.Period = float(Period)
+        if Loop is not None:
+            self.Loop = bool(Loop)
+
         self.Running = True
         TimerClass = LCARS.Retrieve("Base.Core.Timer")
         if TimerClass and callable(TimerClass) and self.Timer is None:
@@ -34,259 +53,59 @@ class Driver(SystemComponent):
             self.Timer.stop()
         return self
 
+    def Reset(self):
+        self.Phase = 0.0
+        if self.Target and hasattr(self.Target, "Refresh"):
+            self.Target.Refresh()
+        return self
+
+    # Базовий крок таймера (викликається кожні 40 мс)
     def Tick(self):
         if not self.Running:
             return
-        self.Phase = (self.Phase + 0.04 * float(self.Speed)) % 1.0
-        if self.Target and hasattr(self.Target, "Refresh"):
-            self.Target.Refresh()
-# =============================================================================
-# 2. СПЕЦІАЛІЗОВАНІ СИСТЕМНІ ДРАЙВЕРИ LCARS
-# Системний драйвер тривоги (Red / Yellow Alert Sweep)
-class AlertSweep(Driver):
-    def __init__(self, TargetGraphic: Graphic, AlertType: str = "red", DurationMs: int = 600):
-        from lcars.base.default import ResolvePaletteGroup
-        AlertColors = ResolvePaletteGroup(AlertType)
-        self.AlertColor = AlertColors[0]
-        self.BaseColor = AlertColors[1] if len(AlertColors) > 1 else Palette.Buttons[0]
-        Interval = 30
-        Speed = Interval / max(10, int(DurationMs))
-        super().__init__(Target=TargetGraphic, Speed=Speed, Interval=Interval, Loop=True, EasingFunc=Easing.SineWave)
 
-    def Apply(self, Progress: float):
-        CurrentColor = self.LerpColor(self.BaseColor, self.AlertColor, Progress)
-        self.Target.SetBackgroundColor(CurrentColor)
+        # Збільшуємо фазу часу
+        Delta = (float(self.Interval) / 1000.0) / max(0.01, float(self.Period)) * float(self.Speed)
+        NextPhase = self.Phase + Delta
 
-# Драйвер тактильного відгуку клавіш LCARS
-class TactileFeedback(Driver):
-    def __init__(self, TargetGraphic: Graphic, HighlightColor: str = "#ffffff"):
-        self.OriginalColor = TargetGraphic.Color
-        self.HighlightColor = HighlightColor
-        super().__init__(Target=TargetGraphic, Speed=0.15, Interval=20, Loop=False, EasingFunc=Easing.EaseOut)
-
-    def Apply(self, Progress: float):
-        CurrentColor = self.LerpColor(self.HighlightColor, self.OriginalColor, Progress)
-        self.Target.SetBackgroundColor(CurrentColor)
-
-# Драйвер твінінгу геометричних властивостей
-class PropertyTween(Driver):
-    def __init__(self, Target: Any, PropertyName: str, StartValue: float, EndValue: float, DurationMs: int = 400, EasingFunc=None):
-        self.PropertyName = PropertyName
-        self.StartValue = float(StartValue)
-        self.EndValue = float(EndValue)
-        Interval = 25
-        Speed = Interval / max(10, int(DurationMs))
-        super().__init__(Target=Target, Speed=Speed, Interval=Interval, Loop=False, EasingFunc=EasingFunc or Easing.EaseInOut)
-
-    def Apply(self, Progress: float):
-        CurrentVal = self.Lerp(self.StartValue, self.EndValue, Progress)
-        Setter = getattr(self.Target, f"Set{self.PropertyName}", None)
-        if callable(Setter):
-            Setter(CurrentVal)
-        elif hasattr(self.Target, self.PropertyName):
-            setattr(self.Target, self.PropertyName, CurrentVal)
-
-# Драйвер колірного переходу
-class ColorFade(Driver):
-    def __init__(self, Target: Any, StartColor: str, EndColor: str, DurationMs: int = 400):
-        self.StartColor = StartColor
-        self.EndColor = EndColor
-        Interval = 30
-        Speed = Interval / max(10, int(DurationMs))
-        super().__init__(Target=Target, Speed=Speed, Interval=Interval, Loop=False, EasingFunc=Easing.EaseInOut)
-
-    def Apply(self, Progress: float):
-        CurrentColor = self.LerpColor(self.StartColor, self.EndColor, Progress)
-        Setter = getattr(self.Target, "SetBackgroundColor", getattr(self.Target, "SetColor", None))
-        if callable(Setter):
-            Setter(CurrentColor)
-
-# Секвенсер послідовностей LCARS
-class Sequencer:
-    def __init__(self):
-        self.Sequence: List[Driver] = []
-        self.CurrentIndex: int = 0
-        self.Running: bool = False
-        self.OnFinishCallback: Optional[Callable[[], None]] = None
-
-    def Add(self, DriverInstance: Driver) -> Sequencer:
-        DriverInstance.Loop = False
-        self.Sequence.append(DriverInstance)
-        return self
-
-    def Play(self, OnFinish: Optional[Callable[[], None]] = None):
-        self.OnFinishCallback = OnFinish
-        self.CurrentIndex = 0
-        self.Running = True
-        self.PlayNext()
-
-    def PlayNext(self):
-        if self.CurrentIndex < len(self.Sequence):
-            CurrentDriver = self.Sequence[self.CurrentIndex]
-            CurrentDriver.OnCompleteCallback = self.OnStepComplete
-            CurrentDriver.Reset()
-            CurrentDriver.Start()
-        else:
-            self.Running = False
-            if callable(self.OnFinishCallback):
-                self.OnFinishCallback()
-
-    def OnStepComplete(self):
-        self.CurrentIndex += 1
-        self.PlayNext()
-
-    def Stop(self):
-        self.Running = False
-        if self.CurrentIndex < len(self.Sequence):
-            self.Sequence[self.CurrentIndex].Stop()
-# ============================================================================
-# 3. БАЗОВИЙ АНІМАЦІЙНИЙ ГРАФІЧНИЙ ДИСПЛЕЙ (ANIMATION)
-# ============================================================================
-class Animation(Graphic):
-    Clamp = staticmethod(Graphic.Clamp)
-    Lerp = staticmethod(Graphic.Lerp)
-    HexToRgb = staticmethod(Graphic.HexToRgb)
-    RgbToHex = staticmethod(Graphic.RgbToHex)
-    LerpColor = staticmethod(Graphic.LerpColor)
-
-    @staticmethod
-    def PaletteColor(Section: str = "buttons", Index: int = 0) -> str:
-        from lcars.base.default import RandomButtonColor, ResolvePaletteGroup
-        ColorsList = ResolvePaletteGroup(Section)
-        if not ColorsList:
-            return Palette.Buttons[0]
-        return ColorsList[int(Index) % len(ColorsList)]
-
-    @staticmethod
-    def SetExternalText(Target: Any, Text: str):
-        if not Target:
-            return
-        Setter = getattr(Target, "SetText", None)
-        if callable(Setter):
-            Setter(str(Text))
-            return
-        Setter = getattr(Target, "setText", None)
-        if callable(Setter):
-            Setter(str(Text))
-            return
-        WidgetRef = getattr(Target, "widget", None)
-        if WidgetRef is not None:
-            Setter = getattr(WidgetRef, "setText", None)
-            if callable(Setter):
-                Setter(str(Text))
-
-    def __init__(self, Parent=None, Type="animation", Color=None, Speed=0.035, Interval=40, Running=True, Loop=True, EasingFunc=None, **Args):
-        Parent = Take(Args, ["parent", "Parent"], Parent)
-        Type = Take(Args, ["type", "Type", "Mode", "mode"], Type)
-        Color = Take(Args, ["color", "Color", "ColorHexStr"], Color)
-        Speed = Take(Args, ["speed", "Speed"], Speed)
-        Interval = Take(Args, ["interval", "Interval", "IntervalMs", "intervalMs"], Interval)
-        Running = Take(Args, ["running", "Running", "Active", "active"], Running)
-        Loop = Take(Args, ["loop", "Loop"], Loop)
-        self.Type = Normalize(Type) or "animation"
-        self.Speed = float(Speed)
-        self.Interval = int(Interval)
-        self.Running = bool(Running)
-        self.Loop = bool(Loop)
-        self.Complete = False
-        self.Frame = 0
-        self.Phase = 0.0
-        self.Easing = EasingFunc or Easing.Linear
-        self.AnimationTimer = None
-        self.OnUpdateCallback: Optional[Callable[[float], None]] = None
-        self.OnCompleteCallback: Optional[Callable[[], None]] = None
-        super().__init__(Parent=Parent, WidgetType=None, Color=Color or Palette.Buttons[0], **Args)
-        if self.Running:
-            self.AnimationTimer = self.CreateTimer(self.Interval)
-
-    def CreateTimer(self, Interval: int):
-        TimerClass = LCARS.Timer
-        if not TimerClass or not callable(TimerClass):
-            self.Running = False
-            return None
-        TimerInstance = TimerClass()
-        Timeout = getattr(TimerInstance, "timeout", None)
-        Connect = getattr(Timeout, "connect", None)
-        Start = getattr(TimerInstance, "start", None)
-        if not callable(Connect) or not callable(Start):
-            self.Running = False
-            return TimerInstance
-        Connect(self.TickFrame)
-        Start(Interval)
-        return TimerInstance
-
-    def AddPrimitive(self, PrimType: str, X: float, Y: float, Width: float, Height: float, Color: str, **kwargs) -> Primitive:
-        Prim = Primitive(Parent=self.Parent, type=PrimType, X=X, Y=Y, Width=Width, Height=Height, Color=Color, **kwargs)
-        self.Primitives.append(Prim)
-        return Prim
-
-    def ClearPrimitives(self):
-        self.Primitives = []
-
-    def GetProgress(self) -> float:
-        ClampedPhase = self.Clamp(self.Phase, 0.0, 1.0)
-        return self.Easing(ClampedPhase)
-
-    def TickFrame(self):
-        self.Frame += 1
-        NextPhase = self.Phase + self.Speed
         if self.Loop:
             self.Phase = NextPhase % 1.0
         else:
-            self.Phase = self.Clamp(NextPhase, 0.0, 1.0)
-            self.Complete = self.Phase >= 1.0
-            if self.Complete:
+            self.Phase = min(1.0, NextPhase)
+            if self.Phase >= 1.0:
                 self.Stop()
-                if callable(self.OnCompleteCallback):
-                    self.OnCompleteCallback()
+                if callable(self.OnComplete):
+                    self.OnComplete()
 
-        if callable(self.OnUpdateCallback):
-            self.OnUpdateCallback(self.GetProgress())
+        # Викликаємо конкретну модуляцію цілі
+        self.Apply()
 
-        self.Generate()
-        self.Update()
+        # Сповіщення слухачів та перемалювання
+        if callable(self.OnUpdate):
+            self.OnUpdate(self.Phase)
 
-    def Start(self, Interval=None):
-        if Interval is not None:
-            self.Interval = int(Interval)
-        self.Running = True
-        StartMethod = getattr(self.AnimationTimer, "start", None)
-        if callable(StartMethod):
-            StartMethod(self.Interval)
-            return
-        self.AnimationTimer = self.CreateTimer(self.Interval)
+        if self.Target and hasattr(self.Target, "Refresh"):
+            self.Target.Refresh()
 
-    def Stop(self):
-        self.Running = False
-        StopMethod = getattr(self.AnimationTimer, "stop", None)
-        if callable(StopMethod):
-            StopMethod()
+    # Хук конкретної дії анімації (перевизначається підкласами)
+    def Apply(self):
+        pass
 
-    def SetSpeed(self, Speed: float):
-        self.Speed = float(Speed)
-
-    def SetPhase(self, Phase: float):
-        self.Phase = float(Phase) % 1.0 if self.Loop else self.Clamp(float(Phase), 0.0, 1.0)
-        self.Generate()
-        self.Update()
-
-    def Reset(self):
-        self.Frame = 0
-        self.Phase = 0.0
-        self.Complete = False
-        self.Generate()
-        self.Update()
-
-    def Generate(self):
-        self.ClearPrimitives()
-
-    Render = Generate
-    render = Generate
-
-
+# Аліас для зворотної сумісності
+Driver = DriverAnimation
+Animation = DriverAnimation
 # =============================================================================
-# 4. АЛГОРИТМІЧНІ ВЕКТОРНІ ДИСПЛЕЇ LCARS (ГЕНЕРАЦІЯ ТОПОЛОГІЧНИХ ПРИМІТИВІВ)
+# АЛГОРИТМІЧНІ ВЕКТОРНІ ДИСПЛЕЇ LCARS (ГЕНЕРАЦІЯ ТОПОЛОГІЧНИХ ПРИМІТИВІВ)
 # =============================================================================
+class Position(Animation):
+    StartPos = (0, 0)
+    EndPos = (100, 0)
+
+    def Apply(self):
+        if self.Target and hasattr(self.Target, "ModulatePosition"):
+            NewPos = self.Target.ModulatePosition(self.StartPos, self.EndPos, Period=self.Period)
+            self.Target.X = int(NewPos[0])
+            self.Target.Y = int(NewPos[1])
 
 # Скануюча шина ODN
 class ScanningBar(Animation):
@@ -699,7 +518,44 @@ class Warp(StarfieldCluster):
                 ColIndex = int(ZRatio * 3)
                 StarCol = self.PaletteColor("buttons", ColIndex)
                 self.AddPrimitive(Primitive.LINE, XPos, YPos, EndX - XPos, EndY - YPos, StarCol, width=Thickness)
+# Секвенсер послідовностей LCARS
+class Sequencer:
+    def __init__(self):
+        self.Sequence: List[Driver] = []
+        self.CurrentIndex: int = 0
+        self.Running: bool = False
+        self.OnFinishCallback: Optional[Callable[[], None]] = None
 
+    def Add(self, DriverInstance: Driver) -> Sequencer:
+        DriverInstance.Loop = False
+        self.Sequence.append(DriverInstance)
+        return self
+
+    def Play(self, OnFinish: Optional[Callable[[], None]] = None):
+        self.OnFinishCallback = OnFinish
+        self.CurrentIndex = 0
+        self.Running = True
+        self.PlayNext()
+
+    def PlayNext(self):
+        if self.CurrentIndex < len(self.Sequence):
+            CurrentDriver = self.Sequence[self.CurrentIndex]
+            CurrentDriver.OnCompleteCallback = self.OnStepComplete
+            CurrentDriver.Reset()
+            CurrentDriver.Start()
+        else:
+            self.Running = False
+            if callable(self.OnFinishCallback):
+                self.OnFinishCallback()
+
+    def OnStepComplete(self):
+        self.CurrentIndex += 1
+        self.PlayNext()
+
+    def Stop(self):
+        self.Running = False
+        if self.CurrentIndex < len(self.Sequence):
+            self.Sequence[self.CurrentIndex].Stop()
 __all__ = [
     "Easing",
     "Driver",
