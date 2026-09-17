@@ -164,51 +164,21 @@ class WaveStream(Graphic):
     Phase = 0.0             # Поточна фаза коливання
     Running = False
     Interval = 35           # ~28-30 FPS для плавності
-    Timer = None
-    _Widget = None
 
     # Колірна схема
-    PrimaryColor = None
-    SecondaryColor = None
+    PrimaryColor = Palette.Buttons[2]
+    SecondaryColor = Palette.Buttons[0]
+    _Widget = None
 
-    def Initialize(self, Parent=None, **kwargs):
-        super().Initialize(Parent=Parent, **kwargs)
-
-        # Зчитування параметрів
-        Freq = Take(kwargs, ["Frequency", "frequency", "WaveCount", "waveCount"], 3.0)
-        self.Frequency = float(Freq)
-
-        Harm = Take(kwargs, ["Harmonics", "harmonics", "Resolution", "resolution", "Cols"], 20)
-        self.Harmonics = max(4, int(Harm))
-
-        Spd = Take(kwargs, ["Speed", "speed", "Rate", "rate"], 0.04)
-        self.Speed = float(Spd)
-
-        Amp = Take(kwargs, ["Amplitude", "amplitude"], 0.85)
-        self.Amplitude = max(0.1, min(1.0, float(Amp)))
-
-        self.Mode = str(Take(kwargs, ["Mode", "mode", "Type", "type"], "Harmonic")).capitalize()
-
-        Col = Take(kwargs, ["Color", "color", "PrimaryColor", "Spectrum"], Palette.Buttons[2])
-        self.PrimaryColor = Col
-        self.Color = Col
-        self.Spectrum = Col
-
-        SecCol = Take(kwargs, ["SecondaryColor", "secondaryColor", "AccentColor"], Palette.Buttons[0])
-        self.SecondaryColor = SecCol
-
-        # Створення або зв'язування віджета відображення Surface
-        SurfaceClass = LCARS.Retrieve("Base.Interface.Surface")
-        if SurfaceClass is None:
-            from lcars.base.interface import Surface
-            SurfaceClass = Surface
-
-        self._Widget = SurfaceClass(Optics=self, Parent=Parent)
-        self.widget = self._Widget
-
-        # Автоматичний запуск, якщо вказано AutoStart=True
-        if kwargs.get("AutoStart", False):
-            self.Start()
+    @property
+    def widget(self):
+        if self._Widget is None:
+            SurfaceClass = LCARS.Retrieve("Base.Interface.Surface")
+            if SurfaceClass is None:
+                from lcars.base.interface import Surface
+                SurfaceClass = Surface
+            self._Widget = SurfaceClass(Optics=self, Parent=getattr(self, "Parent", None))
+        return self._Widget
 
     # -------------------------------------------------------------------------
     # КЕРУВАННЯ ЧАСОВИМ КВАНТОМ (ТАЙМЕР)
@@ -258,6 +228,18 @@ class WaveStream(Graphic):
         return self
 
     # -------------------------------------------------------------------------
+    # ДИНАМІЧНІ ХВИЛЬОВІ ПАРАМЕТРИ
+    # -------------------------------------------------------------------------
+    def GetPrimaryColor(self):
+        return getattr(self, "PrimaryColor", None) or getattr(self, "Spectrum", None) or getattr(self, "Color", Palette.Buttons[2])
+
+    def GetSecondaryColor(self):
+        return getattr(self, "SecondaryColor", None) or getattr(self, "AccentColor", Palette.Buttons[0])
+
+    def GetFrequency(self):
+        return float(getattr(self, "Frequency", getattr(self, "WaveCount", 3.0)))
+
+    # -------------------------------------------------------------------------
     # ПРЯМИЙ ВЕКТОРНИЙ РЕНДЕР (EMITTER DRAW HOOK)
     # -------------------------------------------------------------------------
     def Draw(self, Context, Device) -> bool:
@@ -301,14 +283,15 @@ class WaveStream(Graphic):
         CenterY = H * 0.5
         MaxAmp = H * 0.44 * self.Amplitude
 
-        PrimaryCol = LCARS.Visual.Color(self.PrimaryColor)
-        AccentCol = LCARS.Visual.Color(self.SecondaryColor)
+        PrimaryCol = LCARS.Visual.Color(self.GetPrimaryColor())
+        AccentCol = LCARS.Visual.Color(self.GetSecondaryColor())
+        Freq = self.GetFrequency()
 
         for i in range(Cols):
             X = i * (ColWidth + Gap)
             RelX = i / float(Cols)
             # Суперпозиція першої і другої просторової гармоніки
-            Theta = RelX * self.Frequency * 2.0 * math.pi - self.Phase * 2.0 * math.pi
+            Theta = RelX * Freq * 2.0 * math.pi - self.Phase * 2.0 * math.pi
             Harmonic = math.sin(Theta) + 0.35 * math.sin(2.0 * Theta + 1.2)
             NormVal = (Harmonic + 1.35) / 2.7
             BarHeight = max(4.0, NormVal * MaxAmp * 2.0)
@@ -330,14 +313,15 @@ class WaveStream(Graphic):
         Gap = 2.0
         ColWidth = max(2.0, (W - (Cols - 1) * Gap) / Cols)
         MaxAmp = H * 0.88 * self.Amplitude
+        Freq = self.GetFrequency()
 
-        BaseCol = LCARS.Visual.Color(self.PrimaryColor)
+        BaseCol = LCARS.Visual.Color(self.GetPrimaryColor())
 
         for i in range(Cols):
             X = i * (ColWidth + Gap)
             RelX = i / float(Cols)
             # Каскадна фазова хвиля, що біжить зліва направо
-            Wave = (math.sin((RelX * self.Frequency - self.Phase) * 2.0 * math.pi) + 1.0) * 0.5
+            Wave = (math.sin((RelX * Freq - self.Phase) * 2.0 * math.pi) + 1.0) * 0.5
             BarHeight = max(3.0, Wave * MaxAmp)
             Y = H - BarHeight - 2.0
 
@@ -353,14 +337,15 @@ class WaveStream(Graphic):
         GapY = 2.0
         ColWidth = max(3.0, (W - (Cols - 1) * GapX) / Cols)
         SegHeight = max(2.0, (H - (Rows - 1) * GapY) / Rows)
+        Freq = self.GetFrequency()
 
-        PrimaryCol = LCARS.Visual.Color(self.PrimaryColor)
+        PrimaryCol = LCARS.Visual.Color(self.GetPrimaryColor())
         DimCol = LCARS.Visual.Color("#222233")
 
         for i in range(Cols):
             X = i * (ColWidth + GapX)
             RelX = i / float(Cols)
-            WaveVal = (math.sin(RelX * self.Frequency * 2.0 * math.pi - self.Phase * 2.0 * math.pi) + 1.0) * 0.5
+            WaveVal = (math.sin(RelX * Freq * 2.0 * math.pi - self.Phase * 2.0 * math.pi) + 1.0) * 0.5
             ActiveSegments = int(WaveVal * Rows)
 
             for j in range(Rows):
@@ -379,8 +364,9 @@ class WaveStream(Graphic):
         ColWidth = max(2.0, (W - (Cols - 1) * Gap) / Cols)
         CenterY = H * 0.5
         MaxHalfAmp = (H * 0.44) * self.Amplitude
+        Freq = self.GetFrequency()
 
-        PrimaryCol = LCARS.Visual.Color(self.PrimaryColor)
+        PrimaryCol = LCARS.Visual.Color(self.GetPrimaryColor())
         Context.setBrush(LCARS.Visual.Brush(PrimaryCol))
         Context.setPen(LCARS.Visual.Pen(LCARS.Visual.Color("transparent")))
 
@@ -390,7 +376,7 @@ class WaveStream(Graphic):
         for i in range(Cols):
             X = i * (ColWidth + Gap)
             RelX = i / float(Cols)
-            Wave = math.sin(RelX * self.Frequency * 2.0 * math.pi - self.Phase * 2.0 * math.pi)
+            Wave = math.sin(RelX * Freq * 2.0 * math.pi - self.Phase * 2.0 * math.pi)
             BarHeight = max(4.0, abs(Wave) * MaxHalfAmp * 2.0)
             Y = CenterY - BarHeight * 0.5
             Context.drawRoundedRect(LCARS.Geometry.RectF(X, Y, ColWidth, BarHeight), 2.0, 2.0)
@@ -402,6 +388,8 @@ class WaveStream(Graphic):
         PointsCount = max(40, int(W / 3))
         CenterY = H * 0.5
         Amp = H * 0.38 * self.Amplitude
+        Freq = self.GetFrequency()
+        PrimColor = self.GetPrimaryColor()
 
         PathClass = LCARS.Visual.PainterPath
         WavePath = PathClass()
@@ -410,7 +398,7 @@ class WaveStream(Graphic):
         for i in range(PointsCount + 1):
             X = (i / float(PointsCount)) * W
             RelX = i / float(PointsCount)
-            Angle = RelX * self.Frequency * 2.0 * math.pi - self.Phase * 2.0 * math.pi
+            Angle = RelX * Freq * 2.0 * math.pi - self.Phase * 2.0 * math.pi
             Y = CenterY + math.sin(Angle) * Amp
 
             if FirstPoint:
@@ -420,7 +408,7 @@ class WaveStream(Graphic):
                 WavePath.lineTo(X, Y)
 
         # Контур головної хвилі
-        WavePen = LCARS.Visual.Pen(LCARS.Visual.Color(self.PrimaryColor), 2.5)
+        WavePen = LCARS.Visual.Pen(LCARS.Visual.Color(PrimColor), 2.5)
         Context.setBrush(LCARS.Visual.Brush(LCARS.Visual.Color("transparent")))
         Context.setPen(WavePen)
         Context.drawPath(WavePath)
@@ -431,7 +419,7 @@ class WaveStream(Graphic):
         FillPath.lineTo(0, H)
         FillPath.closeSubpath()
 
-        FillColor = LCARS.Visual.Color(self.PrimaryColor)
+        FillColor = LCARS.Visual.Color(PrimColor)
         FillColor.setAlphaF(0.12)
         Context.fillPath(FillPath, LCARS.Visual.Brush(FillColor))
 
@@ -439,6 +427,7 @@ class WaveStream(Graphic):
         CenterY = H * 0.5
         Amp = H * 0.42 * self.Amplitude
         PointsCount = max(60, int(W / 2))
+        PrimColor = self.GetPrimaryColor()
 
         PathClass = LCARS.Visual.PainterPath
         WavePath = PathClass()
@@ -471,7 +460,7 @@ class WaveStream(Graphic):
                 WavePath.lineTo(X, Y)
 
         # Відмальовка фотонного імпульсу
-        PulsePen = LCARS.Visual.Pen(LCARS.Visual.Color(self.PrimaryColor), 2.2)
+        PulsePen = LCARS.Visual.Pen(LCARS.Visual.Color(PrimColor), 2.2)
         Context.setBrush(LCARS.Visual.Brush(LCARS.Visual.Color("transparent")))
         Context.setPen(PulsePen)
         Context.drawPath(WavePath)
@@ -480,6 +469,7 @@ class WaveStream(Graphic):
         PointsCount = max(50, int(W / 2))
         CenterY = H * 0.5
         Amp = H * 0.32 * self.Amplitude
+        Freq = self.GetFrequency()
 
         PathClass = LCARS.Visual.PainterPath
 
@@ -489,14 +479,14 @@ class WaveStream(Graphic):
         for i in range(PointsCount + 1):
             X = (i / float(PointsCount)) * W
             RelX = i / float(PointsCount)
-            Y = CenterY + math.sin(RelX * self.Frequency * 2.0 * math.pi - self.Phase * 2.0 * math.pi) * Amp
+            Y = CenterY + math.sin(RelX * Freq * 2.0 * math.pi - self.Phase * 2.0 * math.pi) * Amp
             if First:
                 Wave1.moveTo(X, Y)
                 First = False
             else:
                 Wave1.lineTo(X, Y)
 
-        Pen1 = LCARS.Visual.Pen(LCARS.Visual.Color(self.PrimaryColor), 2.0)
+        Pen1 = LCARS.Visual.Pen(LCARS.Visual.Color(self.GetPrimaryColor()), 2.0)
         Context.setBrush(LCARS.Visual.Brush(LCARS.Visual.Color("transparent")))
         Context.setPen(Pen1)
         Context.drawPath(Wave1)
@@ -507,14 +497,14 @@ class WaveStream(Graphic):
         for i in range(PointsCount + 1):
             X = (i / float(PointsCount)) * W
             RelX = i / float(PointsCount)
-            Y = CenterY + math.sin(RelX * (self.Frequency * 1.5) * 2.0 * math.pi + self.Phase * 3.0 * math.pi) * (Amp * 0.75)
+            Y = CenterY + math.sin(RelX * (Freq * 1.5) * 2.0 * math.pi + self.Phase * 3.0 * math.pi) * (Amp * 0.75)
             if First:
                 Wave2.moveTo(X, Y)
                 First = False
             else:
                 Wave2.lineTo(X, Y)
 
-        Pen2 = LCARS.Visual.Pen(LCARS.Visual.Color(self.SecondaryColor), 1.8)
+        Pen2 = LCARS.Visual.Pen(LCARS.Visual.Color(self.GetSecondaryColor()), 1.8)
         Context.setPen(Pen2)
         Context.drawPath(Wave2)
 
