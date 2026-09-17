@@ -26,32 +26,50 @@ class Transmission(Directive):
         return self
 
     # Скасувати виконання
-    def Cancel(self):
+    def Cancelled(self) -> "Transmission":
         self.State = "Cancelled"
         return self
-
+    # Фіксація збою під час передачі в кондуїті   
+    def Fail(self, Reason: Any = None) -> "Transmission":
+        self.Response = Reason
+        self.State = "Failed"
+        return self
     # Випустити результат у цей сигнал. Встановлює дані та завершений стан.
-    def Emit(self, *Args, Channel: Optional[str] = None, **Flags) -> Any:
+    def Transmit(self, *Args, Channel: Optional[str] = None, **Flags) -> Any:
         Path = Channel or Flags.pop("Channel", None) or self.Channel or f"Transmission.{id(self)}"
-        return ODN.Transmit(Path, Data=Args[0] if len(Args) == 1 else (Args if Args else None), **Flags)
-
-    def Connect(self, Receiver: Callable, Channel: Optional[str] = None) -> "Transmission":
-        Path = Channel or self.Channel or f"Transmission.{id(self)}"
-        ODN.Connect(Path, Receiver)
-        return self
-
-    def Disconnect(self, Receiver: Callable, Channel: Optional[str] = None) -> "Transmission":
-        Path = Channel or self.Channel or f"Transmission.{id(self)}"
-        ODN.Disconnect(Path, Receiver)
-        return self
-
-# Optical Transport Line — статичний транспортний канал
-class OTN(SystemComponent):
+        Payload = Args[0] if len(Args) == 1 else (Args if Args else None)
+        return ODN.Transmit(Path, Data=Payload, **Flags)
+# =============================================================================
+# OTN (OPTICAL TRANSPORT LINE) — статичний транспортний канал
+# Оптоволоконна лінія передачі світлового імпульсу зорельота.
+# =============================================================================
+class OpticalTransportLine(SystemComponent):
+    TypeName = "OpticalTransportLine"
+    Type = "OTN"
+    Version = Version.Release
+    # Фізичні параметри середовища
+    Mode: str = "Optical"           # "Optical" (ізолінійне волокно) або "Quantum" (субпросторовий тунель)
+    Bandwidth: int = 1000000        # Пропускна здатність (Квадів/сек)
+    Latency: float = 0.0            # Затримка лінії (мілісекунди)
+    ActivePipes: int = 0            # Лічильник активних імпульсів у магістралі
 
     # Передати сигнал через оптичну лінію
-    def Transmit(self, Signal):
-        Signal.Protocol = "Optical"
-        return Signal
+    def Transmit(self, Packet: Transmission, Receivers: Optional[List[Callable]] = None) -> Transmission:
+        self.ActivePipes += 1
+        Packet.Protocol = self.Protocol
+        Packet.State = "Transmitting"
+        TargetList = list(Receivers or [])
+        LastResponse = None
+        for Receiver in TargetList:
+            if not callable(Receiver):
+                continue
+            Response = Packet.Deliver(Receiver)
+            if Response is not None:
+                LastResponse = Response
+        Packet.Response = LastResponse
+        Packet.State = "Completed"
+        self.ActivePipes = max(0, self.ActivePipes - 1)
+        return Packet
 
 # Optical Data Network -- Ізолінійна мережа LCARS
 # Призначення:
@@ -60,8 +78,8 @@ class OTN(SystemComponent):
 #   - маршрутизація сигналів;
 #   - резолюція каналів.
 class ODN(SystemComponent):
-
-        self.OTN = OTN()
+    
+    self.OTN = OTN()
         # Класична ізолінійна мережа
         # Квантова мережа
         self.Quantum = {}
@@ -72,95 +90,87 @@ class ODN(SystemComponent):
         # Активний режим
         self.Mode = "Optical"
     
-    def SetMode(self, ModeName: str) -> OpticalTransportNetwork:
-        self.Mode = "Quantum" if (ModeName).lower() == "quantum" else "Optical"
-        # Протоколи
-        self.Protocols = {}
-        # Маршрути
-        self.Routes = {}
-        self._BlackBox = None
-    # ------------------------------------------------------------------
-    # Отримати поточну мережу за активним режимом
-    def Current(self):
-        return self.Network[self.Mode]
+        def SetMode(self, ModeName: str) -> OpticalTransportNetwork:
+            self.Mode = "Quantum" if (ModeName).lower() == "quantum" else "Optical"
+            # Протоколи
+            self.Protocols = {}
+            # Маршрути
+            self.Routes = {}
+            self._BlackBox = None
+        # ------------------------------------------------------------------
+        # Отримати поточну мережу за активним режимом
+        def Current(self):
+            return self.Network[self.Mode]
 
-    # Переключити на оптичний режим
-    def OpticalMode(self):
-        self.Mode = "Optical"
-        return self
+        # Переключити на оптичний режим
+        def OpticalMode(self):
+            self.Mode = "Optical"
+            return self
 
-    # Переключити на квантовий режим
-    def QuantumMode(self):
-        self.Mode = "Quantum"
-        return self
+        # Переключити на квантовий режим
+        def QuantumMode(self):
+            self.Mode = "Quantum"
+            return self
 
-    # Канали
-    # Отримати або створити канал за шляхом
-    def Channel(self, Path):
-        Network = self.Current()
-        Channel = Network.get(Path)
-        if Channel is None:
-            Channel = Transmission()
-            Channel.Channel = Path
+        # Канали
+        # Отримати або створити канал за шляхом
+        def Channel(self, Path):
+            Network = self.Current()
+            Channel = Network.get(Path)
+            if Channel is None:
+                Channel = Transmission()
+                Channel.Channel = Path
+                Channel.State = "Online"
+                Network[Path] = Channel
+                self.BlackBox.RegisterChannel(Path)
+            return Channel
+
+        # Перевірити існування каналу
+        def Exists(self, Path):
+            return Path in self.Current()
+
+        # Активувати канал
+        def Online(self, Path):
+            Channel = self.Channel(Path)
             Channel.State = "Online"
-            Network[Path] = Channel
-            self.BlackBox.RegisterChannel(Path)
-        return Channel
+            return Channel
 
-    # Перевірити існування каналу
-    def Exists(self, Path):
-        return Path in self.Current()
+        # Деактивувати канал
+        def Offline(self, Path):
+            Channel = self.Channel(Path)
+            Channel.State = "Offline"
+            return Channel
 
-    # Активувати канал
-    def Online(self, Path):
-        Channel = self.Channel(Path)
-        Channel.State = "Online"
-        return Channel
+        # Отримати статус каналу
+        def Status(self, Path):
+            return self.Channel(Path).State
 
-    # Деактивувати канал
-    def Offline(self, Path):
-        Channel = self.Channel(Path)
-        Channel.State = "Offline"
-        return Channel
+        # Випустити сигнал у канал з даними та прапорцями.
+        # Після публікації викликає всіх підписників каналу.
+        def Emit(self, Path, Data=None, **Kwargs):
+            Signal = self.Channel(Path)
+            Signal.Data = Data if Data is not None else Kwargs
+            Signal.Flags = dict(Kwargs)
+            Signal.State = "Completed"
+            Signal.Channel = Path
+            # Сповіщаємо підписників каналу
+            for Callback in getattr(Signal, "_listeners", []):
+                Callback(Signal)
+            # Bridge до EventBus ядра — єдина шина подій системи.
+            if hasattr(self, "EventBus") and self.EventBus is not None:
+                if not str(Path).startswith("EventBus."):
+                    self.EventBus.Emit(Path, "ODN", Data=Data)
+            return Signal
+    
+        def Connect(self, Receiver: Callable, Channel: Optional[str] = None) -> "Transmission":
+            Path = Channel or self.Channel or f"Transmission.{id(self)}"
+            ODN.Connect(Path, Receiver)
+            return self
 
-    # Отримати статус каналу
-    def Status(self, Path):
-        return self.Channel(Path).State
-
-    # Випустити сигнал у канал з даними та прапорцями.
-    # Після публікації викликає всіх підписників каналу.
-    def Emit(self, Path, Data=None, **Kwargs):
-        Signal = self.Channel(Path)
-        Signal.Data = Data if Data is not None else Kwargs
-        Signal.Flags = dict(Kwargs)
-        Signal.State = "Completed"
-        Signal.Channel = Path
-        # Сповіщаємо підписників каналу
-        for Callback in getattr(Signal, "_listeners", []):
-            Callback(Signal)
-        # Bridge до EventBus ядра — єдина шина подій системи.
-        if hasattr(self, "EventBus") and self.EventBus is not None:
-            if not str(Path).startswith("EventBus."):
-                self.EventBus.Emit(Path, "ODN", Data=Data)
-        return Signal
-    # Підписатися на канал (Listen / Subscribe / Connect)
-    def Listen(self, Path, Callback):
-        return self.Channel(Path).Connect(Callback)
-
-    def Subscribe(self, Path, Callback):
-        return self.Channel(Path).Connect(Callback)
-
-    def Connect(self, Path, Callback):
-        return self.Channel(Path).Connect(Callback)
-
-    def listen(self, Path, Callback):
-        return self.Channel(Path).Connect(Callback)
-
-    def subscribe(self, Path, Callback):
-        return self.Channel(Path).Connect(Callback)
-
-    def connect(self, Path, Callback):
-        return self.Channel(Path).Connect(Callback)
+        def Disconnect(self, Receiver: Callable, Channel: Optional[str] = None) -> "Transmission":
+            Path = Channel or self.Channel or f"Transmission.{id(self)}"
+            ODN.Disconnect(Path, Receiver)
+            return self
 
     # ------------------------------------------------------------------
     # Маршрути

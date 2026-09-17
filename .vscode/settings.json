@@ -33,5 +33,6 @@
     "dist": true,
     "*.egg-info": true
   },
-  "dotnet.preferCSharpExtension": true
+  "dotnet.preferCSharpExtension": true,
+  "python.REPL.enableREPLSmartSend": false
 }
