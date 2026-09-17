@@ -5,7 +5,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 import math
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
-from lcars.base.component import Normalize, Take
+from lcars.base.component import Component, Normalize, Take
 from lcars.base.default import Palette
 from lcars.base.graphic import Modulation, Graphic, Primitive, Renderer
 from lcars.base.type import LCARS, SystemComponent
@@ -95,6 +95,183 @@ class DriverAnimation(SystemComponent):
 # Аліас для зворотної сумісності
 Driver = DriverAnimation
 Animation = DriverAnimation
+# =============================================================================
+# SEQUENCER — ЧАСОВИЙ ДИРИГЕНТ ПОСЛІДОВНОСТЕЙ АНІМАЦІЙ LCARS
+# =============================================================================
+class Sequencer(SystemComponent):
+    TypeName = "LCARSSequencer"
+    Type = "Sequencer"
+
+    # Стан черги
+    Sequence: List[Any] = []
+    CurrentIndex: int = 0
+    Running: bool = False
+    OnFinish: Optional[Callable[[], None]] = None
+
+    def Add(self, DriverInstance):
+        if self.Sequence is None or self.Sequence is Sequencer.Sequence:
+            self.Sequence = []
+        if DriverInstance is not None:
+            DriverInstance.Loop = False
+            self.Sequence.append(DriverInstance)
+        return self
+
+    def Play(self, OnFinish=None):
+        self.OnFinish = OnFinish
+        self.CurrentIndex = 0
+        self.Running = True
+        self.PlayNext()
+        return self
+
+    def PlayNext(self):
+        Items = self.Sequence or []
+        if self.CurrentIndex < len(Items):
+            CurrentDriver = Items[self.CurrentIndex]
+            CurrentDriver.OnComplete = self.OnStepComplete
+            CurrentDriver.Reset()
+            CurrentDriver.Start()
+        else:
+            self.Running = False
+            if callable(self.OnFinish):
+                self.OnFinish()
+
+    def OnStepComplete(self):
+        self.CurrentIndex += 1
+        self.PlayNext()
+
+    def Stop(self):
+        self.Running = False
+        Items = self.Sequence or []
+        if self.CurrentIndex < len(Items):
+            Items[self.CurrentIndex].Stop()
+        return self
+# =============================================================================
+# PARALLEL — ПАРАЛЕЛЬНА ЗБІРКА АНІМАЦІЙ (СИНХРОННИЙ ЗАПУСК ХОРУ ДРАЙВЕРІВ)
+# =============================================================================
+class Parallel(SystemComponent):
+    TypeName = "LCARSParallel"
+    Type = "Parallel"
+
+    Drivers: List[Any] = []
+    Running: bool = False
+    CompletedCount: int = 0
+    OnFinish: Optional[Callable[[], None]] = None
+
+    def Add(self, *DriverInstances):
+        if self.Drivers is None or self.Drivers is Parallel.Drivers:
+            self.Drivers = []
+        for Drv in DriverInstances:
+            if Drv is not None:
+                self.Drivers.append(Drv)
+        return self
+
+    def Play(self, OnFinish=None):
+        self.OnFinish = OnFinish
+        self.Running = True
+        self.CompletedCount = 0
+
+        Items = self.Drivers or []
+        if not Items:
+            if callable(self.OnFinish):
+                self.OnFinish()
+            return self
+
+        for Drv in Items:
+            Drv.OnComplete = self.OnDriverComplete
+            Drv.Reset()
+            Drv.Start()
+        return self
+
+    def OnDriverComplete(self):
+        self.CompletedCount += 1
+        Items = self.Drivers or []
+        if self.CompletedCount >= len(Items):
+            self.Running = False
+            if callable(self.OnFinish):
+                self.OnFinish()
+
+    def Stop(self):
+        self.Running = False
+        Items = self.Drivers or []
+        for Drv in Items:
+            Drv.Stop()
+        return self
+# =============================================================================
+# STAGGER — КАСКАДНА ЗБІРКА АНІМАЦІЙ (ЗАПУСК ІЗ ЧАСОВИМ ЗСУВОМ / ХВИЛЯ)
+# =============================================================================
+class Stagger(SystemComponent):
+    TypeName = "LCARSStagger"
+    Type = "Stagger"
+
+    Drivers: List[Any] = []
+    DelayMs: int = 60        # Затримка між запуском сусідніх елементів
+    Running: bool = False
+    CompletedCount: int = 0
+    CurrentLaunchIndex: int = 0
+    OnFinish: Optional[Callable[[], None]] = None
+
+    def Add(self, *DriverInstances):
+        if self.Drivers is None or self.Drivers is Stagger.Drivers:
+            self.Drivers = []
+        for Drv in DriverInstances:
+            if Drv is not None:
+                self.Drivers.append(Drv)
+        return self
+
+    def Play(self, DelayMs=None, OnFinish=None):
+        if DelayMs is not None:
+            self.DelayMs = int(DelayMs)
+        self.OnFinish = OnFinish
+        self.Running = True
+        self.CompletedCount = 0
+        self.CurrentLaunchIndex = 0
+
+        Items = self.Drivers or []
+        if not Items:
+            if callable(self.OnFinish):
+                self.OnFinish()
+            return self
+
+        # Запускаємо таймер каскадного викиду
+        TimerClass = LCARS.Retrieve("Base.Core.Timer")
+        if TimerClass and callable(TimerClass) and self.Timer is None:
+            self.Timer = TimerClass()
+            self.Timer.timeout.connect(self.LaunchNext)
+            self.Timer.start(self.DelayMs)
+        elif self.Timer and hasattr(self.Timer, "start"):
+            self.Timer.start(self.DelayMs)
+
+        return self
+
+    def LaunchNext(self):
+        Items = self.Drivers or []
+        if self.CurrentLaunchIndex < len(Items):
+            Drv = Items[self.CurrentLaunchIndex]
+            Drv.OnComplete = self.OnDriverComplete
+            Drv.Reset()
+            Drv.Start()
+            self.CurrentLaunchIndex += 1
+        else:
+            # Усі анімації запущені — зупиняємо черговий таймер
+            if self.Timer and hasattr(self.Timer, "stop"):
+                self.Timer.stop()
+
+    def OnDriverComplete(self):
+        self.CompletedCount += 1
+        Items = self.Drivers or []
+        if self.CompletedCount >= len(Items):
+            self.Running = False
+            if callable(self.OnFinish):
+                self.OnFinish()
+
+    def Stop(self):
+        self.Running = False
+        if self.Timer and hasattr(self.Timer, "stop"):
+            self.Timer.stop()
+        Items = self.Drivers or []
+        for Drv in Items:
+            Drv.Stop()
+        return self
 # =============================================================================
 # АЛГОРИТМІЧНІ ВЕКТОРНІ ДИСПЛЕЇ LCARS (ГЕНЕРАЦІЯ ТОПОЛОГІЧНИХ ПРИМІТИВІВ)
 # =============================================================================
@@ -920,178 +1097,286 @@ class DiagnosticGrid(Component):
         BeamPen = LCARS.Visual.Pen(LCARS.Visual.Color(self.ScanColor), 2.0)
         Context.setPen(BeamPen)
         Context.drawLine(LCARS.Geometry.PointF(ActiveX + CellW, 0), LCARS.Geometry.PointF(ActiveX + CellW, H))
-
         return True            
-# Імпульс
-class Impulse(Pulse):
-    def __init__(self, Parent=None, Intensity=1.0, **Args):
-        self.Intensity = float(Take(Args, ["intensity", "Intensity"], Intensity))
-        super().__init__(Parent=Parent, **Args)
+# =============================================================================
+# DATASTREAM — ВЕРТИКАЛЬНИЙ ПОТІК ТЕЛЕМЕТРІЇ ТА ЛОГІВ БОРТОВОГО КОМП'ЮТЕРА
+# =============================================================================
+class DataStream(Component):
+    TypeName = "LCARSDataStream"
+    Type = "DataStream"
 
-    def TickFrame(self):
-        self.Speed = self.Clamp(self.Speed * self.Intensity, 0.005, 0.25)
-        super().TickFrame()
+    # Геометрія
+    Width = 260
+    Height = 140
 
-# Потік телеметрії
-class DataStream(Animation):
-    def __init__(self, Parent=None, Lines=None, Rows=6, FontSize=12, **Args):
-        DefaultLines = ["LCARS 47-ALPHA", "SUBSPACE LINK", "BIOFILTER ACTIVE", "PRIMARY CORE", "EPS GRID", "SENSOR LOCK"]
-        self.Lines = list(Take(Args, ["lines", "Lines"], Lines) or DefaultLines)
-        self.Rows = int(Take(Args, ["rows", "Rows"], Rows))
-        self.FontSize = int(Take(Args, ["fontSize", "FontSize"], FontSize))
-        super().__init__(Parent=Parent, Type="data-stream", **Args)
-        self.Generate()
+    # Параметри потоку
+    Rows = 6
+    FontSize = 11
+    Speed = 0.02
+    Phase = 0.0
+    Running = False
+    Interval = 40
+    Timer = None
 
-    def Generate(self):
-        self.ClearPrimitives()
-        Total = len(self.Lines)
-        if not Total:
-            return
-        RowH = max(14, int(self.Height / max(1, self.Rows)))
-        Offset = int(self.Phase * Total)
-        for Row in range(self.Rows):
-            Index = (Offset + Row) % Total
-            Text = self.Lines[Index]
-            YPos = Row * RowH
-            TextColor = self.Color if Row % 2 == 0 else Palette.Buttons[2]
-            self.AddPrimitive(Primitive.TEXT, 0, YPos, self.Width, RowH, TextColor, text=Text, fontSize=self.FontSize)
-            self.AddPrimitive(Primitive.LINE, 0, YPos + RowH - 2, self.Width, 0, Palette.Disabled[1], width=1)
+    # Кольори
+    Spectrum = Palette.Buttons[2]
+    Accent = Palette.Buttons[0]
+    DividerColor = "#222233"
 
+    # Рядки телеметрії за замовчуванням
+    Lines = [
+        "LCARS 47-ALPHA // SYSTEM ONLINE",
+        "SUBSPACE CARRIER // 45.2 GHZ",
+        "BIOFILTER STATUS // ACTIVE",
+        "WARP CORE HARMONICS // 99.4%",
+        "EPS POWER GRID // BALANCED",
+        "DEFLECTOR SHIELDS // NOMINAL",
+        "ODN OPTICAL BUS // 100% BANDWIDTH",
+        "LONG-RANGE SENSORS // SCANNING",
+        "TACTICAL MATRIX // STANDBY",
+    ]
 
-# Алгоритмічне зоряне поле
-class StarfieldCluster(Animation):
-    def __init__(self, Parent=None, StarCount=160, Depth=2.4, **Args):
-        self.StarCount = int(Take(Args, ["starCount", "StarCount"], StarCount))
-        self.Depth = float(Take(Args, ["depth", "Depth"], Depth))
-        self.Stars: List[Dict[str, float]] = []
-        super().__init__(Parent=Parent, Type="starfield", **Args)
-        self.BuildStars()
-        self.Generate()
-
-    def BuildStars(self):
-        Random = LCARS.Random.Random(1701)
-        self.Stars.clear()
-        for _ in range(self.StarCount):
-            self.Stars.append({
-                "x": Random.uniform(-1.0, 1.0),
-                "y": Random.uniform(-1.0, 1.0),
-                "z": Random.uniform(0.2, self.Depth),
-                "size": Random.uniform(1.0, 3.5),
-            })
-
-    def TickFrame(self):
-        for Star in self.Stars:
-            Star["z"] -= self.Speed * 0.45
-            if Star["z"] <= 0.1:
-                Star["z"] = self.Depth
-        super().TickFrame()
-
-    def Generate(self):
-        self.ClearPrimitives()
-        CenterX = self.Width / 2.0
-        CenterY = self.Height / 2.0
-        for Star in self.Stars:
-            Scale = 1.0 / max(0.1, Star["z"])
-            XPos = CenterX + Star["x"] * CenterX * Scale
-            YPos = CenterY + Star["y"] * CenterY * Scale
-            if 0 <= XPos < self.Width and 0 <= YPos < self.Height:
-                Size = max(1.0, Star["size"] * Scale)
-                ZRatio = (self.Depth - Star["z"]) / max(0.1, self.Depth - 0.2)
-                ColIndex = int(ZRatio * 3)
-                StarCol = self.PaletteColor("buttons", ColIndex)
-                self.AddPrimitive(Primitive.CIRCLE, XPos, YPos, max(2.0, Size), max(2.0, Size), StarCol)
-
-
-# Алгоритмічний варп-ефект
-class Warp(StarfieldCluster):
-    def __init__(self, Parent=None, Engaged=False, **Args):
-        self.Engaged = bool(Take(Args, ["engaged", "Engaged"], Engaged))
-        super().__init__(Parent=Parent, **Args)
-        self.SetWarpSpeed(self.Engaged)
-
-    def SetWarpSpeed(self, Engaged=True):
-        self.Engaged = bool(Engaged)
-        self.Speed = 0.085 if self.Engaged else 0.035
-
-    def Generate(self):
-        if not self.Engaged:
-            super().Generate()
-            return
-        self.ClearPrimitives()
-        CenterX = self.Width / 2.0
-        CenterY = self.Height / 2.0
-        Stretch = 22.0
-        for Star in self.Stars:
-            Scale = 1.0 / max(0.1, Star["z"])
-            XPos = CenterX + Star["x"] * CenterX * Scale
-            YPos = CenterY + Star["y"] * CenterY * Scale
-            if 0 <= XPos < self.Width and 0 <= YPos < self.Height:
-                EndX = XPos + Star["x"] * Stretch * Scale
-                EndY = YPos + Star["y"] * Stretch * Scale
-                Thickness = max(1, int(Star["size"] * Scale))
-                ZRatio = (self.Depth - Star["z"]) / max(0.1, self.Depth - 0.2)
-                ColIndex = int(ZRatio * 3)
-                StarCol = self.PaletteColor("buttons", ColIndex)
-                self.AddPrimitive(Primitive.LINE, XPos, YPos, EndX - XPos, EndY - YPos, StarCol, width=Thickness)
-# Секвенсер послідовностей LCARS
-class Sequencer:
-    def __init__(self):
-        self.Sequence: List[Driver] = []
-        self.CurrentIndex: int = 0
-        self.Running: bool = False
-        self.OnFinishCallback: Optional[Callable[[], None]] = None
-
-    def Add(self, DriverInstance: Driver) -> Sequencer:
-        DriverInstance.Loop = False
-        self.Sequence.append(DriverInstance)
-        return self
-
-    def Play(self, OnFinish: Optional[Callable[[], None]] = None):
-        self.OnFinishCallback = OnFinish
-        self.CurrentIndex = 0
+    def Start(self, Speed=None):
+        if Speed is not None:
+            self.Speed = float(Speed)
         self.Running = True
-        self.PlayNext()
-
-    def PlayNext(self):
-        if self.CurrentIndex < len(self.Sequence):
-            CurrentDriver = self.Sequence[self.CurrentIndex]
-            CurrentDriver.OnCompleteCallback = self.OnStepComplete
-            CurrentDriver.Reset()
-            CurrentDriver.Start()
-        else:
-            self.Running = False
-            if callable(self.OnFinishCallback):
-                self.OnFinishCallback()
-
-    def OnStepComplete(self):
-        self.CurrentIndex += 1
-        self.PlayNext()
+        TimerClass = LCARS.Retrieve("Base.Core.Timer")
+        if TimerClass and callable(TimerClass) and self.Timer is None:
+            self.Timer = TimerClass()
+            self.Timer.timeout.connect(self.Tick)
+            self.Timer.start(self.Interval)
+        elif self.Timer and hasattr(self.Timer, "start"):
+            self.Timer.start(self.Interval)
+        return self
 
     def Stop(self):
         self.Running = False
-        if self.CurrentIndex < len(self.Sequence):
-            self.Sequence[self.CurrentIndex].Stop()
-__all__ = [
-    "Easing",
+        if self.Timer and hasattr(self.Timer, "stop"):
+            self.Timer.stop()
+        return self
+
+    def Tick(self):
+        if not self.Running:
+            return
+        self.Phase = (self.Phase + self.Speed) % 1.0
+        self.Refresh()
+
+    # Прямий векторний рендер рухомого потоку тексту
+    def Draw(self, Context, Device):
+        if Context is None or Device is None:
+            return False
+
+        W = float(Device.width() if hasattr(Device, "width") else self.Width)
+        H = float(Device.height() if hasattr(Device, "height") else self.Height)
+        # Чорне тло
+        Context.fillRect(Device.rect(), LCARS.Visual.Color("#000000"))
+
+        LinesList = getattr(self, "Lines", [])
+        Total = len(LinesList)
+        if not Total:
+            return True
+
+        VisibleRows = max(1, self.Rows)
+        RowH = max(12.0, H / VisibleRows)
+        Offset = int(self.Phase * Total)
+
+        FontClass = LCARS.Retrieve("Base.Visual.Font")
+        if FontClass:
+            Context.setFont(FontClass("LCARS", self.FontSize))
+
+        PrimaryColor = LCARS.Visual.Color(self.Spectrum)
+        SecondaryColor = LCARS.Visual.Color(self.Accent)
+        DividerPen = LCARS.Visual.Pen(LCARS.Visual.Color(self.DividerColor), 1.0)
+
+        for Row in range(VisibleRows):
+            Index = (Offset + Row) % Total
+            LineText = str(LinesList[Index]).upper()
+            Y = Row * RowH
+
+            # Чергування кольорів для кращої читабельності
+            TextColor = PrimaryColor if Row % 2 == 0 else SecondaryColor
+            Context.setPen(LCARS.Visual.Pen(TextColor))
+            Context.drawText(LCARS.Geometry.RectF(4.0, Y, W - 8.0, RowH), 0x0080 | 0x0001, LineText)
+
+            # Тонка лінія розділювача
+            Context.setPen(DividerPen)
+            Context.drawLine(LCARS.Geometry.PointF(0, Y + RowH - 1.0), LCARS.Geometry.PointF(W, Y + RowH - 1.0))
+        return True
+# =============================================================================
+# STARFIELD — 3D НАВІГАЦІЙНИЙ ДИСПЛЕЙ: ІМПУЛЬС ТА ВАРП-СТРИБОК LCARS
+# =============================================================================
+class Starfield(Component):
+    TypeName = "LCARSStarfield"
+    Type = "Starfield"
+
+    # Габарити
+    Width = 400
+    Height = 300
+
+    # Режими польоту: "Impulse" (точки) або "Warp" (розтягнуті смуги)
+    Mode = "Impulse"
+    StarCount = 160
+    Depth = 2.5             # Глибина перспективи Z
+    Speed = 0.035           # Базова швидкість для Impulse
+    WarpFactor = 5.0        # Коефіцієнт прискорення та довжини смуг у Warp
+    StarList = []
+    Running = False
+    Interval = 35           # ~30 FPS
+    Timer = None
+
+    # Кольори
+    Spectrum = "#ffffff"               # Білий для Impulse
+    WarpColor = "#99ccff"              # Блакитний ефект просторового зсуву для Warp
+    # Залізна типізація для Pyrefly
+    StarList: List[Any] = []
+
+    def InitializeStars(self):
+        Rnd = LCARS.Random  # Сід NCC-1701
+        self.StarList = []
+        for Index in range(self.StarCount):
+            self.StarList.append([
+                Rnd.uniform(-1.0, 1.0),         # X [-1.0 .. 1.0]
+                Rnd.uniform(-1.0, 1.0),         # Y [-1.0 .. 1.0]
+                Rnd.uniform(0.15, self.Depth),  # Z [0.15 .. Depth]
+                Rnd.uniform(1.2, 3.0),          # Базовий розмір
+            ])
+
+    def SetMode(self, Mode: str):
+        self.Mode = (Mode).capitalize()
+        self.Refresh()
+        return self
+
+    def Start(self, Speed=None, Mode=None):
+        if Speed is not None:
+            self.Speed = float(Speed)
+        if Mode is not None:
+            self.Mode = str(Mode).capitalize()
+
+        self.Running = True
+        if self.StarList is None:
+            self.InitializeStars()
+
+        TimerClass = LCARS.Retrieve("Base.Core.Timer")
+        if TimerClass and callable(TimerClass) and self.Timer is None:
+            self.Timer = TimerClass()
+            self.Timer.timeout.connect(self.Tick)
+            self.Timer.start(self.Interval)
+        elif self.Timer and hasattr(self.Timer, "start"):
+            self.Timer.start(self.Interval)
+        return self
+
+    def Stop(self):
+        self.Running = False
+        if self.Timer and hasattr(self.Timer, "stop"):
+            self.Timer.stop()
+        return self
+
+    def Tick(self):
+        if not self.Running or not self.StarList:
+            return
+
+        IsWarp = (self.Mode.lower() == "warp")
+        EffectiveSpeed = self.Speed * (self.WarpFactor if IsWarp else 1.0)
+        Step = EffectiveSpeed * 0.45
+
+        for Star in self.StarList:
+            Star[2] -= Step
+            if Star[2] <= 0.08:
+                # Зірка пролетіла — респавнимо в глибину
+                Star[2] = self.Depth
+        self.Refresh()
+
+    # Прямий векторний рендер обох режимів
+    def Draw(self, Context, Device):
+        if Context is None or Device is None:
+            return False
+
+        W = float(Device.width() if hasattr(Device, "width") else self.Width)
+        H = float(Device.height() if hasattr(Device, "height") else self.Height)
+        self.Width = int (W)
+        self.Height = int (H)
+
+        # Чорний космічний вакуум
+        Context.fillRect(Device.rect(), LCARS.Visual.Color("#000000"))
+
+        if self.StarList is None:
+            self.InitializeStars()
+
+        CenterX = W * 0.5
+        CenterY = H * 0.5
+        IsWarp = (self.Mode.lower() == "warp")
+
+        if IsWarp:
+            # -------------------------------------------------------------
+            # РЕЖИМ 1: WARP SPEED (РОЗТЯГНУТІ СВІТЛОВІ СМУГИ / СТРІКИ)
+            # -------------------------------------------------------------
+            BaseColor = LCARS.Visual.Color(self.WarpColor)
+            StreakLength = self.Speed * self.WarpFactor * 0.8
+
+            for Star in self.StarList:
+                CurrentZ = max(0.06, Star[2])
+                PreviousZ = CurrentZ + StreakLength
+
+                ScaleCur = 1.0 / CurrentZ
+                ScalePrev = 1.0 / PreviousZ
+
+                CurX = CenterX + Star[0] * CenterX * ScaleCur
+                CurY = CenterY + Star[1] * CenterY * ScaleCur
+
+                PrevX = CenterX + Star[0] * CenterX * ScalePrev
+                PrevY = CenterY + Star[1] * CenterY * ScalePrev
+
+                if 0.0 <= CurX <= W and 0.0 <= CurY <= H:
+                    Alpha = int(min(255, max(50, (1.0 - (CurrentZ / self.Depth)) * 255)))
+                    PenWidth = max(1.2, Star[3] * ScaleCur * 0.6)
+
+                    StreakColor = LCARS.Visual.Color(BaseColor.red(), BaseColor.green(), BaseColor.blue(), Alpha)
+                    Context.setPen(LCARS.Visual.Pen(StreakColor, PenWidth))
+                    Context.drawLine(LCARS.Geometry.PointF(PrevX, PrevY), LCARS.Geometry.PointF(CurX, CurY))
+        else:
+            # -------------------------------------------------------------
+            # РЕЖИМ 2: IMPULSE (КРУГЛІ СВІТЛОВІ ТОЧКИ В ПЕРСПЕКТИВІ)
+            # -------------------------------------------------------------
+            BaseColor = LCARS.Visual.Color(self.Spectrum)
+            Context.setPen(LCARS.Visual.Pen(LCARS.Visual.Color("transparent")))
+
+            for Star in self.StarList:
+                Z = max(0.08, Star[2])
+                Scale = 1.0 / Z
+
+                ScreenX = CenterX + Star[0] * CenterX * Scale
+                ScreenY = CenterY + Star[1] * CenterY * Scale
+
+                if 0.0 <= ScreenX <= W and 0.0 <= ScreenY <= H:
+                    Radius = max(0.8, Star[3] * Scale * 0.5)
+                    Alpha = int(min(255, max(40, (1.0 - (Z / self.Depth)) * 255)))
+
+                    StarColor = LCARS.Visual.Color(BaseColor.red(), BaseColor.green(), BaseColor.blue(), Alpha)
+                    Context.setBrush(LCARS.Visual.Brush(StarColor))
+                    Context.drawEllipse(LCARS.Geometry.PointF(ScreenX, ScreenY), Radius, Radius)
+        return True
+# Аліаси для зворотної сумісності з імпортами
+Impulse = Starfield
+Warp = Starfield
+LCARS.Types = [
     "Driver",
-    "AlertSweep",
-    "TactileFeedback",
-    "PropertyTween",
-    "ColorFade",
     "Sequencer",
+    "Parallel",
+    "Stagger",
     "Animation",
-    "ScanningBar",
+    "Scanning",
     "WaveStream",
-    "ShieldHarmonics",
     "Reveal",
+    "Conceal",
     "Transition",
     "Pulse",
     "Blink",
     "Typewriter",
     "TextDecode",
-    "Impulse",
     "DiagnosticGrid",
     "DataStream",
-    "StarfieldCluster",
+    "Starfield",
+    "Impulse",
     "Warp",
 ]
+All = list(LCARS.Types)
