@@ -12,7 +12,6 @@
 #       6. Координує штучний інтелект та агентів зорельота (Copilot / GemmaIntegrator).
 # СТАНДАРТ: Titanium LCARS (Zero-Except, Zero-Underscores, Strict PascalCase, Pure Classes, No Direct Imports).
 # =============================================================================
-from __future__ import annotations
 from lcars.base.type import LCARS, SystemComponent
 from lcars.base.info import Version, Passport
 from lcars.core.signal import ODN, Transmission

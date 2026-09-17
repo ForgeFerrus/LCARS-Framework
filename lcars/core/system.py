@@ -9,49 +9,42 @@
 #       2. MasterSystem — координує BIOS POST, конфігурації, модулі та інженерію.
 #       3. Підключає інженерний колектор, ізолінійні чіпи та сенсорну сітку.
 #       4. Надає консоль та інтерфейс управління екіпажу.
-# СТАНДАРТ: Titanium LCARS (Zero-Except, Zero-Underscores, Strict PascalCase, Pure Classes).
 # =============================================================================
+from typing import Any, Dict, List, Optional
 from lcars.base.type import LCARS, SystemComponent
 from lcars.base.info import Version, Passport
 from lcars.core.signal import ODN, Transmission
 from lcars.core.conduit import ServiceRegistry, Service
 from lcars.service.chronometer import Chronometer
 from lcars.system.config import Config
-# ═════════════════════════════════════════════════════════════════════
-# 1. SUBSYSTEM (КАНОНІЧНИЙ КЛАС ПІДСИСТЕМИ ВСЕРЕДИНІ СИСТЕМИ)
-# ═════════════════════════════════════════════════════════════════════
+
 class Subsystem(SystemComponent):
-    # Базовий клас підсистеми системи (аналог як Subprocess для Process)
-    Name = "GenericSubsystem"
-    Category = "General"
+    TypeName = "LCARSSubsystem"
+    Type = "Subsystem"
 
-    def __init__(self, SubsystemId = None, ParentSystem = None):
-        ActualId = SubsystemId or f"Subsystem.{self.Name}"
-        super().__init__(SystemId=ActualId)
-        self.System = ParentSystem
-        self.Active = True
-        self.PowerAllocation = 100.0
-        self.Status = "ONLINE"
+    Name: str = "GenericSubsystem"
+    Category: str = "General"
+    System: Any = None
+    Active: bool = True
+    PowerAllocation: float = 100.0
+    Status: str = "ONLINE"
 
-    # Прив'язка до батьківської Системи
     def BindSystem(self, SystemRef):
         self.System = SystemRef
+        return self
 
-    # Зміна рівня виділення потужності підсистемі
     def SetPower(self, Percent):
         self.PowerAllocation = max(0.0, min(100.0, float(Percent)))
         ODN.Transmit(f"Subsystem.{self.Name}.PowerChanged", Power=self.PowerAllocation)
         return self.PowerAllocation
 
-    # Активація / деактивація підсистеми
     def SetActive(self, IsActive):
         self.Active = bool(IsActive)
         self.Status = "ONLINE" if self.Active else "OFFLINE"
         ODN.Transmit(f"Subsystem.{self.Name}.StateChanged", Status=self.Status)
         return self.Active
 
-    # Звіт про стан підсистеми
-    def GetState(self):
+    def SetState(self):
         return {
             "Subsystem": self.Name,
             "Category": self.Category,
@@ -63,44 +56,27 @@ class Subsystem(SystemComponent):
 # 2. MASTER SYSTEM (ГОЛОВНЕ ОПЕРАЦІЙНЕ СЕРЕДОВИЩЕ ЗОРЕЛЬОТА)
 # ═════════════════════════════════════════════════════════════════════
 class MasterSystem(SystemComponent):
-    InstanceRef = None
+    TypeName = "LCARSMasterSystem"
+    Type = "Core"
 
-    def __new__(cls, *args, **kwargs):
-        if cls.InstanceRef is None:
-            cls.InstanceRef = super().__new__(cls)
-            cls.InstanceRef.IsInitialized = False
-        return cls.InstanceRef
+    # Реєстри модулів, служб та підсистем Матриці LCARS
+    Services: ServiceRegistry
+    Subsystems: Dict[str, Any] = {}
+    Modules: Dict[str, Any] = {}
+    Engineering: Any = None
+    ErrorList: List[str] = []
+    BiosReport: Any = None
+    IsInitialized: bool = False
 
-    def __init__(self, SysArgs = None):
-        if getattr(self, "IsInitialized", False):
-            return
+    def Boot(self, SysArgs: Optional[List[str]] = None) -> bool:
+        if self.IsInitialized:
+            return True
 
-        super().__init__(SystemId="MasterSystem-MasterNode")
-        self.Args = SysArgs or []
-        self.Root = LCARS.System.Path(__file__).resolve().parents[2] if hasattr(LCARS.System, "Path") else None
-        self.ErrorList = []
-        self.BiosReport = None
-
-        # 1. Реєстри модулів, служб та підсистем Матриці LCARS
         self.Services = ServiceRegistry()
         self.Subsystems = {}
         self.Modules = {}
-        self.Engineering = {}
+        self.ErrorList = []
 
-        # 2. Повний життєвий цикл розгортання Матриці (System Bootstrap)
-        self.Boot()
-
-        self.IsInitialized = True
-        ODN.Transmit("MasterSystem.Online", Version=Version.Release, Status="ONLINE")
-
-    @classmethod
-    def GetInstance(cls):
-        if cls.InstanceRef is None:
-            cls.InstanceRef = MasterSystem()
-        return cls.InstanceRef
-
-    # ─── ЖИТТЄВИЙ ЦИКЛ ЗАВАНТАЖЕННЯ ───────────────────────
-    def Boot(self):
         # 1. BIOS POST апаратна діагностика
         if not self.RunBiosChecks():
             ODN.Transmit("MasterSystem.Boot.Error", Phase="BIOS")
@@ -119,6 +95,8 @@ class MasterSystem(SystemComponent):
         else:
             ODN.Transmit("MasterSystem.Ready")
 
+        self.IsInitialized = True
+        ODN.Transmit("MasterSystem.Online", Version=Version.Release, Status="ONLINE")
         return True
 
     def RunBiosChecks(self):
@@ -231,7 +209,7 @@ class MasterSystem(SystemComponent):
         Normalized = str(Name or "").lower().strip()
         return self.Subsystems.get(Normalized) or self.Subsystems.get(f"subsystem.{Normalized}")
 
-    def Module(self, Name):
+    def Modules(self, Name):
         return self.Modules.get(Name)
 
     def Service(self, Name):
@@ -286,8 +264,9 @@ class MasterSystem(SystemComponent):
 
 # Системні аліаси зорельота
 ActiveSystem = MasterSystem.GetInstance
-System = MasterSystem.GetInstance
-__all__ = [
+# Готовий канонічний інстанс бортового комп'ютера
+System = MasterSystemNode = MasterSystem()
+LCARS.All = [
     "Subsystem",
     "MasterSystem",
     "ActiveSystem",

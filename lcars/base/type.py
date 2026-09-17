@@ -231,7 +231,25 @@ class LCARS(metaclass=Namespace):
             "system": getattr(self, "SystemId", None),
             "status": getattr(self, "Status", "Operational"),
         }
-        
+
+    def Launch(EntryPoint: Type.Any, *Args, **Flags) -> Type.Any:
+    # Отримання канонічного екземпляра додатку через ядро
+        Application = LCARS.Retrieve("Base.Interface.Application")
+        if callable(Application) and not hasattr(Application, "exec"):
+            App = Application()
+
+        # Запуск інтерфейсу або системного процесу
+        Instance = EntryPoint(*Args, **Flags) if callable(EntryPoint) else EntryPoint
+
+        # Якщо це візуальний інтерфейс — забезпечуємо показ
+        if hasattr(Instance, "Show"):
+            Instance.Show()
+
+        # Запуск головного циклу операцій зорельота
+        if hasattr(Application, "exec"):
+            return Application.exec()
+        return Instance
+
     # === СИСТЕМНІ ЗМАГАЛЬНІ ТА ДАНДЕР-ЗАМІННИКИ (BUILTINS & OPERATORS) ===
     # Шляхові канонії зібрано у вкладені контейнери, щоб не перекривати
     # справжні атрибути класу (Init, Name, Import, Directory тощо).

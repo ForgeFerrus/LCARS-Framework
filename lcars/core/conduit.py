@@ -11,53 +11,48 @@
 #       4. Автоматичний перезапуск та ізоляція збоїв (AutoRestart).
 # СТАНДАРТ: Titanium LCARS (Zero-Except, Zero-Underscores, Strict PascalCase, Pure Classes).
 # =============================================================================
-
-from __future__ import annotations
 from lcars.base.type import LCARS, SystemComponent
 from lcars.core.signal import ODN, Transmission
-
-
 # ═════════════════════════════════════════════════════════════════════
 # 1. BASE SYSTEM SERVICE (КОНТРАКТ СЛУЖБИ ЗОРЕЛЬОТА / КОНДУЇТУ)
 # ═════════════════════════════════════════════════════════════════════
 class Service(SystemComponent):
-    Name = "UnnamedSubsystem"
-    Dependencies = []
-    AutoRestart = True
-    MaxRestarts = 3
-
-    def __init__(self, Id = None):
-        ActualId = Id or f"Service.{self.Name}"
-        super().__init__(SystemId=ActualId)
-        self.SystemHost = None
-        self.Running = False
-        self.Healthy = True
-        self.RestartCount = 0
-        self.LastError = None
-        self.LastHeartbeat = 0.0
-
-    # Ініціалізація служби в операційному середовищі зорельота
-    def OnInit(self, SystemHostRef = None):
+    TypeName = "LCARSService"
+    Type = "Service"
+    Name: str = "UnnamedSubsystem"
+    Dependencies: list = []
+    AutoRestart: bool = True
+    MaxRestarts: int = 3
+    SystemHost: Any = None
+    Running: bool = False
+    Healthy: bool = True
+    RestartCount: int = 0
+    LastError: Any = None
+    LastHeartbeat: float = 0.0
+    # Прив'язка служби до операційного середовища зорельота
+    def BindHost(self, SystemHostRef: Any = None) -> "Service":
         self.SystemHost = SystemHostRef
-
+        return self
+    OnInit = BindHost
     # Запуск фонової обробки сервісу
-    def OnStart(self):
+    def OnStart(self) -> "Service":
         self.Running = True
         self.Healthy = True
-        TimeSubsystem = LCARS.System.Time
-        self.LastHeartbeat = TimeSubsystem.time() if hasattr(TimeSubsystem, "time") else 0.0
+        TimeSubsystem = getattr(LCARS.System, "Time", None)
+        self.LastHeartbeat = TimeSubsystem.time() if TimeSubsystem and hasattr(TimeSubsystem, "time") else 0.0
         ODN.Transmit(f"Service.{self.Name}.Started", Service=self.Name, Status="ONLINE")
-
+        return self
     # Зупинка та коректне вивільнення ресурсів
-    def OnStop(self):
+    def OnStop(self) -> "Service":
         self.Running = False
         ODN.Transmit(f"Service.{self.Name}.Stopped", Service=self.Name, Status="OFFLINE")
-
+        return self
     # Сигнал активності для сторожового таймера (Watchdog)
-    def Heartbeat(self):
-        TimeSubsystem = LCARS.System.Time
-        self.LastHeartbeat = TimeSubsystem.time() if hasattr(TimeSubsystem, "time") else 0.0
+    def Heartbeat(self) -> bool:
+        TimeSubsystem = getattr(LCARS.System, "Time", None)
+        self.LastHeartbeat = TimeSubsystem.time() if TimeSubsystem and hasattr(TimeSubsystem, "time") else 0.0
         self.Healthy = True
+        return self.Healthy
 
     # Перевірка життєздатності служби для системної діагностики
     def Health(self):
@@ -76,8 +71,6 @@ class Service(SystemComponent):
         self.Healthy = False
         ODN.Transmit(f"Service.{self.Name}.Failed", Service=self.Name, Reason="MAX_RESTARTS_EXCEEDED")
         return False
-
-
 # ═════════════════════════════════════════════════════════════════════
 # 2. SYSTEM SERVICE REGISTRY & WATCHDOG (ДИСПЕТЧЕР КОНДУЇТІВ)
 # ═════════════════════════════════════════════════════════════════════
