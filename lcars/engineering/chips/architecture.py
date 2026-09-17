@@ -6,11 +6,9 @@
 #       монтуванням у слоти, оперативним каталогом чіпів та виконанням entrypoints.
 # СТАНДАРТ: Titanium LCARS (Zero-Direct-Imports, Zero-Except, Zero-Underscores, Strict PascalCase, Pure Classes).
 # =============================================================================
-
-from __future__ import annotations
-
 from lcars.base.type import SystemComponent, LCARS
 from lcars.base.info import VersionInfo
+from lcars.base.interface import 
 from lcars.core.signal import ODN
 
 # Категорія ізолінійного чіпа
@@ -163,6 +161,271 @@ class ISOArchitecture(SystemComponent):
         LoadedModule = ImportFunc(ModulePath)
         TargetClassOrFunc = getattr(LoadedModule, AttrName, None)
         return TargetClassOrFunc
+# =====================================================================
+# CHIP INTERFACE BUILDER — Фабрика зчитування й побудови чіпів ODN
+# =====================================================================
+class ChipInterfaceBuilder:
+    @classmethod
+    def LocateChip(cls, ChipId: str) -> Optional[Path]:
+        CleanId = str(ChipId).strip().replace(".yaml", "").replace(".yml", "")
+        BaseDir = Path(__file__).resolve().parents[2]
+        Cat = CleanId.split("-")[0] if "-" in CleanId else "05"
+        Candidates = [
+            BaseDir / "lcars" / "engineering" / "chips" / Cat / f"{CleanId}.yaml",
+            BaseDir / "lcars" / "engineering" / "chips" / Cat / f"{CleanId[:7]}.yaml",
+            BaseDir / "lcars" / "engineering" / "chips" / Cat / "05-0000.yaml",
+        ]
+        for Candidate in Candidates:
+            if Candidate.exists():
+                return Candidate
+        return None
+
+    @classmethod
+    def LoadChipData(cls, ChipId: str) -> dict:
+        ChipFile = cls.LocateChip(ChipId)
+        if not ChipFile:
+            return {}
+        with open(ChipFile, "r", encoding="utf-8") as FileStream:
+            Manifest = yaml.safe_load(FileStream) or {}
+
+        DbConfig = Manifest.get("config", {}).get("database", {})
+        DbRelPath = DbConfig.get("path", "")
+        if DbRelPath:
+            BaseDir = Path(__file__).resolve().parents[2]
+            DbPath = BaseDir / DbRelPath
+            if DbPath.exists():
+                Conn = sqlite3.connect(str(DbPath))
+                Cursor = Conn.cursor()
+                Table = DbConfig.get("table", "ui_chip_images")
+                ScreenName = DbConfig.get("screen", "master_catalog")
+                Cursor.execute(
+                    f"SELECT elements_json FROM {Table} WHERE chip_id=? OR screen_name=? LIMIT 1",
+                    (str(ChipId), str(ScreenName))
+                )
+                Row = Cursor.fetchone()
+                Conn.close()
+                if Row and Row[0]:
+                    Payload = json.loads(Row[0])
+                    if "layout" not in Payload and "sections" in Payload:
+                        return {"layout": Payload}
+                    return Payload
+
+        LayoutPayload = Manifest.get("layout", {})
+        if LayoutPayload:
+            return {"layout": LayoutPayload}
+        return {}
+
+    @classmethod
+    def Build(cls, ChipId: str, ParentHost: Any = None, MasterPadd: Any = None):
+        Data = cls.LoadChipData(ChipId)
+        if not Data:
+            return None
+        LayoutConfig = Data.get("layout", {})
+        RootPanel = Panel(Parent=ParentHost)
+        RootLayout = RootPanel.Vertical(16, 14, 16, 14, 18)
+        StatusLabelRef = [None]
+
+        def HandleModeAction(ActionType):
+            from lcars.system.alert import GetAlertSystem, AlertLevel
+            import lcars.base.default as DefaultMod
+            AlertSys = GetAlertSystem()
+            if ActionType == "normal":
+                DefaultMod.SystemState = "normal"
+                if AlertSys:
+                    AlertSys.SetLevel(AlertLevel.GREEN)
+                if StatusLabelRef[0]:
+                    StatusLabelRef[0].SetText("SYSTEM MODE: NORMAL // STANDARD STARFLEET OPERATIONAL PALETTE")
+            elif ActionType == "yellow":
+                DefaultMod.SystemState = "yellow"
+                if AlertSys:
+                    AlertSys.SetLevel(AlertLevel.YELLOW)
+                if StatusLabelRef[0]:
+                    StatusLabelRef[0].SetText("SYSTEM MODE: CONDITION YELLOW // ACTIVE SENSOR CAUTION")
+            elif ActionType == "red":
+                DefaultMod.SystemState = "red"
+                if AlertSys:
+                    AlertSys.SetLevel(AlertLevel.RED)
+                if StatusLabelRef[0]:
+                    StatusLabelRef[0].SetText("SYSTEM MODE: CONDITION RED // ALL STATIONS TO TACTICAL ALERT")
+            elif ActionType == "auth":
+                if StatusLabelRef[0]:
+                    StatusLabelRef[0].SetText("AUTHORIZATION ACCEPTED // SECURITY CLEARANCE LEVEL 4")
+                    StatusLabelRef[0].Update()
+            elif ActionType == "standby":
+                DefaultMod.SystemState = "disabled"
+                if StatusLabelRef[0]:
+                    StatusLabelRef[0].SetText("SYSTEM MODE: STANDBY // POWER CONSERVE PROTOCOL")
+            if MasterPadd and hasattr(MasterPadd, "Widget") and MasterPadd.Widget:
+                MasterPadd.Widget.update()
+
+        Sections = LayoutConfig.get("sections", [])
+        for SecData in Sections:
+            SecPanel = Panel(Parent=RootPanel.Widget)
+            SecVL = SecPanel.Vertical(0, 0, 0, 0, SecData.get("spacing", 8))
+
+            if "header" in SecData:
+                HdrData = SecData["header"]
+                HdrLbl = LCARSLabel(
+                    Text=HdrData.get("text", ""),
+                    FontSize=HdrData.get("font_size", 18),
+                    Parent=SecPanel.Widget,
+                )
+                SecPanel.Add(SecVL, HdrLbl)
+
+            if "status_label" in SecData:
+                StData = SecData["status_label"]
+                StRow = Segment(Parent=SecPanel.Widget)
+                StRL = StRow.Horizontal(0, 0, 0, 0, 6)
+                StLbl = LCARSLabel(
+                    Text=StData.get("text", ""),
+                    FontSize=StData.get("font_size", 18),
+                    Parent=StRow.Widget,
+                )
+                StatusLabelRef[0] = StLbl
+                StRow.Add(StRL, StLbl)
+                SecPanel.Add(SecVL, StRow)
+
+            for RowData in SecData.get("rows", []):
+                RowType = RowData.get("type", "segment")
+                if RowType == "compound_stacks":
+                    RowMain = Segment(Parent=SecPanel.Widget)
+                    RML = RowMain.Horizontal(0, 0, 0, 0, 12)
+
+                    LeftStack = Segment(Parent=RowMain.Widget)
+                    LSL = LeftStack.Vertical(0, 0, 0, 0, 4)
+                    for NumVal, NameVal, ChipCode in RowData.get("left_rows", []):
+                        RowItem = Segment(Parent=LeftStack.Widget)
+                        RL = RowItem.Horizontal(0, 0, 0, 0, 4)
+                        Cap = LCARSIndicator(
+                            IndicatorType=LCARSIndicator.PillHalf,
+                            Direction=180,
+                            Width=28,
+                            Height=28,
+                            Parent=RowItem.Widget
+                        )
+                        Bar = LCARSBar(Width=6, Height=28, Parent=RowItem.Widget)
+                        NumLbl = LCARSLabel(Text=NumVal, FontSize=20, Width=48, Parent=RowItem.Widget)
+                        Btn = LCARSButton(
+                            Text=NameVal,
+                            Number=ChipCode,
+                            Form=LCARSButton.SoftHalf,
+                            Direction=0,
+                            Height=28,
+                            Width=180,
+                            FontSize=16,
+                            Parent=RowItem.Widget
+                        )
+                        RowItem.Add(RL, Cap)
+                        RowItem.Add(RL, Bar)
+                        RowItem.Add(RL, NumLbl)
+                        RowItem.Add(RL, Btn)
+                        LeftStack.Add(LSL, RowItem)
+                    RowMain.Add(RML, LeftStack)
+
+                    RightStack = Segment(Parent=RowMain.Widget)
+                    RSL = RightStack.Vertical(0, 0, 0, 0, 4)
+                    for Subsys, BadgeVal, TelemetryVal, ChipCode in RowData.get("right_rows", []):
+                        RowItem = Segment(Parent=RightStack.Widget)
+                        RL = RowItem.Horizontal(0, 0, 0, 0, 4)
+                        LBtn = LCARSButton(
+                            Text=Subsys,
+                            Number=ChipCode,
+                            Form=LCARSButton.SoftHalf,
+                            Direction=180,
+                            Height=28,
+                            Width=160,
+                            FontSize=16,
+                            Parent=RowItem.Widget
+                        )
+                        BadgeLbl = LCARSLabel(Text=BadgeVal, FontSize=20, Width=36, Parent=RowItem.Widget)
+                        DataLbl = LCARSLabel(Text=TelemetryVal, FontSize=18, Width=140, Parent=RowItem.Widget)
+                        CapR = LCARSIndicator(
+                            IndicatorType=LCARSIndicator.PillHalf,
+                            Direction=0,
+                            Width=24,
+                            Height=28,
+                            Parent=RowItem.Widget
+                        )
+                        RowItem.Add(RL, LBtn)
+                        RowItem.Add(RL, BadgeLbl)
+                        RowItem.Add(RL, DataLbl)
+                        RowItem.Add(RL, CapR)
+                        RightStack.Add(RSL, RowItem)
+                    RowMain.Add(RML, RightStack, 1)
+                    SecPanel.Add(SecVL, RowMain)
+
+                elif RowType == "bars_stack":
+                    BarRow = Segment(Parent=SecPanel.Widget)
+                    BRL = BarRow.Vertical(0, 0, 0, 0, 4)
+                    for HVal in RowData.get("heights", [4, 8, 14, 22]):
+                        Bar = LCARSBar(Height=HVal, Parent=BarRow.Widget)
+                        BarRow.Add(BRL, Bar)
+                    SecPanel.Add(SecVL, BarRow)
+
+                else:
+                    RowSeg = Segment(Parent=SecPanel.Widget)
+                    RL = RowSeg.Horizontal(0, 0, 0, 0, RowData.get("spacing", 6))
+                    for Item in RowData.get("items", []):
+                        IType = Item.get("type", "button")
+                        Flex = Item.get("flex", 0)
+                        if IType == "button":
+                            ActionKey = Item.get("action", "")
+                            Btn = LCARSButton(
+                                Text=Item.get("text", ""),
+                                Number=Item.get("number", ""),
+                                Form=Item.get("form", LCARSButton.Pill),
+                                Height=Item.get("height", 38),
+                                Width=Item.get("width", 0),
+                                FontSize=Item.get("font_size", 16),
+                                Parent=RowSeg.Widget,
+                            )
+                            if ActionKey:
+                                def MakeHandler(Act):
+                                    return lambda *a: HandleModeAction(Act)
+                                Btn.Clicked.Connect(MakeHandler(ActionKey))
+                            RowSeg.Add(RL, Btn, Flex)
+                        elif IType == "elbow":
+                            Elb = LCARSElbow(
+                                Direction=Item.get("direction", "top-left"),
+                                Text=Item.get("text", ""),
+                                Number=Item.get("number", ""),
+                                Width=Item.get("width", 480),
+                                Height=Item.get("height", 80),
+                                Thickness=Item.get("thickness", 24),
+                                Radius=Item.get("radius", 36),
+                                FontSize=Item.get("font_size", 18),
+                                Parent=RowSeg.Widget,
+                            )
+                            RowSeg.Add(RL, Elb, Flex)
+                        elif IType == "indicator":
+                            IndMap = {
+                                "pill": LCARSIndicator.Pill,
+                                "pill_half": LCARSIndicator.PillHalf,
+                                "bar": LCARSIndicator.Rect,
+                                "rect": LCARSIndicator.Rect,
+                            }
+                            IndTypeEnum = IndMap.get(Item.get("indicator_type", "pill_half"), LCARSIndicator.PillHalf)
+                            Ind = LCARSIndicator(
+                                Text=Item.get("text", ""),
+                                IndicatorType=IndTypeEnum,
+                                Direction=Item.get("direction", 0),
+                                Height=Item.get("height", 34),
+                                Width=Item.get("width", 140),
+                                FontSize=Item.get("font_size", 16),
+                                Parent=RowSeg.Widget,
+                            )
+                            RowSeg.Add(RL, Ind, Flex)
+                        elif IType == "datablock":
+                            DB = DataBlock(
+                                Item.get("title", ""),
+                                Item.get("data", {}),
+                                RowSeg.Widget,
+                            )
+                            RowSeg.Add(RL, DB, Flex)
+                    SecPanel.Add(SecVL, RowSeg)
+
+            RootPanel.Add(RootLayout, SecPanel)
+        return RootPanel
 
 # Канонічні точки доступу до ІСО-архітектури чіпів
 ISOArchitectureCore = ISOArchitecture.GetInstance
