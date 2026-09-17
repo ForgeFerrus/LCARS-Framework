@@ -1,86 +1,178 @@
-# ◤ LCARS BASE LAYER ARCHITECTURE // TITANIUM MASTER SPECIFICATION 🖖
-# =============================================================================
-# ОПИС: Базовий шар LCARS Framework (Фундамент системи).
-#       Визначає векторну геометрію Окуди, канонічні палітри кольорів, 
-#       сигнально-часові анімаційні приводи, наукові та навігаційні дисплеї,
-#       контейнери інтерфейсу, центральний реєстр та систему типів DNA.
-# СТАНДАРТ: Titanium (Zero-Except, Zero-Underscores, Strict PascalCase, Pure LCARS Classes).
-# =============================================================================
+# ◤ LCARS FRAMEWORK // БАЗОВИЙ ШАР СИСТЕМИ (`lcars/base`) 🖖
+=============================================================================
+**Стандарт:** Titanium Master Specification  
+**Принцип:** Zero-Except • Zero-Underscores • Pure PascalCase • Векторний конвеєр без важких віджетів ОС  
+=============================================================================
 
-## 🏛 1. АРХІТЕКТУРНІ ПРИНЦИПИ
-`lcars/base/` є абсолютно незалежним фундаментом системи:
-1. **Ізоляція та чистота**: Базовий шар не має зворотних залежностей від вищих шарів (`core`, `modules`, `programs`).
-2. **Єдиний простір імен `LCARS`** (`type.py`): Всі системні адаптери, графічні типи та протоколи доступні централізовано через клас `LCARS`.
-3. **Реєстр платформи** (`register.py`): Центральна диспетчеризація зв'язків компонентів та системних мостів.
-4. **Чистий вектор замість віджетів** (`component.py`, `graphic.py`): Компоненти є логічними вузлами на шині ODN із чистим математичним рендерингом `Draw(Context, Device)` через `QPainterPath`, без зайвих важких віджетів операційної системи.
+## 📖 1. ЩО ЦЕ ЗА ПАПКА ТА ЯКА ЇЇ РОЛЬ
+Папка `lcars/base/` — це **фундамент та серце всього фреймворку LCARS**. 
 
----
+Усі інші частини проекту (`lcars/core`, `lcars/modules`, `lcars/ui`, приклади в `programs/`) спираються виключно на цей шар. Базовий шар спроєктований так, що він **не має жодної зворотної залежності** від вищих рівнів і може функціонувати повністю автономно.
 
-## 📁 2. СТРУКТУРА ФАЙЛІВ БАЗОВОГО ШАРУ
-
-| Файл | Розмір | Призначення та ключові сутності |
-| :--- | :--- | :--- |
-| **`animation.py`** | ~56 KB | **Часовий привід та алгоритмічні дисплеї:**<br>• *Приводи*: `Driver`, `Animation`<br>• *Збірки*: `Sequencer`, `Parallel`, `Stagger`<br>• *Переходи*: `Reveal`, `Conceal`, `Transition`, `Blink`<br>• *Текст*: `Typewriter` (`Write`), `TextDecode` (`Decode`)<br>• *Дисплеї*: `WaveStream` (7 режимів), `Scanning`, `Pulse`, `DiagnosticGrid`, `DataStream`, `Starfield` (Impulse + Warp) |
-| **`catalog.py`** | ~5.5 KB | Паспорт підтримуваних технологічних стеків (`LCARSCatalog`: Core, Web, Science, Simulation, Quantum, AI) |
-| **`component.py`** | ~28 KB | **Базовий сенсорний вузол інтерфейсу (ODN Node):**<br>• `Component` (наслідує `Visual`)<br>• `LCARSButton` (6 типів геометрії: Rect, Pill, PillHalf, Soft, SoftHalf, Elbow)<br>• `LCARSBar` (канонічні балки та рейки каркасу)<br>• `LCARSIndicator` (світлові маркери: Rect, Soft, PillHalf)<br>• `LCARSElbow` (несучі кутові вигини каркасу Окуди)<br>• `LCARSLabel` (типографіка Swiss 911 Ultra Compressed) |
-| **`default.py`** | ~12 KB | **Палітра кольорів та теми:**<br>• `Palette` (канонічні кольори TNG/DS9/Voyager: Tango, Federation Blue, Red Alert)<br>• `SystemTheme` (керування динамічними станами та яскравістю)<br>• `FontStyle` (типографічний хелпер для стилів шрифту) |
-| **`desktop.py`** | ~32 KB | Системні віконні адаптери та десктопне середовище терміналу LCARS |
-| **`graphic.py`** | ~40 KB | **Низькорівневе векторне математичне ядро:**<br>• Топологічні трейсери: `TraceCap`, `TraceElbow`, `TraceRounded`, `TraceRect`<br>• Класи оптики: `Visual`, `Topology`, `Graphic`<br>• Апаратний випромінювач світла: `Emitter` (`Renderer`) із прямим викликом `Draw(Context, Device)` |
-| **`info.py`** | ~3 KB | Системний паспорт, глобальна версія (`Version.Release`) та розрахунок Зоряної Дати (`GetStardate()`) |
-| **`interface.py`** | ~43 KB | **Оптичні поверхні та готові канонічні композиції (без префіксу LCARS):**<br>• Поверхня полотна: `Surface(Display)`<br>• Контейнер: `Element` (`SetVertical`, `SetHorizontal`, `Add`, `AddStretch`)<br>• Композиції: `Header`, `Footer`, `Sidebar`, `Bracket`, `DataBlock`, `Toolbar`, `StatBar`, `ScanningBar`, `Panel`, `AccessPanel`, `Screen`, `PADD` |
-| **`register.py`** | ~161 KB | Центральний Реєстр усіх підсистем, вузлів інтерфейсу та зовнішніх мостів `Bridge.*` |
-| **`type.py`** | ~29 KB | Головний фасад `LCARS`, базові DNA-типи, протоколи вирівнювання та клавіш |
+### Головна філософія архітектури:
+1. **Ніяких важких віджетів Windows/Qt:** Замість використання класичних `QPushButton`, `QTableWidget` чи `QProgressBar`, які виглядають як офісний софт 90-х років і розмиваються на екранах різної роздільної здатності, уся система LCARS будується на **чистій аналітичній геометрії та векторному рендерингу (`QPainterPath`, `QPainter`)**.
+2. **Логічний вузол (`Component`) проти фізичного скла (`Surface`):**
+   * Елементи інтерфейсу (`LCARSButton`, `LCARSElbow`, `LCARSBar`) — це легкі математичні вузли в пам'яті, підключені до інформаційної шини **ODN**.
+   * Єдиним справжнім віконним віджетом є сенсорне полотно **`Surface`** (екранне скло), яке за мікросекунди відмальовує векторні контури через апаратний випромінювач світла `Emitter`.
+3. **Жодних дублюючих ініціалізацій (`__init__`):** Усі класи наслідують ланцюжок `LCARS` -> `SystemComponent` -> `Graphic` -> `Component`. Їхні параметри — це чисті атрибути класу з підтримкою автоматичного розпакування `**kwargs`.
 
 ---
 
-## 💎 3. ВЗАЄМОДІЯ ТА СТАНДАРТИ ВИКОРИСТАННЯ
+## 📁 2. ДЕТАЛЬНИЙ ЗМІСТ ТА ПРИЗНАЧЕННЯ ФАЙЛІВ
 
-### 3.1. Складання канонічного екрана (Interface Compositions)
+Нижче наведено повний розбір кожного з 10 модулів папки `lcars/base/`:
+
+```
+lcars/base/
+├── type.py         # Центральний фасад LCARS, системні типи та протоколи
+├── graphic.py      # Векторне математичне ядро, розрахунок кривих Окуди та Emitter
+├── default.py      # Канонічні палітри кольорів Star Trek, теми оформлення та шрифти
+├── component.py    # Базові сенсорні вузли Окуди (кнопки, лікті, балки, мітки)
+├── interface.py    # Канонічні готові композиції (Header, Sidebar, Bracket, Panel, PADD)
+├── animation.py    # Часові приводи, збірки анімацій (Parallel, Stagger) та дисплеї
+├── desktop.py      # Десктопний простір терміналу, віконні оболонки та робочий стіл
+├── register.py     # Центральний реєстр вузлів платформи та зв'язування мостів Bridge.*
+├── catalog.py      # Технологічний паспорт підсистем (Core, Science, Simulation, AI)
+└── info.py         # Паспорт версії, системні метадані та розрахунок Зоряної Дати
+```
+
+---
+
+### 📄 `type.py` (~29 KB) — Центральний фасад і фундамент типів
+* **Що робить:** Головний вхідний простір імен. Визначає суперклас `LCARS`, базовий вузол `SystemComponent`, константи вирівнювання (`AlignCenter`, `AlignLeft`, `AlignRight`), коди клавіш терміналу (`KeyEnter`, `KeyEscape`, `KeyTab`) та системні прапорці відображення (`Frameless`).
+* **Ключові класи:** `LCARS`, `SystemComponent`, `Type`, `Protocol`.
+* **Чому важливий:** Усі класи у фреймворку наслідуються від `LCARS` або взаємодіють через його глобальний реєстр `LCARS.Retrieve(...)`.
+
+### 📄 `graphic.py` (~40 KB) — Низькорівнева векторна оптика
+* **Що робить:** Математична фабрика векторної геометрії Майкла Окуди. Розраховує радіуси скруглень, товщини рейок, дуги та замкнені криві.
+* **Ключові інструменти:**
+  * Трейсери контурів: `TraceCap()` (пігулки), `TraceElbow()` (кутові вигини каркасу), `TraceRounded()` (м'які фаски Soft), `TraceRect()` (прямокутники).
+  * `Visual` та `Graphic` — базові носії векторної топології та світлових характеристик (`Spectrum`, `Luminance`, `State`).
+  * `Emitter` (`Renderer`) — апаратний проектор світла. Він бере будь-який векторний об'єкт і випромінює його на фізичний екран через прямий виклик методу `Draw(Context, Device)`.
+
+### 📄 `default.py` (~12 KB) — Колірний канон та шрифти
+* **Що робить:** Описує фірмову колористику 24-го століття (LCARS Color Standard).
+* **Палітри:**
+  * `Palette.Buttons` — класичний золотаво-помаранчевий спектр (Tango `#ff9900`, Neon Gold `#ffcc00`, Federation Blue `#336699`, Lilac Purple `#cc6699`).
+  * `Palette.RedAlert` / `YellowAlert` — колірні стани бойової тривоги корабля.
+  * `Palette.Background` — абсолютний космічний чорний вакуум (`#000000`).
+* **Допоміжні інструменти:** `SystemTheme` (динамічне перемикання станів і яскравості), `FontStyle()` (типографіка під фірмовий вузький шрифт *Swiss 911 Ultra Compressed*).
+
+### 📄 `component.py` (~28 KB) — Сенсорні фізичні елементи Окуди
+* **Що робить:** Містить базові цеглинки інтерфейсу, які реагують на дотики пальця або курсор миші та надсилають сигнали в шину **ODN**.
+* **Ключові компоненти:**
+  * `LCARSButton` — універсальна сенсорна кнопка з 6 типами форми (`RectType`, `PillType`, `PillHalfType`, `SoftType`, `SoftHalfType`, `ElbowType`), підтримкою звуку кліку та перемикання станів `Toggle`.
+  * `LCARSElbow` — фірмовий Г-подібний кутовий силовий лікоть (несуча балка терміналу з налаштуванням товщини рейок і положення кута).
+  * `LCARSBar` — векторні кінцевики та горизонтальні перемички з керованим скругленням.
+  * `LCARSIndicator` — світлодіодні інформаційні маркери.
+  * `LCARSLabel` — текстові моноширинні блоки (весь текст за каноном авто-переводиться у верхній регістр).
+
+### 📄 `interface.py` (~43 KB) — Готові канонічні композиції
+* **Що робить:** Збирає елементи у готові функціональні вузли інтерфейсу зорельота. **Усі композиції названі без застарілих префіксів `LCARS`**.
+* **Ключові сутності:**
+  * `Surface(Display)` — кореневе екранне скло (єдиний віджет), на якому відображаються векторні шари.
+  * `Element` — інтелектуальний векторний контейнер із підтримкою компонування (`SetVertical`, `SetHorizontal`, `Add`, `AddStretch`).
+  * `Header` / `Footer` — верхня та нижня окантовка екрана з назвою системи чи зоряною датою.
+  * `Sidebar` — ліва вертикальна консоль керування з банком функціональних кнопок.
+  * `Bracket` — скоба-рамка для обрамлення сенсорних карт чи радарів.
+  * `DataBlock` — інформаційний блок телеметрії з бічними дужками.
+  * `Toolbar` / `StatBar` — панелі інструментів та горизонтальні індикатори систем.
+  * `Screen` / `PADD` — повноцінні готові вікна настінних консолей або портативних планшетів екіпажу.
+
+### 📄 `animation.py` (~56 KB) — Повний анімаційний стек LCARS (19 класів)
+* **Що робить:** Забезпечує живий рух інтерфейсу: від плавної зміни кольорів до наукових симуляцій та польоту крізь зорі.
+* **1. Часові приводи та керування:**
+  * `Driver` / `Animation` — квантовий часовий привід із підтримкою плавності руху (`Easing`).
+  * `Sequencer` — послідовний ланцюжок анімацій (Крок 1 ➔ Крок 2 ➔ Крок 3).
+  * `Parallel` — синхронний хор (одночасний запуск кількох анімацій).
+  * `Stagger` — каскадна хвиля (запуск групи кнопок або індикаторів з мікро-затримкою `DelayMs`).
+* **2. Переходи та текстові ефекти:**
+  * `Reveal` / `Conceal` — плавне розгортання та згортання балок і панелей (Left, Right, Top, Bottom, Center).
+  * `Transition` — зміна екранів через шторку `Wipe` або діафрагму `Split`.
+  * `Blink` — мерехтіння кнопок тривоги Red Alert.
+  * `Typewriter` (`Write`) — посимвольний друк комп'ютера з термінальним курсором `█`.
+  * `TextDecode` (`Decode`) — дешифрування підпросторового квантового шуму у фінальний текст.
+* **3. Наукові та навігаційні дисплеї:**
+  * `WaveStream` — підпросторовий хвильовий спектрограф із 7 режимами:
+    * *Стовпчики*: `Harmonic` (гармоніки), `Waterfall` (каскад), `Segmented` (матриця), `Symmetric` (двополярний).
+    * *Хвилі*: `Sine` (осцилограф), `Pulse` (кардіо-біосканер), `Interference` (накладення 2 хвиль).
+  * `DiagnosticGrid` — діагностична матриця ізолінійних оптичних чіпів із біжучим променем сканера.
+  * `DataStream` — рухомий вертикальний потік системних логів та параметрів шини EPS.
+  * `Starfield` (`Impulse` / `Warp`) — 3D навігаційне зоряне поле оглядового екрана (точки в імпульсному режимі та розтягнуті світлові смуги простору у режимі Варп).
+
+### 📄 `desktop.py` (~32 KB) — Інтегроване десктопне середовище
+* **Що робить:** Відповідає за запуск LCARS як повноцінної операційної оболонки (Shell) поверх Windows/Linux: повноекранний режим, блокування доступу, меню запуску корабельних утиліт.
+
+### 📄 `register.py` (~161 KB) — Центральний Реєстр платформи
+* **Що робить:** Каталог та диспетчер усіх внутрішніх зв'язків. Забезпечує доступ до системних мостів `Bridge.*` (робота зі звуком, таймерами, файловою системою та процесами) без жорсткої прив'язки до сторонніх C++ бібліотек.
+
+### 📄 `catalog.py` (~5.5 KB) — Технологічний паспорт
+* **Що робить:** Описує дерево категорій платформи: `LCARSCategory` (Core, Visual, Interface, Hardware, Audio, Science, Simulation, Quantum, AI).
+
+### 📄 `info.py` (~2.7 KB) — Системний паспорт та Зоряна Дата
+* **Що робить:** Зберігає версію фреймворку (`Version.Release`), системні підписи та канонічний алгоритм розрахунку поточної **Зоряної Дати (Stardate)** Зоряного Флоту за стандартами ТНГ.
+
+---
+
+## 🚀 3. ШВИДКИЙ СТАРТ ТА ПРИКЛАДИ КОДУ
+
+### Складання канонічного екрана консолі:
 ```python
+import sys
+from lcars.base.type import LCARS
 from lcars.base.default import Palette
-from lcars.base.interface import Screen, Header, Footer, Sidebar, Bracket, Panel
-from lcars.base.component import LCARSButton, LCARSLabel
+from lcars.base.interface import Screen, Header, Footer, Sidebar, Panel, Bracket
+from lcars.base.component import LCARSButton
 
-# Створення екрана
-Root = Screen(Title="TACTICAL DEFENSE CONSOLE", Width=1280, Height=800)
+# 1. Ініціалізація додатку
+App = LCARS.Retrieve("Base.Core.App")([])
 
-# Додавання канонічних блоків без префіксів
-Root.Add(Header(Title="PRIMARY SENSOR GRID // USS ENTERPRISE", Spectrum=Palette.Buttons[2]))
+# 2. Головне вікно консолі
+Console = Screen(Title="TACTICAL MONITOR // USS ENTERPRISE", Width=1280, Height=800)
 
-MainPanel = Panel(Spectrum=Palette.Background)
-MainPanel.SetHorizontal()
+# 3. Додавання заголовка та підвалу
+Console.Add(Header(Title="PRIMARY TACTICAL SENSOR ARRAY", Spectrum=Palette.Buttons[2]))
 
-# Додавання лівого сайдбару та робочої області
-MainPanel.Add(Sidebar(Width=220))
-MainPanel.Add(Bracket(Width=600, Height=400))
+# 4. Основна зона: сайдбар з кнопками зліва, тактична скоба справа
+Body = Panel(Spectrum=Palette.Background)
+Body.SetHorizontal()
 
-Root.Add(MainPanel)
-Root.Add(Footer(Title="SYSTEMS NOMINAL // LEVEL 1 DIAGNOSTIC CLEAR", Spectrum=Palette.Buttons[0]))
+Side = Sidebar(Width=220)
+BtnEngage = LCARSButton(Text="RED ALERT", Spectrum=Palette.RedAlert[0])
+Side.Add(BtnEngage)
+
+TacticalFrame = Bracket(Width=700, Height=500)
+
+Body.Add(Side)
+Body.Add(TacticalFrame)
+Console.Add(Body)
+
+Console.Add(Footer(Title="ALL ODN CHANNELS STABLE", Spectrum=Palette.Buttons[0]))
+
+Console.Show()
 ```
 
-### 3.2. Використання анімаційного рушія (Animation Suite)
+### Запуск мульти-анімації (Паралельно + Послідовно):
 ```python
-from lcars.base.animation import WaveStream, Starfield, Sequencer, Parallel, Stagger, Reveal, Typewriter
+from lcars.base.animation import Parallel, Sequencer, Stagger, Reveal, Typewriter
+from lcars.base.component import LCARSLabel, LCARSBar
 
-# 1. Підпросторовий спектрограф (7 режимів)
-Waves = WaveStream(Mode="Harmonic", Frequency=3.0, Speed=0.04)
-Waves.Start()
+StatusLabel = LCARSLabel(Text="")
+PowerBar = LCARSBar(Width=400, Height=12)
 
-# 2. 3D навігаційне зоряне поле (Impulse / Warp)
-Viewscreen = Starfield(Mode="Warp", StarCount=200)
-Viewscreen.Start()
-
-# 3. Композиція запуску терміналу (Паралельно + Каскадно)
-FrameAnim = Parallel().Add(Reveal().Start(Target=TopBar), Reveal().Start(Target=BottomBar))
-ButtonsAnim = Stagger().Add(*[Reveal().Start(Target=btn) for btn in ButtonList])
-
-BootSequence = Sequencer().Add(FrameAnim).Add(ButtonsAnim).Play()
+# Розгортаємо балку і одночасно друкуємо текст комп'ютера:
+ParallelAnim = Parallel()
+ParallelAnim.Add(Reveal().Start(Target=PowerBar, Period=0.6))
+ParallelAnim.Add(Typewriter().Write(Target=StatusLabel, Text="WARP CORE ONLINE"))
+ParallelAnim.Play()
 ```
 
 ---
 
-## 🧪 4. ВАЛІДАЦІЯ БАЗОВОГО ШАРУ
-Перевірка цілісності всіх 10 модулів базового шару:
+## 🧪 4. АВТОМАТИЧНА ВАЛІДАЦІЯ ЦІЛІСНОСТІ
+Усі 10 модулів базового шару регулярно перевіряються на відсутність синтаксичних помилок та коректність імпортів єдиною командою:
+
 ```powershell
 py -c "import lcars.base.animation, lcars.base.catalog, lcars.base.component, lcars.base.default, lcars.base.desktop, lcars.base.graphic, lcars.base.info, lcars.base.interface, lcars.base.register, lcars.base.type; print('ALL BASE MODULES OPERATIONAL [EXIT 0]')"
 ```
+**Поточний статус:** `ALL BASE MODULES OPERATIONAL [EXIT 0]` 🖖
