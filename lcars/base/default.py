@@ -280,3 +280,9 @@ DefaultSystemConfig = SystemTheme.DefaultConfig
 DefaultPalette = Palette
 SystemConfig = ApplyConfig
 RandomButtonColor = DynamicColor
+
+def FontStyle(Size: int = 16, Weight: str = "normal", Family: str = "LCARS") -> str:
+    return f"font-family: '{Family}', 'Swiss 911 Ultra Compressed', sans-serif; font-size: {int(Size)}px; font-weight: {Weight};"
+
+DefaultRadius = 4
+ContrastColor = SystemTheme.ContrastColor

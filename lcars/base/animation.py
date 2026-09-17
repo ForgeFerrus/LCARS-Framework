@@ -3,6 +3,7 @@
 # ПРИНЦИП: Driver модулює стан графічних елементів, а класи дисплеїв формують топологічні Primitive (Elbow, Bar, Cap)
 #         для єдиного апаратного рендерера Renderer.
 # ─────────────────────────────────────────────────────────────────────────────
+import math
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from lcars.base.component import Normalize, Take
 from lcars.base.default import Palette
@@ -106,98 +107,417 @@ class Position(Animation):
             NewPos = self.Target.ModulatePosition(self.StartPos, self.EndPos, Period=self.Period)
             self.Target.X = int(NewPos[0])
             self.Target.Y = int(NewPos[1])
+# =============================================================================
+# SCANNING — АНІМАЦІЯ СЕНСОРНОГО СКАНУВАННЯ ТА БІГУНКА LCARS
+# Маятниковий або циклічний пробіг сенсорного променя по шкалі
+# =============================================================================
+class Scanning(Animation):
+    TypeName = "Scanning"
+    Type = "Scanning"
 
-# Скануюча шина ODN
-class ScanningBar(Animation):
-    def __init__(self, Parent=None, Type="horizontal", Segments=12, Tail=4, **Args):
-        Type = Take(Args, ["type", "Type", "Mode", "mode"], Type)
-        self.Segments = int(Take(Args, ["segments", "Segments"], Segments))
-        self.Tail = int(Take(Args, ["tail", "Tail"], Tail))
-        super().__init__(Parent=Parent, Type=Type, **Args)
-        self.Generate()
+    # Режими сканування
+    PingPong = 1        # Туди-назад (маятник)
+    LoopProgress = 2    # Тільки в один бік по колу
 
-    def Generate(self):
-        self.ClearPrimitives()
-        BarType = self.Type
-        if BarType == "vertical":
-            self.GenVertical()
-        elif BarType == "blocks":
-            self.GenBlocks()
-        elif BarType == "sweep":
-            self.GenSweep()
+    Mode = PingPong
+    Direction = 1       # 1 = вправо, -1 = вліво
+    Progress = 0.0      # 0.0 - 1.0
+
+    def Apply(self):
+        if not self.Target:
+            return
+
+        # Маятниковий алгоритм сканера Окуди
+        if self.Mode == self.PingPong:
+            # Рухаємося від 0 до 1 і назад
+            self.Progress = self.Phase
+            if hasattr(self.Target, "StepScan"):
+                self.Target.StepScan()
+            elif hasattr(self.Target, "Position"):
+                self.Target.Position = self.Progress
         else:
-            self.GenHorizontal()
+            # Односторонній циклічний пробіг
+            self.Progress = self.Phase
+            if hasattr(self.Target, "Position"):
+                self.Target.Position = self.Progress
+                
+# =============================================================================
+# WAVESTREAM — ПІДПРОСТОРОВИЙ ХВИЛЬОВИЙ СПЕКТРОГРАФ ТА ОПТИЧНИЙ ПОТІК ODN
+# Підтримує спектральні стовпчики (Harmonic, Waterfall, Segmented, Symmetric)
+# та векторні неперервні хвилі (Sine, Pulse/Bioscan, Interference).
+# =============================================================================
+class WaveStream(Graphic):
+    TypeName = "LCARSWaveStream"
+    Type = "WaveStream"
 
-    def GenHorizontal(self):
-        Active = int(self.Phase * max(1, self.Segments))
-        Gap = 4
-        SegW = max(4, int((self.Width - Gap * (self.Segments - 1)) / max(1, self.Segments)))
-        for Index in range(self.Segments):
-            Distance = (Index - Active) % self.Segments
-            SegColor = self.Color if Distance < self.Tail else Palette.Disabled[1]
-            HeightVal = self.Height if Distance == 0 else max(4, self.Height - 8)
-            YPos = int((self.Height - HeightVal) / 2)
-            XPos = Index * (SegW + Gap)
-            self.AddPrimitive(Primitive.ROUNDED_RECT, XPos, YPos, SegW, HeightVal, SegColor, rx=4, ry=4)
+    # Параметри геометрії та оптичного поля
+    Width = 240
+    Height = 80
+    Transparent = False
 
-    def GenVertical(self):
-        Active = int(self.Phase * max(1, self.Segments))
-        Gap = 4
-        SegH = max(4, int((self.Height - Gap * (self.Segments - 1)) / max(1, self.Segments)))
-        for Index in range(self.Segments):
-            Distance = (Index - Active) % self.Segments
-            SegColor = self.Color if Distance < self.Tail else Palette.Disabled[1]
-            WidthVal = self.Width if Distance == 0 else max(4, self.Width - 8)
-            XPos = int((self.Width - WidthVal) / 2)
-            YPos = Index * (SegH + Gap)
-            self.AddPrimitive(Primitive.ROUNDED_RECT, XPos, YPos, WidthVal, SegH, SegColor, rx=4, ry=4)
+    # Параметри хвильової математики
+    Mode = "Harmonic"       # Harmonic, Waterfall, Segmented, Symmetric, Sine, Pulse, Interference
+    Frequency = 3.0         # Кількість повних хвиль на довжині
+    Harmonics = 20          # Кількість стовпчиків або точок дискретизації
+    Amplitude = 0.85        # Відносна амплітуда коливання (0.0 .. 1.0)
+    Speed = 0.04            # Швидкість фазового зсуву за кадр
+    Phase = 0.0             # Поточна фаза коливання
+    Running = False
+    Interval = 35           # ~28-30 FPS для плавності
+    Timer = None
+    _Widget = None
 
-    def GenBlocks(self):
-        Cols = max(2, self.Segments)
-        Rows = max(1, int(self.Height / 18))
-        CellW = max(5, int(self.Width / Cols))
-        CellH = max(5, int(self.Height / Rows))
-        Active = int(self.Phase * Cols)
-        for Row in range(Rows):
-            for Col in range(Cols):
-                Dist = (Col - Active + Row) % Cols
-                if Dist < self.Tail:
-                    self.AddPrimitive(Primitive.RECT, Col * CellW + 2, Row * CellH + 2, CellW - 4, CellH - 4, self.Color)
+    # Колірна схема
+    PrimaryColor = None
+    SecondaryColor = None
 
-    def GenSweep(self):
-        Pos = int(self.Phase * self.Width)
-        self.AddPrimitive(Primitive.BAR, 0, 0, self.Width, self.Height, Palette.Disabled[1])
-        for Offset in range(self.Tail * 8):
-            XPos = Pos - Offset
-            if 0 <= XPos <= self.Width:
-                SegW = max(2, self.Tail * 8 - Offset)
-                self.AddPrimitive(Primitive.CAP, XPos, 0, SegW, self.Height, self.Color, side="pill")
+    def Initialize(self, Parent=None, **kwargs):
+        super().Initialize(Parent=Parent, **kwargs)
 
+        # Зчитування параметрів
+        Freq = Take(kwargs, ["Frequency", "frequency", "WaveCount", "waveCount"], 3.0)
+        self.Frequency = float(Freq)
 
-# Хвильовий оптичний потік ODN
-class WaveStream(Animation):
-    def __init__(self, Parent=None, Frequency: float = 3.0, Harmonics: int = 16, **Args):
-        self.Frequency = float(Frequency)
-        self.Harmonics = int(Harmonics)
-        super().__init__(Parent=Parent, Type="odn-wave", **Args)
-        self.Generate()
+        Harm = Take(kwargs, ["Harmonics", "harmonics", "Resolution", "resolution", "Cols"], 20)
+        self.Harmonics = max(4, int(Harm))
 
-    def Generate(self):
-        self.ClearPrimitives()
-        Cols = max(8, self.Harmonics)
-        ColWidth = self.Width / Cols
-        CenterY = self.Height / 2.0
-        MaxAmp = self.Height * 0.42
+        Spd = Take(kwargs, ["Speed", "speed", "Rate", "rate"], 0.04)
+        self.Speed = float(Spd)
+
+        Amp = Take(kwargs, ["Amplitude", "amplitude"], 0.85)
+        self.Amplitude = max(0.1, min(1.0, float(Amp)))
+
+        self.Mode = str(Take(kwargs, ["Mode", "mode", "Type", "type"], "Harmonic")).capitalize()
+
+        Col = Take(kwargs, ["Color", "color", "PrimaryColor", "Spectrum"], Palette.Buttons[2])
+        self.PrimaryColor = Col
+        self.Color = Col
+        self.Spectrum = Col
+
+        SecCol = Take(kwargs, ["SecondaryColor", "secondaryColor", "AccentColor"], Palette.Buttons[0])
+        self.SecondaryColor = SecCol
+
+        # Створення або зв'язування віджета відображення Surface
+        SurfaceClass = LCARS.Retrieve("Base.Interface.Surface")
+        if SurfaceClass is None:
+            from lcars.base.interface import Surface
+            SurfaceClass = Surface
+
+        self._Widget = SurfaceClass(Optics=self, Parent=Parent)
+        self.widget = self._Widget
+
+        # Автоматичний запуск, якщо вказано AutoStart=True
+        if kwargs.get("AutoStart", False):
+            self.Start()
+
+    # -------------------------------------------------------------------------
+    # КЕРУВАННЯ ЧАСОВИМ КВАНТОМ (ТАЙМЕР)
+    # -------------------------------------------------------------------------
+    def Start(self, Speed: float | None = None):
+        if Speed is not None:
+            self.Speed = float(Speed)
+        self.Running = True
+        if self.Timer is None:
+            TimerClass = LCARS.Retrieve("Base.Core.Timer")
+            if TimerClass and callable(TimerClass):
+                self.Timer = TimerClass()
+                Timeout = getattr(self.Timer, "timeout", None)
+                if Timeout and hasattr(Timeout, "connect"):
+                    Timeout.connect(self.Tick)
+                StartFunc = getattr(self.Timer, "start", None)
+                if callable(StartFunc):
+                    StartFunc(self.Interval)
+        elif hasattr(self.Timer, "start"):
+            self.Timer.start(self.Interval)
+        return self
+
+    def Stop(self):
+        self.Running = False
+        if self.Timer and hasattr(self.Timer, "stop"):
+            self.Timer.stop()
+        return self
+
+    def Reset(self):
+        self.Phase = 0.0
+        self.Refresh()
+        return self
+
+    def Tick(self):
+        if not self.Running:
+            return
+        self.Phase = (self.Phase + self.Speed) % 1.0
+        self.Refresh()
+
+    def Refresh(self):
+        if self._Widget and hasattr(self._Widget, "update"):
+            self._Widget.update()
+
+    def SetMode(self, Mode: str):
+        self.Mode = str(Mode).capitalize()
+        self.Refresh()
+        return self
+
+    # -------------------------------------------------------------------------
+    # ПРЯМИЙ ВЕКТОРНИЙ РЕНДЕР (EMITTER DRAW HOOK)
+    # -------------------------------------------------------------------------
+    def Draw(self, Context, Device) -> bool:
+        if Context is None or Device is None:
+            return False
+
+        W = float(Device.width() if hasattr(Device, "width") else self.Width)
+        H = float(Device.height() if hasattr(Device, "height") else self.Height)
+        self.Width = W
+        self.Height = H
+
+        # Очищення підкладки в канонічний чорний колір вакууму
+        Context.fillRect(Device.rect(), LCARS.Visual.Color("#000000"))
+
+        ModeKey = self.Mode.lower()
+        if ModeKey in ("sine", "curve"):
+            self.RenderSineWave(Context, W, H)
+        elif ModeKey in ("pulse", "cardio", "bioscan"):
+            self.RenderPulseWave(Context, W, H)
+        elif ModeKey in ("interference", "dual"):
+            self.RenderInterference(Context, W, H)
+        elif ModeKey in ("waterfall", "cascade"):
+            self.RenderWaterfall(Context, W, H)
+        elif ModeKey in ("segmented", "matrix"):
+            self.RenderSegmented(Context, W, H)
+        elif ModeKey in ("symmetric",):
+            self.RenderSymmetric(Context, W, H)
+        else:
+            # За замовчуванням: класичні стовпчики гармонік
+            self.RenderHarmonicBars(Context, W, H)
+
+        return True
+
+    # -------------------------------------------------------------------------
+    # 1. ТИПИ АНІМАЦІЇ ДЛЯ СТОВПЧИКІВ (COLUMNS / BARS)
+    # -------------------------------------------------------------------------
+    def RenderHarmonicBars(self, Context, W: float, H: float):
+        Cols = max(6, self.Harmonics)
+        Gap = 3.0
+        ColWidth = max(2.0, (W - (Cols - 1) * Gap) / Cols)
+        CenterY = H * 0.5
+        MaxAmp = H * 0.44 * self.Amplitude
+
+        PrimaryCol = LCARS.Visual.Color(self.PrimaryColor)
+        AccentCol = LCARS.Visual.Color(self.SecondaryColor)
 
         for i in range(Cols):
-            X = i * ColWidth
-            RelX = i / Cols
-            WaveVal = math.sin(RelX * self.Frequency * 2.0 * math.pi - self.Phase * 2.0 * math.pi)
-            BarHeight = max(4.0, abs(WaveVal) * MaxAmp * 2.0)
-            Y = CenterY - BarHeight / 2.0
-            ColIndex = int((WaveVal + 1.0) * 1.5)
-            BarColor = self.PaletteColor("buttons", ColIndex)
-            self.AddPrimitive(Primitive.ROUNDED_RECT, X + 1, Y, ColWidth - 2, BarHeight, BarColor, rx=3, ry=3)
+            X = i * (ColWidth + Gap)
+            RelX = i / float(Cols)
+            # Суперпозиція першої і другої просторової гармоніки
+            Theta = RelX * self.Frequency * 2.0 * math.pi - self.Phase * 2.0 * math.pi
+            Harmonic = math.sin(Theta) + 0.35 * math.sin(2.0 * Theta + 1.2)
+            NormVal = (Harmonic + 1.35) / 2.7
+            BarHeight = max(4.0, NormVal * MaxAmp * 2.0)
+            Y = H - BarHeight - 2.0
+
+            # Плавне змішування спектру на піках
+            Blend = min(1.0, max(0.0, NormVal))
+            R = int(PrimaryCol.red() * (1.0 - Blend) + AccentCol.red() * Blend)
+            G = int(PrimaryCol.green() * (1.0 - Blend) + AccentCol.green() * Blend)
+            B = int(PrimaryCol.blue() * (1.0 - Blend) + AccentCol.blue() * Blend)
+
+            BarBrush = LCARS.Visual.Brush(LCARS.Visual.Color(R, G, B))
+            Context.setPen(LCARS.Visual.Pen(LCARS.Visual.Color("transparent")))
+            Context.setBrush(BarBrush)
+            Context.drawRoundedRect(LCARS.Geometry.RectF(X, Y, ColWidth, BarHeight), 3.0, 3.0)
+
+    def RenderWaterfall(self, Context, W: float, H: float):
+        Cols = max(8, self.Harmonics)
+        Gap = 2.0
+        ColWidth = max(2.0, (W - (Cols - 1) * Gap) / Cols)
+        MaxAmp = H * 0.88 * self.Amplitude
+
+        BaseCol = LCARS.Visual.Color(self.PrimaryColor)
+
+        for i in range(Cols):
+            X = i * (ColWidth + Gap)
+            RelX = i / float(Cols)
+            # Каскадна фазова хвиля, що біжить зліва направо
+            Wave = (math.sin((RelX * self.Frequency - self.Phase) * 2.0 * math.pi) + 1.0) * 0.5
+            BarHeight = max(3.0, Wave * MaxAmp)
+            Y = H - BarHeight - 2.0
+
+            # Яскравість пропорційна хвильовому піку
+            Alpha = int(90 + Wave * 165)
+            BarColor = LCARS.Visual.Color(BaseCol.red(), BaseCol.green(), BaseCol.blue(), Alpha)
+            Context.fillRect(LCARS.Geometry.RectF(X, Y, ColWidth, BarHeight), BarColor)
+
+    def RenderSegmented(self, Context, W: float, H: float):
+        Cols = max(6, self.Harmonics)
+        Rows = 10
+        GapX = 4.0
+        GapY = 2.0
+        ColWidth = max(3.0, (W - (Cols - 1) * GapX) / Cols)
+        SegHeight = max(2.0, (H - (Rows - 1) * GapY) / Rows)
+
+        PrimaryCol = LCARS.Visual.Color(self.PrimaryColor)
+        DimCol = LCARS.Visual.Color("#222233")
+
+        for i in range(Cols):
+            X = i * (ColWidth + GapX)
+            RelX = i / float(Cols)
+            WaveVal = (math.sin(RelX * self.Frequency * 2.0 * math.pi - self.Phase * 2.0 * math.pi) + 1.0) * 0.5
+            ActiveSegments = int(WaveVal * Rows)
+
+            for j in range(Rows):
+                # Рядок рахуємо знизу вгору
+                RowIdxFromBottom = (Rows - 1 - j)
+                Y = j * (SegHeight + GapY)
+
+                if RowIdxFromBottom <= ActiveSegments:
+                    Context.fillRect(LCARS.Geometry.RectF(X, Y, ColWidth, SegHeight), PrimaryCol)
+                else:
+                    Context.fillRect(LCARS.Geometry.RectF(X, Y, ColWidth, SegHeight), DimCol)
+
+    def RenderSymmetric(self, Context, W: float, H: float):
+        Cols = max(8, self.Harmonics)
+        Gap = 3.0
+        ColWidth = max(2.0, (W - (Cols - 1) * Gap) / Cols)
+        CenterY = H * 0.5
+        MaxHalfAmp = (H * 0.44) * self.Amplitude
+
+        PrimaryCol = LCARS.Visual.Color(self.PrimaryColor)
+        Context.setBrush(LCARS.Visual.Brush(PrimaryCol))
+        Context.setPen(LCARS.Visual.Pen(LCARS.Visual.Color("transparent")))
+
+        # Осьова центральна базова лінія
+        Context.fillRect(LCARS.Geometry.RectF(0, CenterY - 0.5, W, 1.0), LCARS.Visual.Color("#444455"))
+
+        for i in range(Cols):
+            X = i * (ColWidth + Gap)
+            RelX = i / float(Cols)
+            Wave = math.sin(RelX * self.Frequency * 2.0 * math.pi - self.Phase * 2.0 * math.pi)
+            BarHeight = max(4.0, abs(Wave) * MaxHalfAmp * 2.0)
+            Y = CenterY - BarHeight * 0.5
+            Context.drawRoundedRect(LCARS.Geometry.RectF(X, Y, ColWidth, BarHeight), 2.0, 2.0)
+
+    # -------------------------------------------------------------------------
+    # 2. ТИПИ АНІМАЦІЇ ДЛЯ НЕПЕРЕРВНИХ ХВИЛЬ (CONTINUOUS WAVES)
+    # -------------------------------------------------------------------------
+    def RenderSineWave(self, Context, W: float, H: float):
+        PointsCount = max(40, int(W / 3))
+        CenterY = H * 0.5
+        Amp = H * 0.38 * self.Amplitude
+
+        PathClass = LCARS.Visual.PainterPath
+        WavePath = PathClass()
+
+        FirstPoint = True
+        for i in range(PointsCount + 1):
+            X = (i / float(PointsCount)) * W
+            RelX = i / float(PointsCount)
+            Angle = RelX * self.Frequency * 2.0 * math.pi - self.Phase * 2.0 * math.pi
+            Y = CenterY + math.sin(Angle) * Amp
+
+            if FirstPoint:
+                WavePath.moveTo(X, Y)
+                FirstPoint = False
+            else:
+                WavePath.lineTo(X, Y)
+
+        # Контур головної хвилі
+        WavePen = LCARS.Visual.Pen(LCARS.Visual.Color(self.PrimaryColor), 2.5)
+        Context.setBrush(LCARS.Visual.Brush(LCARS.Visual.Color("transparent")))
+        Context.setPen(WavePen)
+        Context.drawPath(WavePath)
+
+        # Напівпрозорий слід/заливка під хвилею
+        FillPath = PathClass(WavePath)
+        FillPath.lineTo(W, H)
+        FillPath.lineTo(0, H)
+        FillPath.closeSubpath()
+
+        FillColor = LCARS.Visual.Color(self.PrimaryColor)
+        FillColor.setAlphaF(0.12)
+        Context.fillPath(FillPath, LCARS.Visual.Brush(FillColor))
+
+    def RenderPulseWave(self, Context, W: float, H: float):
+        CenterY = H * 0.5
+        Amp = H * 0.42 * self.Amplitude
+        PointsCount = max(60, int(W / 2))
+
+        PathClass = LCARS.Visual.PainterPath
+        WavePath = PathClass()
+
+        # Біжучий центр кардіограми
+        PulseCenter = self.Phase * W
+
+        FirstPoint = True
+        for i in range(PointsCount + 1):
+            X = (i / float(PointsCount)) * W
+            Dist = X - PulseCenter
+            if Dist < -W * 0.5:
+                Dist += W
+            elif Dist > W * 0.5:
+                Dist -= W
+
+            # Емуляція P-Q-R-S-T спайку
+            Dev = 0.0
+            NormDist = Dist / max(1.0, W * 0.12)
+            if -1.0 <= NormDist <= 1.0:
+                # Гострий Q-R-S комплекс
+                Dev = math.exp(-12.0 * (NormDist ** 2)) * math.cos(NormDist * math.pi * 3.5)
+
+            Y = CenterY - Dev * Amp
+
+            if FirstPoint:
+                WavePath.moveTo(X, Y)
+                FirstPoint = False
+            else:
+                WavePath.lineTo(X, Y)
+
+        # Відмальовка фотонного імпульсу
+        PulsePen = LCARS.Visual.Pen(LCARS.Visual.Color(self.PrimaryColor), 2.2)
+        Context.setBrush(LCARS.Visual.Brush(LCARS.Visual.Color("transparent")))
+        Context.setPen(PulsePen)
+        Context.drawPath(WavePath)
+
+    def RenderInterference(self, Context, W: float, H: float):
+        PointsCount = max(50, int(W / 2))
+        CenterY = H * 0.5
+        Amp = H * 0.32 * self.Amplitude
+
+        PathClass = LCARS.Visual.PainterPath
+
+        # Перша хвиля (Primary)
+        Wave1 = PathClass()
+        First = True
+        for i in range(PointsCount + 1):
+            X = (i / float(PointsCount)) * W
+            RelX = i / float(PointsCount)
+            Y = CenterY + math.sin(RelX * self.Frequency * 2.0 * math.pi - self.Phase * 2.0 * math.pi) * Amp
+            if First:
+                Wave1.moveTo(X, Y)
+                First = False
+            else:
+                Wave1.lineTo(X, Y)
+
+        Pen1 = LCARS.Visual.Pen(LCARS.Visual.Color(self.PrimaryColor), 2.0)
+        Context.setBrush(LCARS.Visual.Brush(LCARS.Visual.Color("transparent")))
+        Context.setPen(Pen1)
+        Context.drawPath(Wave1)
+
+        # Друга хвиля (Secondary) з фазовим зсувом та вищою гармонікою
+        Wave2 = PathClass()
+        First = True
+        for i in range(PointsCount + 1):
+            X = (i / float(PointsCount)) * W
+            RelX = i / float(PointsCount)
+            Y = CenterY + math.sin(RelX * (self.Frequency * 1.5) * 2.0 * math.pi + self.Phase * 3.0 * math.pi) * (Amp * 0.75)
+            if First:
+                Wave2.moveTo(X, Y)
+                First = False
+            else:
+                Wave2.lineTo(X, Y)
+
+        Pen2 = LCARS.Visual.Pen(LCARS.Visual.Color(self.SecondaryColor), 1.8)
+        Context.setPen(Pen2)
+        Context.drawPath(Wave2)
+
 
 
 # Алгоритмічна гармоніка силового щита

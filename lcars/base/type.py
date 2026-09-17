@@ -393,77 +393,29 @@ class LCARS(metaclass=Namespace):
     Trajectory = "Base.Graphics.Path"      # Траєкторія польоту
     Territory = "Base.Graphics.Polygon"    # Сектор / територія
     Designation = "Base.Graphics.Text"     # Бортовий напис
-    Telemetry = "Base.Graphics.SimpleText" # Текстовий індикатор
+    SimpleText = "Base.Graphics.SimpleText" # Текстовий індикатор
     Sprite = "Base.Graphics.Image"         # Спрайт об'єкта
+
     # === PHOTONIC & SUBSPACE EFFECTS ===
     Cloak = "Base.Graphics.Effect.Opacity"         # Маскування / прозорість
     Glow = "Base.Graphics.Effect.DropShadow"       # Фотонне світіння
-    Distortion = "Base.Graphics.Effect.Blur"       # Сенсорне розмиття
-    Spectrum = "Base.Graphics.Effect.Colorize"     # Спектральний зсув
 
     # === LCARS SURFACE & DISPLAY TOPOLOGY ===
     Viewport = "Base.Interface.Viewport"
     Display = "Base.Interface.Widget"
-    Widget = "Base.Interface.Widget"
-    Buffer = "Base.Interface.Scroll"
+    Scroll = "Base.Interface.Scroll"
     Tab = "Base.Interface.Tab"
     Stacked = "Base.Interface.Stack"
     Divider = "Base.Interface.Splitter"
-    Dock = "Base.Interface.Dock"
-    Progress = "Base.Interface.ProgressBar"
-    Readout = "Base.Interface.LCD"
-    
-    # === DIALOGS / MENUS ===
-    Dialog = "Base.Interface.Dialog"
-    Message = "Base.Interface.Dialog.Message"
-    FileDialog = "Base.Interface.Dialog.File"
-    Menu = "Base.Interface.Menu"
-    MenuBar = "Base.Interface.MenuBar"
-    ToolBar = "Base.Interface.ToolBar"
-    StatusBar = "Base.Interface.StatusBar"
-    Command = "Base.Interface.Action"
-    Beacon = "Base.Interface.SystemTray"
-    Grip = "Base.Interface.SizeGrip"
-    Policy = "Base.Interface.SizePolicy"
-    Synthesizer = "Base.Interface.Completer"
     
     # === INTERACTIVE ELEMENTS ===
-    Button = "Base.Interface.Button"
-    Label = "Base.Interface.Label"
-    Frame = "Base.Interface.Frame"
     Input = "Base.Interface.LineEdit"
-    Console = "Base.Interface.TextEdit"
-    Terminal = "Base.Interface.TextEdit"
     TextBox = "Base.Interface.TextEdit"
     Selector = "Base.Interface.Combo"
     Regulator = "Base.Interface.Slider"
     TextEdit = "Base.Interface.TextEdit"
     PlainText = "Base.Interface.PlainText"
     LineEdit = "Base.Interface.LineEdit"
-    ToolButton = "Base.Interface.ToolButton"
-    Radio = "Base.Interface.Radio"
-    CheckBox = "Base.Interface.CheckBox"
-    SpinBox = "Base.Interface.SpinBox"
-    DoubleSpinBox = "Base.Interface.DoubleSpinBox"
-    DateEdit = "Base.Interface.DateEdit"
-    TimeEdit = "Base.Interface.TimeEdit"
-    DateTimeEdit = "Base.Interface.DateTimeEdit"
-    Dial = "Base.Interface.Dial"
-    Slider = "Base.Interface.Slider"
-    ScrollBar = "Base.Interface.ScrollBar"
-    ProgressBar = "Base.Interface.ProgressBar"
-    LCD = "Base.Interface.LCD"
-    Stack = "Base.Interface.Stack"
-    Chamber = "Base.Interface.Stack"
-    
-    # === LISTS / TABLES ===
-    List = "Base.Interface.List"
-    Inventory = "Base.Interface.Item.List"
-    Hierarchy = "Base.Interface.Tree"
-    Table = "Base.Interface.Table"
-    Combo = "Base.Interface.Combo"
-    Tray = "Base.Interface.SystemTray"
-    Complete = "Base.Interface.Completer"
     
     # === LAYOUTS ===
     Layout = "Base.Interface.Layout"
@@ -474,17 +426,7 @@ class LCARS(metaclass=Namespace):
     FormLayout = "Base.Interface.Layout.Form"
     StackLayout = "Base.Interface.Layout.Stacked"
     Spacer = "Base.Interface.Layout.Spacer"
-    
-    # === ANIMATION ===
-    Animation = "Base.Animation"
-    Property = "Base.Animation.Property"
-    Variant = "Base.Animation.Variant"
-    Timeline = "Base.Animation.TimeLine"
-    Group = "Base.Animation.Group"
-    Parallel = "Base.Animation.Parallel"
-    Sequential = "Base.Animation.Sequential"
-    Pause = "Base.Animation.Pause"
-    
+
     # === PROTOCOL ENUMS ===
     AlignCenter = "Base.Protocol.Align.Center"
     AlignLeft = "Base.Protocol.Align.Left"

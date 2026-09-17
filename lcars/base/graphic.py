@@ -639,7 +639,10 @@ class Emitter(Graphic):
         if not IsTransparent and self.Device is not None and hasattr(self.Device, "rect"):
             SpaceColor = LCARS.Visual.Color("#000000")
             self.Context.fillRect(self.Device.rect(), SpaceColor)
-        # 2. Прояв топологічних сегментів (якщо вони зареєстровані)
+        # 2. Прямий швидкісний рендерер компонента (якщо є власний метод Draw)
+        if hasattr(GraphicObj, "Draw") and callable(GraphicObj.Draw):
+            return bool(GraphicObj.Draw(self.Context, self.Device))
+        # 3. Прояв топологічних сегментів (якщо вони зареєстровані)
         Primitives = getattr(GraphicObj, "Primitives", [])
         if Primitives:
             for Segment in Primitives:
