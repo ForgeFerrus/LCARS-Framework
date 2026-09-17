@@ -12,7 +12,7 @@ from lcars.base.component import (
     LCARSIndicator,
     LCARSLabel,
 )
-from lcars.base.graphic import LCARSBuilder
+from lcars.base.graphic import Visual, Emitter
 from lcars.base.default import DefaultBackground, Palette
 from lcars.base.type import LCARS
 from lcars.core.signal import ODN
@@ -77,20 +77,23 @@ class Surface(Display):
             ParentResize(Event)
     # Цикл оптичного світіння (прояв фотонного поля на поверхні)
     def OpticalDispersion(self, Event):
+        # Малює свій Optics / Graphic
         if self.Visual is None:
             return
         # Синхронізація просторових меж
         CurrentW = self.width()
         CurrentH = self.height()
-        if getattr(self.Graphic, "Width", 0) != CurrentW or getattr(self.Graphic, "Height", 0) != CurrentH:
-            self.Graphic.Width = CurrentW
-            self.Graphic.Height = CurrentH
-            if hasattr(self.Graphic, "Synthesize"):
-                self.Graphic.Synthesize
+        if getattr(self.Visual, "Width", 0) != CurrentW or getattr(self.Visual, "Height", 0) != CurrentH:
+            self.Visual.Width = CurrentW
+            self.Visual.Height = CurrentH
+            if hasattr(self.Visual, "Synthesize"):
+                self.Visual.Synthesize
         # Випромінення через єдиний оптичний проєктор LCARS
         ProjectorInstance = Emitter()
+
         if ProjectorInstance.Activate(self):
-            ProjectorInstance.Project(self.Graphic)
+            # Проєктор бере self.Visual і малює його на підкладці
+            ProjectorInstance.Project(self.Visual)
             ProjectorInstance.Deactivate()
     # Сенсорний контакт (натискання на скло)
     def TouchContact(self, Event):
@@ -198,7 +201,57 @@ class Element(Component):
     def Item(self, Key: str) -> Component | None:
         return self.Items.get(Key)
     Item = LCARS.GetItem
-     # -------------------------------------------------------------------------
+
+    # Додає новий компонент або лейаут у композицію
+    def Add(self, *Arguments):
+        if not Arguments:
+            return self
+
+        if self.Layout is None:
+            if hasattr(self.Widget, "layout") and self.Widget.layout() is not None:
+                self.Layout = self.Widget.layout()
+            else:
+                self.Vertical(0, 0, 0, 0, 0)
+
+        TargetLayout = self.Layout
+        Item = Arguments[0]
+        Stretch = None
+
+        if len(Arguments) == 1:
+            Item = Arguments[0]
+        elif len(Arguments) == 2:
+            if hasattr(Arguments[0], "addWidget") or hasattr(Arguments[0], "addLayout"):
+                TargetLayout = Arguments[0]
+                Item = Arguments[1]
+            else:
+                Item = Arguments[0]
+                Stretch = Arguments[1]
+        elif len(Arguments) >= 3:
+            TargetLayout = Arguments[0]
+            Item = Arguments[1]
+            Stretch = Arguments[2]
+
+        if Item is None or TargetLayout is None:
+            return self
+
+        TargetWidget = getattr(Item, "Widget", getattr(Item, "widget", Item))
+        if hasattr(TargetLayout, "addWidget") and (not hasattr(Item, "addWidget") or TargetWidget is not Item):
+            if Stretch is None:
+                TargetLayout.addWidget(TargetWidget)
+            else:
+                TargetLayout.addWidget(TargetWidget, int(Stretch))
+        elif hasattr(TargetLayout, "addLayout"):
+            SubLayout = getattr(Item, "Layout", Item)
+            TargetLayout.addLayout(SubLayout)
+        return self
+
+    # Додає гнучку прокладку (стретч)
+    def AddStretch(self, TargetLayout=None, Factor=1):
+        LayoutObj = TargetLayout or self.Layout
+        if LayoutObj is not None and hasattr(LayoutObj, "addStretch"):
+            LayoutObj.addStretch(int(Factor))
+        return self
+    # -------------------------------------------------------------------------
     # СИНТЕЗ КОМПОЗИТНОГО ВУЗЛА (ПРОСТОРОВИЙ РОЗРАХУНОК)
     # Розставляє дочірні компоненти вздовж лінії або в блок
     # -------------------------------------------------------------------------
@@ -227,8 +280,47 @@ class Element(Component):
         if self.Items:
             self.Width = int(TotalW)
             self.Height = int(TotalH)
-        return self
+        return self.BuildInterface()
 
+    def BuildInterface(self):
+        TargetType = (self.Type).lower()
+        if TargetType == "padd":
+            return self.BuildPadd()
+        elif TargetType == "screen":
+            return self.BuildScreen()
+        elif TargetType == "segment":
+            return self.BuildSegment()
+        elif TargetType in ("header", "headerframe"):
+            return self.BuildHeader()
+        elif TargetType == "footer":
+            return self.BuildFooter()
+        elif TargetType == "sidebar":
+            return self.BuildSidebar()
+        elif TargetType == "menu":
+            return self.BuildMenu()
+        elif TargetType == "toolbar":
+            return self.BuildToolbar()
+        elif TargetType == "statusline":
+            return self.BuildStatusLine()
+        elif TargetType == "datablock":
+            return self.BuildDataBlock()
+        elif TargetType == "statbar":
+            return self.BuildStatBar()
+        elif TargetType == "scanningbar":
+            return self.BuildScanningBar()
+        elif TargetType == "overlay":
+            return self.BuildOverlay()
+        elif TargetType == "stasis":
+            return self.BuildStasis()
+        elif TargetType in ("access", "accesscode"):
+            return self.BuildAccess()
+        elif TargetType in ("coupled", "coupledblock"):
+            return self.BuildCoupled()
+        elif TargetType in ("telemetry", "telemetryblock"):
+            return self.BuildTelemetry()
+        elif TargetType in ("bracket", "framebracket"):
+            return self.BuildBracket()
+        return self.BuildPanel()
 # =============================================================================
 # LCARSHEADER — ВЕРХНЯ НЕСУЧА АРКА ПАНЕЛІ (КАНОНІЧНА ШАПКА)
 # =============================================================================
@@ -278,128 +370,7 @@ class LCARSHeader(Element):
 
         return self
 
-    def Add(self, *Arguments):
-        if not Arguments:
-            return self
 
-        if self.Layout is None:
-            if hasattr(self.Widget, "layout") and self.Widget.layout() is not None:
-                self.Layout = self.Widget.layout()
-            else:
-                self.Vertical(0, 0, 0, 0, 0)
-
-        TargetLayout = self.Layout
-        Item = Arguments[0]
-        Stretch = None
-
-        if len(Arguments) == 1:
-            Item = Arguments[0]
-        elif len(Arguments) == 2:
-            if hasattr(Arguments[0], "addWidget") or hasattr(Arguments[0], "addLayout"):
-                TargetLayout = Arguments[0]
-                Item = Arguments[1]
-            else:
-                Item = Arguments[0]
-                Stretch = Arguments[1]
-        elif len(Arguments) >= 3:
-            TargetLayout = Arguments[0]
-            Item = Arguments[1]
-            Stretch = Arguments[2]
-
-        if Item is None or TargetLayout is None:
-            return self
-
-        TargetWidget = getattr(Item, "Widget", getattr(Item, "widget", Item))
-        if hasattr(TargetLayout, "addWidget") and (not hasattr(Item, "addWidget") or TargetWidget is not Item):
-            if Stretch is None:
-                TargetLayout.addWidget(TargetWidget)
-            else:
-                TargetLayout.addWidget(TargetWidget, int(Stretch))
-        elif hasattr(TargetLayout, "addLayout"):
-            SubLayout = getattr(Item, "Layout", Item)
-            TargetLayout.addLayout(SubLayout)
-
-        return self
-
-    def addWidget(self, *args, **kwargs):
-        return self.Add(*args, **kwargs)
-
-    def addLayout(self, *args, **kwargs):
-        return self.Add(*args, **kwargs)
-
-    def AddLayout(self, TargetLayout, SubLayout):
-        if TargetLayout is not None and SubLayout is not None and hasattr(TargetLayout, "addLayout"):
-            LayoutObj = getattr(SubLayout, "Layout", SubLayout)
-            TargetLayout.addLayout(LayoutObj)
-        return self
-
-    def AddStretch(self, TargetLayout=None, Factor=1):
-        LayoutObj = TargetLayout or self.Layout
-        if LayoutObj is not None and hasattr(LayoutObj, "addStretch"):
-            LayoutObj.addStretch(int(Factor))
-        return self
-
-    def addStretch(self, *args, **kwargs):
-        return self.AddStretch(*args, **kwargs)
-
-    def Clear(self):
-        if self.Layout is None:
-            return self
-
-        while self.Layout.count():
-            Item = self.Layout.takeAt(0)
-            if Item is None:
-                continue
-            WidgetRef = Item.widget()
-            if WidgetRef is not None:
-                WidgetRef.deleteLater()
-
-        self.Items.clear()
-        return self
-
-
-    def Build(self):
-        return self.BuildInterface()
-
-    def BuildInterface(self):
-        TargetType = str(self.Type).lower()
-        if TargetType == "padd":
-            return self.BuildPadd()
-        elif TargetType == "screen":
-            return self.BuildScreen()
-        elif TargetType == "segment":
-            return self.BuildSegment()
-        elif TargetType in ("header", "headerframe"):
-            return self.BuildHeader()
-        elif TargetType == "footer":
-            return self.BuildFooter()
-        elif TargetType == "sidebar":
-            return self.BuildSidebar()
-        elif TargetType == "menu":
-            return self.BuildMenu()
-        elif TargetType == "toolbar":
-            return self.BuildToolbar()
-        elif TargetType == "statusline":
-            return self.BuildStatusLine()
-        elif TargetType == "datablock":
-            return self.BuildDataBlock()
-        elif TargetType == "statbar":
-            return self.BuildStatBar()
-        elif TargetType == "scanningbar":
-            return self.BuildScanningBar()
-        elif TargetType == "overlay":
-            return self.BuildOverlay()
-        elif TargetType == "stasis":
-            return self.BuildStasis()
-        elif TargetType in ("access", "accesscode"):
-            return self.BuildAccess()
-        elif TargetType in ("coupled", "coupledblock"):
-            return self.BuildCoupled()
-        elif TargetType in ("telemetry", "telemetryblock"):
-            return self.BuildTelemetry()
-        elif TargetType in ("bracket", "framebracket"):
-            return self.BuildBracket()
-        return self.BuildPanel()
 
     def BuildPanel(self):
         if hasattr(self.Widget, "setStyleSheet"):
