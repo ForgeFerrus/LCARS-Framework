@@ -168,36 +168,21 @@ class WaveStream(Graphic):
     # Колірна схема
     PrimaryColor = Palette.Buttons[2]
     SecondaryColor = Palette.Buttons[0]
-    _Widget = None
 
-    @property
-    def widget(self):
-        if self._Widget is None:
-            SurfaceClass = LCARS.Retrieve("Base.Interface.Surface")
-            if SurfaceClass is None:
-                from lcars.base.interface import Surface
-                SurfaceClass = Surface
-            self._Widget = SurfaceClass(Optics=self, Parent=getattr(self, "Parent", None))
-        return self._Widget
-
-    # -------------------------------------------------------------------------
-    # КЕРУВАННЯ ЧАСОВИМ КВАНТОМ (ТАЙМЕР)
-    # -------------------------------------------------------------------------
-    def Start(self, Speed: float | None = None):
+    # Канонічні кольори LCARS
+    Spectrum = Palette.Buttons[2]
+    Accent = Palette.Buttons[0]
+    # Керування рухом
+    def Start(self, Speed=None):
         if Speed is not None:
             self.Speed = float(Speed)
         self.Running = True
-        if self.Timer is None:
-            TimerClass = LCARS.Retrieve("Base.Core.Timer")
-            if TimerClass and callable(TimerClass):
-                self.Timer = TimerClass()
-                Timeout = getattr(self.Timer, "timeout", None)
-                if Timeout and hasattr(Timeout, "connect"):
-                    Timeout.connect(self.Tick)
-                StartFunc = getattr(self.Timer, "start", None)
-                if callable(StartFunc):
-                    StartFunc(self.Interval)
-        elif hasattr(self.Timer, "start"):
+        TimerClass = LCARS.Retrieve("Base.Core.Timer")
+        if TimerClass and callable(TimerClass) and self.Timer is None:
+            self.Timer = TimerClass()
+            self.Timer.timeout.connect(self.Tick)
+            self.Timer.start(self.Interval)
+        elif self.Timer and hasattr(self.Timer, "start"):
             self.Timer.start(self.Interval)
         return self
 
@@ -223,7 +208,7 @@ class WaveStream(Graphic):
             self._Widget.update()
 
     def SetMode(self, Mode: str):
-        self.Mode = str(Mode).capitalize()
+        self.Mode = (Mode).capitalize()
         self.Refresh()
         return self
 
@@ -248,8 +233,6 @@ class WaveStream(Graphic):
 
         W = float(Device.width() if hasattr(Device, "width") else self.Width)
         H = float(Device.height() if hasattr(Device, "height") else self.Height)
-        self.Width = W
-        self.Height = H
 
         # Очищення підкладки в канонічний чорний колір вакууму
         Context.fillRect(Device.rect(), LCARS.Visual.Color("#000000"))
@@ -270,7 +253,6 @@ class WaveStream(Graphic):
         else:
             # За замовчуванням: класичні стовпчики гармонік
             self.RenderHarmonicBars(Context, W, H)
-
         return True
 
     # -------------------------------------------------------------------------
@@ -507,193 +489,439 @@ class WaveStream(Graphic):
         Pen2 = LCARS.Visual.Pen(LCARS.Visual.Color(self.GetSecondaryColor()), 1.8)
         Context.setPen(Pen2)
         Context.drawPath(Wave2)
-
-
-
-# Алгоритмічна гармоніка силового щита
-class ShieldHarmonics(Animation):
-    def __init__(self, Parent=None, Rings: int = 5, ShieldColor: str = None, **Args):
-        self.Rings = int(Rings)
-        super().__init__(Parent=Parent, Type="shield-harmonics", Color=ShieldColor or Palette.Buttons[0], **Args)
-        self.Generate()
-
-    def Generate(self):
-        self.ClearPrimitives()
-        CenterX = self.Width / 2.0
-        CenterY = self.Height / 2.0
-        MaxRadius = min(self.Width, self.Height) * 0.46
-
-        for Index in range(self.Rings):
-            RingPhase = (self.Phase + Index / max(1, self.Rings)) % 1.0
-            Radius = max(6.0, MaxRadius * RingPhase)
-            HarmonicAlpha = math.sin(RingPhase * math.pi)
-            ColorIndex = int((1.0 - RingPhase) * 3)
-            RingColor = self.PaletteColor("buttons", ColorIndex) if HarmonicAlpha > 0.2 else Palette.Disabled[0]
-            self.AddPrimitive(Primitive.CIRCLE, CenterX, CenterY, Radius * 2.0, Radius * 2.0, RingColor)
-
-
-# Розгортання шини
+# =============================================================================
+# REVEAL & CONCEAL — ДРАЙВЕРИ РОЗГОРТАННЯ ТА ЗГОРТАННЯ LCARS (WIPE TRANSITION)
+# =============================================================================
 class Reveal(Animation):
-    def __init__(self, Parent=None, Type="left", BackColor="#000000", **Args):
-        self.BackColor = Take(Args, ["backColor", "BackColor", "Background", "background"], BackColor)
-        super().__init__(Parent=Parent, Type=Type, Loop=False, EasingFunc=Easing.EaseOut, **Args)
-        self.Generate()
+    TypeName = "LCARSReveal"
+    Type = "Reveal"
 
-    def Generate(self):
-        self.ClearPrimitives()
-        self.AddPrimitive(Primitive.BAR, 0, 0, self.Width, self.Height, self.BackColor)
-        Progress = self.GetProgress()
-        if self.Type == "right":
-            W = int(self.Width * Progress)
-            self.AddPrimitive(Primitive.BAR, self.Width - W, 0, W, self.Height, self.Color)
-        elif self.Type == "top":
-            H = int(self.Height * Progress)
-            self.AddPrimitive(Primitive.COLUMN, 0, 0, self.Width, H, self.Color)
-        elif self.Type == "bottom":
-            H = int(self.Height * Progress)
-            self.AddPrimitive(Primitive.COLUMN, 0, self.Height - H, self.Width, H, self.Color)
-        elif self.Type == "center":
-            W = int(self.Width * Progress)
-            H = int(self.Height * Progress)
-            self.AddPrimitive(Primitive.ROUNDED_RECT, int((self.Width - W) / 2), int((self.Height - H) / 2), W, H, self.Color, rx=10, ry=10)
-        elif self.Type == "split":
-            W = int(self.Width * Progress / 2)
-            self.AddPrimitive(Primitive.BAR, int(self.Width / 2) - W, 0, W, self.Height, self.Color)
-            self.AddPrimitive(Primitive.BAR, int(self.Width / 2), 0, W, self.Height, self.Color)
-        else:
-            W = int(self.Width * Progress)
-            self.AddPrimitive(Primitive.BAR, 0, 0, W, self.Height, self.Color)
+    # Параметри переходу
+    Direction = "Left"      # Left, Right, Top, Bottom, Center
+    Period = 0.6            # Тривалість розгортання (сек)
+    Loop = False            # Одноразовий перехід
+    EasingFunc = None
+    Reverse = False         # True = Conceal (згортання), False = Reveal (розгортання)
 
+    # Початкові габарити цілі
+    InitialWidth = None
+    InitialHeight = None
 
-# Екранний перехід
+    def StartReveal(self, Target=None, Period=None, Direction=None, Reverse=None):
+        if Direction is not None:
+            self.Direction = str(Direction).capitalize()
+        if Reverse is not None:
+            self.Reverse = bool(Reverse)
+
+        super().Start(Target=Target, Period=Period, Loop=False)
+
+        # Фіксуємо базовий розмір цілі при старті
+        if self.Target:
+            if self.InitialWidth is None:
+                self.InitialWidth = getattr(self.Target, "Width", 100)
+            if self.InitialHeight is None:
+                self.InitialHeight = getattr(self.Target, "Height", 30)
+
+        return self
+
+    # Крок модуляції
+    def Apply(self):
+        if not self.Target:
+            return
+
+        # Прогрес розгортання: від 0.0 до 1.0 (або навпаки при Reverse)
+        Progress = (1.0 - self.Phase) if self.Reverse else self.Phase
+
+        # Плавне згладжування (Easing)
+        Factor = Progress * Progress * (3.0 - 2.0 * Progress)  # SmoothStep
+
+        Dir = self.Direction.lower()
+        FullW = float(self.InitialWidth or 100)
+        FullH = float(self.InitialHeight or 30)
+
+        if Dir in ("left", "right"):
+            # Горизонтальне розгортання довжини
+            CurrentW = max(1.0, FullW * Factor)
+            self.Target.Width = CurrentW
+            if hasattr(self.Target, "Synthesize"):
+                self.Target.Synthesize()
+
+        elif Dir in ("top", "bottom"):
+            # Вертикальне розгортання висоти
+            CurrentH = max(1.0, FullH * Factor)
+            self.Target.Height = CurrentH
+            if hasattr(self.Target, "Synthesize"):
+                self.Target.Synthesize()
+
+        elif Dir == "center":
+            # Симетричне розкриття від центру в обидва боки
+            self.Target.Width = max(1.0, FullW * Factor)
+            self.Target.Height = max(1.0, FullH * Factor)
+            if hasattr(self.Target, "Synthesize"):
+                self.Target.Synthesize()
+
+# Драйвер зворотного згортання (Conceal)
+class Conceal(Reveal):
+    TypeName = "LCARSConceal"
+    Type = "Conceal"
+    Reverse = True
+# =============================================================================
+# TRANSITION — ЕКРАННИЙ ПЕРЕХІД ТА ЗМІНА РЕЖИМІВ ДИСПЛЕЯ LCARS
+# =============================================================================
 class Transition(Animation):
-    def __init__(self, Parent=None, Type="wipe", BackColor="#000000", AccentColor=None, **Args):
-        self.BackColor = Take(Args, ["backColor", "BackColor", "Background", "background"], BackColor)
-        self.AccentColor = Take(Args, ["accentColor", "AccentColor"], AccentColor) or Palette.Buttons[2]
-        super().__init__(Parent=Parent, Type=Type, Loop=False, EasingFunc=Easing.EaseInOut, **Args)
-        self.Generate()
+    TypeName = "LCARSTransition"
+    Type = "Transition"
 
-    def Generate(self):
-        self.ClearPrimitives()
-        Progress = self.GetProgress()
-        if self.Type == "split":
-            W = int(self.Width * Progress / 2)
-            Center = int(self.Width / 2)
-            self.AddPrimitive(Primitive.BAR, 0, 0, self.Width, self.Height, self.BackColor)
-            self.AddPrimitive(Primitive.BAR, Center - W, 0, W, self.Height, self.Color)
-            self.AddPrimitive(Primitive.BAR, Center, 0, W, self.Height, self.Color)
-        elif self.Type == "bars":
-            BarCount = 12
-            BarW = max(4, self.Width // BarCount)
-            for i in range(BarCount):
-                Delay = i * 0.08
-                LocalP = self.Clamp((Progress - Delay) / (1.0 - Delay), 0.0, 1.0)
-                H = int(self.Height * LocalP)
-                self.AddPrimitive(Primitive.COLUMN, i * BarW, self.Height - H, BarW - 2, H, self.Color)
-        else:
-            W = int(self.Width * Progress)
-            self.AddPrimitive(Primitive.BAR, 0, 0, W, self.Height, self.Color)
-            self.AddPrimitive(Primitive.BAR, W, 0, max(0, self.Width - W), self.Height, self.BackColor)
-            self.AddPrimitive(Primitive.LINE, W, 0, 0, self.Height, self.AccentColor, width=4)
+    # Параметри переходу
+    Mode = "Wipe"           # Wipe, Split, Cascade, Fade
+    Period = 0.5            # Тривалість зміни екрану (сек)
+    Loop = False
+    Running = False
 
+    # Кольорова гама переходу
+    Spectrum = Palette.Buttons[2]
+    Accent = Palette.Buttons[0]
 
-# Сенсорний імпульс
-class Pulse(Animation):
-    def __init__(self, Parent=None, Rings=4, Shape="circle", **Args):
-        self.Rings = int(Take(Args, ["rings", "Rings", "PulseCount"], Rings))
-        self.Shape = Normalize(Take(Args, ["shape", "Shape"], Shape)) or "circle"
-        super().__init__(Parent=Parent, Type=self.Shape, **Args)
-        self.Generate()
+    # Екрани перемикання
+    Source = None
+    Destination = None
 
-    def Generate(self):
-        self.ClearPrimitives()
-        Size = min(self.Width, self.Height)
-        CenterX = int(self.Width / 2)
-        CenterY = int(self.Height / 2)
-        for Index in range(self.Rings):
-            RingPhase = (self.Phase + Index / max(1, self.Rings)) % 1.0
-            Radius = max(4, int(Size * 0.48 * RingPhase))
-            Col = self.Color if RingPhase > 0.18 else Palette.Disabled[1]
-            if self.Shape == "rect":
-                W = self.Clamp(Radius * 2, 4, self.Width)
-                H = self.Clamp(int(Radius * 1.1), 4, self.Height)
-                self.AddPrimitive(Primitive.ROUNDED_RECT, CenterX - int(W / 2), CenterY - int(H / 2), W, H, Col, rx=8, ry=8)
-            else:
-                self.AddPrimitive(Primitive.CIRCLE, CenterX, CenterY, Radius * 2, Radius * 2, Col)
+    def Switch(self, Source, Destination, Mode=None, Period=None, OnFinish=None):
+        self.Source = Source
+        self.Destination = Destination
+        if Mode is not None:
+            self.Mode = str(Mode).capitalize()
+        if OnFinish is not None:
+            self.OnComplete = OnFinish
+        self.Start(Period=Period, Loop=False)
+        return self
 
+    def Apply(self):
+        Progress = self.Phase
 
-# Миготіння індикатора
+        # 1. Плавне згасання / проявлення (Fade)
+        if self.Mode.lower() == "fade":
+            if self.Source and hasattr(self.Source, "Luminance"):
+                self.Source.Luminance = max(0.0, 1.0 - Progress)
+                self.Source.Refresh()
+            if self.Destination and hasattr(self.Destination, "Luminance"):
+                self.Destination.Luminance = min(1.0, Progress)
+                self.Destination.Refresh()
+
+        # 2. Шторка зсуву (Wipe)
+        elif self.Mode.lower() == "wipe":
+            if self.Source and hasattr(self.Source, "Width"):
+                TotalW = getattr(self.Source, "_InitialWidth", self.Source.Width)
+                self.Source._InitialWidth = TotalW
+                self.Source.Width = max(0.0, TotalW * (1.0 - Progress))
+                if hasattr(self.Source, "Synthesize"):
+                    self.Source.Synthesize()
+
+        # 3. Розкриття від центру (Split)
+        elif self.Mode.lower() == "split":
+            if self.Destination and hasattr(self.Destination, "Width"):
+                TargetW = getattr(self.Destination, "_InitialWidth", self.Destination.Width)
+                self.Destination._InitialWidth = TargetW
+                self.Destination.Width = max(1.0, TargetW * Progress)
+                if hasattr(self.Destination, "Synthesize"):
+                    self.Destination.Synthesize()
+# =============================================================================
+# BLINK — СИСТЕМНИЙ ДРАЙВЕР МИГОТІННЯ КНОПОК ТА ІНДИКАТОРІВ (RED ALERT / WARN)
+# =============================================================================
 class Blink(Animation):
-    def __init__(self, Parent=None, Text="", OffColor=None, FontSize=14, **Args):
-        self.Label = str(Take(Args, ["text", "Text"], Text))
-        self.OffColor = OffColor or Palette.Disabled[1]
-        self.FontSize = int(Take(Args, ["fontSize", "FontSize"], FontSize))
-        super().__init__(Parent=Parent, Type="blink", **Args)
-        self.Generate()
+    TypeName = "LCARSBlink"
+    Type = "Blink"
 
-    def Generate(self):
-        self.ClearPrimitives()
-        Active = self.Phase < 0.5
-        Col = self.Color if Active else self.OffColor
-        self.AddPrimitive(Primitive.CAP, 0, 0, self.Width, self.Height, Col, side="pill")
-        if self.Label:
-            TextCol = "#000000" if Active else Palette.Disabled[0]
-            self.AddPrimitive(Primitive.TEXT, 0, 0, self.Width, self.Height, TextCol, text=self.Label.upper(), fontSize=self.FontSize)
+    # Параметри миготіння
+    Period = 0.8            # Період повного спалаху (сек)
+    Loop = True             # Постійне миготіння
+    DutyCycle = 0.5         # 50% часу світиться, 50% вимкнено
 
+    ActiveColor = None
+    OffColor = None
 
-# Посимвольний термінал
-class Typewriter(Animation):
-    def __init__(self, Parent=None, Text="", Target=None, FontSize=14, Align="left", **Args):
-        self.FullText = str(Take(Args, ["text", "Text"], Text))
-        self.Target = Take(Args, ["target", "Target"], Target)
-        self.FontSize = int(Take(Args, ["fontSize", "FontSize"], FontSize))
-        self.Align = Take(Args, ["align", "Align"], Align)
-        super().__init__(Parent=Parent, Type="typewriter", Loop=False, **Args)
-        self.Generate()
+    def Apply(self):
+        if not self.Target:
+            return
 
-    def CurrentText(self) -> str:
-        Count = int(len(self.FullText) * self.Clamp(self.Phase, 0.0, 1.0))
-        return self.FullText[:Count]
+        IsLit = (self.Phase < self.DutyCycle)
 
-    def Generate(self):
-        self.ClearPrimitives()
-        Text = self.CurrentText()
-        self.SetExternalText(self.Target, Text)
-        self.AddPrimitive(Primitive.TEXT, 0, 0, self.Width, self.Height, self.Color, text=Text, fontSize=self.FontSize)
+        # 1. Якщо ціль підтримує Luminance (наш Component / Graphic)
+        if hasattr(self.Target, "Luminance"):
+            self.Target.Luminance = 1.0 if IsLit else 0.0
+            self.Target.Refresh()
 
+        # 2. Якщо задано кольори для перемикання спектру
+        elif self.ActiveColor and hasattr(self.Target, "Spectrum"):
+            OffCol = self.OffColor or Palette.Disabled[1]
+            self.Target.Spectrum = self.ActiveColor if IsLit else OffCol
+            self.Target.Refresh()
+# =============================================================================
+# PULSE — РАДІАЛЬНЕ СКАЗИЩЕ / СОНАР ТАКТИЧНОГО ДИСПЛЕЯ (DEFLECTOR / RADAR)
+# =============================================================================
+class Pulse(Graphic):
+    TypeName = "LCARSPulse"
+    Type = "Pulse"
 
-# Декодування шуму
-class TextDecode(Animation):
-    def __init__(self, Parent=None, Text="", Target=None, Alphabet=None, FontSize=14, Align="left", **Args):
-        self.FullText = str(Take(Args, ["text", "Text"], Text))
-        self.Target = Take(Args, ["target", "Target"], Target)
-        self.Alphabet = str(Take(Args, ["alphabet", "Alphabet"], Alphabet or "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/+-#"))
-        self.FontSize = int(Take(Args, ["fontSize", "FontSize"], FontSize))
-        self.Align = Take(Args, ["align", "Align"], Align)
-        super().__init__(Parent=Parent, Type="decode", Loop=False, **Args)
-        self.Generate()
+    Width = 160
+    Height = 160
+    Rings = 4               # Кількість концентричних кілець
+    Shape = "Circle"        # Circle або Rect
+    Spectrum = Palette.Buttons[2]
+    Speed = 0.03
+    Phase = 0.0
+    Running = False
+    Interval = 40
 
-    def CurrentText(self) -> str:
-        Progress = self.Clamp(self.Phase, 0.0, 1.0)
-        Locked = int(len(self.FullText) * Progress)
-        Output = []
-        for Index, Character in enumerate(self.FullText):
-            if Character == " ":
-                Output.append(" ")
-            elif Index < Locked:
-                Output.append(Character)
+    def Start(self):
+        self.Running = True
+        TimerClass = LCARS.Retrieve("Base.Core.Timer")
+        if TimerClass and callable(TimerClass) and self.Timer is None:
+            self.Timer = TimerClass()
+            self.Timer.timeout.connect(self.Tick)
+            self.Timer.start(self.Interval)
+        elif self.Timer and hasattr(self.Timer, "start"):
+            self.Timer.start(self.Interval)
+        return self
+
+    def Stop(self):
+        self.Running = False
+        if self.Timer and hasattr(self.Timer, "stop"):
+            self.Timer.stop()
+        return self
+
+    def Tick(self):
+        if not self.Running:
+            return
+        self.Phase = (self.Phase + self.Speed) % 1.0
+        self.Refresh()
+
+    # Прямий векторний рендер концентричних кілець
+    def Draw(self, Context, Device):
+        if Context is None or Device is None:
+            return False
+
+        W = float(Device.width() if hasattr(Device, "width") else self.Width)
+        H = float(Device.height() if hasattr(Device, "height") else self.Height)
+        CenterX = W * 0.5
+        CenterY = H * 0.5
+        MaxRadius = min(W, H) * 0.46
+
+        BaseCol = LCARS.Visual.Color(self.Spectrum)
+        Context.setBrush(LCARS.Visual.Brush(LCARS.Visual.Color("transparent")))
+
+        for Index in range(self.Rings):
+            RingPhase = (self.Phase + Index / float(max(1, self.Rings))) % 1.0
+            Radius = max(4.0, MaxRadius * RingPhase)
+
+            # Кільця плавно згасають у міру розширення
+            Alpha = int(max(0, 255 * (1.0 - RingPhase)))
+            RingColor = LCARS.Visual.Color(BaseCol.red(), BaseCol.green(), BaseCol.blue(), Alpha)
+            Context.setPen(LCARS.Visual.Pen(RingColor, 2.0))
+
+            if self.Shape.lower() == "rect":
+                Context.drawRoundedRect(LCARS.Geometry.RectF(CenterX - Radius, CenterY - Radius, Radius * 2, Radius * 2), 6.0, 6.0)
             else:
-                Rnd = LCARS.Random.Random(self.Frame * 101 + Index * 17)
-                Output.append(Rnd.choice(self.Alphabet))
-        return "".join(Output)
+                Context.drawEllipse(LCARS.Geometry.PointF(CenterX, CenterY), Radius, Radius)
+        return True
+# =============================================================================
+# TYPEWRITER — ПОСИМВОЛЬНИЙ ДРУК ТЕКСТУ БОРТОВОГО КОМП'ЮТЕРА LCARS
+# =============================================================================
+class Typewriter(Animation):
+    TypeName = "LCARSTypewriter"
+    # Параметри друку
+    FullText = ""
+    Period = 1.5            # Загальний час друку (сек)
+    Loop = False
+    Running = False
+    ShowCursor = True       # Показувати термінальний курсор █
+    CursorChar = " "
 
-    def Generate(self):
-        self.ClearPrimitives()
-        Text = self.CurrentText()
-        self.SetExternalText(self.Target, Text)
-        self.AddPrimitive(Primitive.TEXT, 0, 0, self.Width, self.Height, self.Color, text=Text.upper(), fontSize=self.FontSize)
+    def Write(self, Target, Text, Period=None, OnFinish=None):
+        self.Target = Target
+        self.FullText = str(Text or "")
+        if OnFinish is not None:
+            self.OnComplete = OnFinish
+        # Якщо період не вказано — розраховуємо швидкість від довжини тексту (~25 симв/сек)
+        CalcPeriod = Period if Period is not None else max(0.4, len(self.FullText) * 0.04)
+        self.Start(Period=CalcPeriod, Loop=False)
+        return self
 
+    def Apply(self):
+        if not self.Target or not self.FullText:
+            return
 
+        TotalChars = len(self.FullText)
+        Count = int(TotalChars * min(1.0, self.Phase))
+        CurrentChunk = self.FullText[:Count]
+
+        # Додаємо курсор під час друку
+        if self.ShowCursor and Count < TotalChars:
+            DisplayText = CurrentChunk + self.CursorChar
+        else:
+            DisplayText = CurrentChunk
+
+        # Оновлення тексту цілі
+        if hasattr(self.Target, "SetText"):
+            self.Target.SetText(DisplayText)
+        elif hasattr(self.Target, "setText"):
+            self.Target.setText(DisplayText)
+# =============================================================================
+# TEXTDECODE — АЛГОРИТМІЧНЕ ДЕКОДУВАННЯ ТА ДЕШИФРУВАННЯ СИГНАЛУ LCARS
+# =============================================================================
+class TextDecode(Animation):
+    TypeName = "LCARSDecode"
+    Type = "TextDecode"
+
+    # Параметри дешифрування
+    FullText = ""
+    Period = 1.2            # Час розшифрування (сек)
+    Loop = False
+    Running = False
+    
+    # Алфавіт підпросторового квантового шуму
+    CipherChars = "0123456789ABCDEF/+-#%&*<>[]"
+
+    def Decode(self, Target, Text, Period=None, OnFinish=None):
+        self.Target = Target
+        self.FullText = str(Text or "")
+        if OnFinish is not None:
+            self.OnComplete = OnFinish
+        CalcPeriod = Period if Period is not None else max(0.5, len(self.FullText) * 0.05)
+        self.Start(Period=CalcPeriod, Loop=False)
+        return self
+
+    def Apply(self):
+        if not self.Target or not self.FullText:
+            return
+
+        TotalChars = len(self.FullText)
+        # Кількість уже розшифрованих символів (фіксованих)
+        DecodedCount = int(TotalChars * min(1.0, self.Phase))
+
+        # Генеруємо поточний рядок: розшифрована частина + шум
+        import random
+        Result = []
+        for i in range(TotalChars):
+            TargetChar = self.FullText[i]
+            if i < DecodedCount or TargetChar in (" ", "\n", "\t"):
+                Result.append(TargetChar)
+            else:
+                # Випадковий гліф із квантового шуму
+                NoiseChar = self.CipherChars[int(random.random() * len(self.CipherChars))]
+                Result.append(NoiseChar)
+
+        DisplayText = "".join(Result)
+
+        # Оновлення тексту в нашому LCARSLabel
+        if hasattr(self.Target, "SetText"):
+            self.Target.SetText(DisplayText)
+        elif hasattr(self.Target, "setText"):
+            self.Target.setText(DisplayText)
+# =============================================================================
+# DIAGNOSTICGRID — ДІАГНОСТИЧНА МАТРИЦЯ ІЗОЛІНІЙНИХ ЧІПІВ ТА ШИНИ EPS LCARS
+# =============================================================================
+class DiagnosticGrid(Component):
+    TypeName = "LCARSDiagnosticGrid"
+    Type = "DiagnosticGrid"
+
+    # Геометрія сітки
+    Width = 320
+    Height = 120
+    Columns = 12
+    Rows = 5
+
+    # Кольори та стан
+    Spectrum = Palette.Buttons[2]      # Основний робочий колір
+    ScanColor = "#ffffff"              # Білий промінь сканера
+    DimColor = "#1a1a2e"               # Неактивна комірка
+
+    # Анімація
+    Speed = 0.03
+    Phase = 0.0
+    Running = False
+    Interval = 40
+    Timer = None
+
+    def Start(self, Speed=None):
+        if Speed is not None:
+            self.Speed = float(Speed)
+        self.Running = True
+        TimerClass = LCARS.Retrieve("Base.Core.Timer")
+        if TimerClass and callable(TimerClass) and self.Timer is None:
+            self.Timer = TimerClass()
+            self.Timer.timeout.connect(self.Tick)
+            self.Timer.start(self.Interval)
+        elif self.Timer and hasattr(self.Timer, "start"):
+            self.Timer.start(self.Interval)
+        return self
+
+    def Stop(self):
+        self.Running = False
+        if self.Timer and hasattr(self.Timer, "stop"):
+            self.Timer.stop()
+        return self
+
+    def Tick(self):
+        if not self.Running:
+            return
+        self.Phase = (self.Phase + self.Speed) % 1.0
+        self.Refresh()
+
+    # Прямий векторний рендер діагностичної матриці
+    def Draw(self, Context, Device):
+        if Context is None or Device is None:
+            return False
+
+        W = float(Device.width() if hasattr(Device, "width") else self.Width)
+        H = float(Device.height() if hasattr(Device, "height") else self.Height)
+
+        # Очищення підкладки
+        Context.fillRect(Device.rect(), LCARS.Visual.Color("#000000"))
+
+        Cols = max(2, self.Columns)
+        Rows = max(1, self.Rows)
+        Gap = 3.0
+        CellW = max(2.0, (W - (Cols - 1) * Gap) / Cols)
+        CellH = max(2.0, (H - (Rows - 1) * Gap) / Rows)
+
+        ActiveCol = int(self.Phase * Cols)
+        ActiveX = ActiveCol * (CellW + Gap)
+
+        PrimaryCol = LCARS.Visual.Color(self.Spectrum)
+        DimCol = LCARS.Visual.Color(self.DimColor)
+
+        Context.setPen(LCARS.Visual.Pen(LCARS.Visual.Color("transparent")))
+
+        # Малювання комірок матриці
+        for r in range(Rows):
+            for c in range(Cols):
+                X = c * (CellW + Gap)
+                Y = r * (CellH + Gap)
+
+                # Псевдовипадкове підсвічування комірок навколо сканера
+                Dist = (ActiveCol - c) % Cols
+                if Dist == 0:
+                    # Поточна колонка під променем
+                    CellColor = PrimaryCol
+                elif Dist < 3:
+                    # Хвіст після сканування
+                    Alpha = int(180 * (1.0 - Dist / 3.0))
+                    CellColor = LCARS.Visual.Color(PrimaryCol.red(), PrimaryCol.green(), PrimaryCol.blue(), Alpha)
+                elif (r * 7 + c * 13) % 5 == 0:
+                    # Активні фонові блоки
+                    CellColor = PrimaryCol
+                else:
+                    CellColor = DimCol
+
+                Context.fillRect(LCARS.Geometry.RectF(X, Y, CellW, CellH), CellColor)
+
+        # Вертикальний лазерний промінь сканера
+        BeamPen = LCARS.Visual.Pen(LCARS.Visual.Color(self.ScanColor), 2.0)
+        Context.setPen(BeamPen)
+        Context.drawLine(LCARS.Geometry.PointF(ActiveX + CellW, 0), LCARS.Geometry.PointF(ActiveX + CellW, H))
+
+        return True            
 # Імпульс
 class Impulse(Pulse):
     def __init__(self, Parent=None, Intensity=1.0, **Args):
@@ -703,29 +931,6 @@ class Impulse(Pulse):
     def TickFrame(self):
         self.Speed = self.Clamp(self.Speed * self.Intensity, 0.005, 0.25)
         super().TickFrame()
-
-
-# Діагностична матриця
-class DiagnosticGrid(Animation):
-    def __init__(self, Parent=None, Columns=12, Rows=5, **Args):
-        self.Columns = int(Take(Args, ["columns", "Columns", "GridSize"], Columns))
-        self.Rows = int(Take(Args, ["rows", "Rows"], Rows))
-        super().__init__(Parent=Parent, Type="diagnostic-grid", **Args)
-        self.Generate()
-
-    def Generate(self):
-        self.ClearPrimitives()
-        CellW = max(4, int(self.Width / max(1, self.Columns)))
-        CellH = max(4, int(self.Height / max(1, self.Rows)))
-        ActiveCol = int(self.Phase * max(1, self.Columns))
-        for Row in range(self.Rows):
-            for Col in range(self.Columns):
-                Score = (self.Frame + Row * 7 + Col * 11) % 17
-                CellColor = self.Color if Score < 5 or Col == ActiveCol else Palette.Disabled[1]
-                self.AddPrimitive(Primitive.RECT, Col * CellW + 2, Row * CellH + 2, CellW - 4, CellH - 4, CellColor)
-        ScanX = ActiveCol * CellW
-        self.AddPrimitive(Primitive.LINE, ScanX, 0, 0, self.Height, "#ffffff", width=3)
-
 
 # Потік телеметрії
 class DataStream(Animation):
