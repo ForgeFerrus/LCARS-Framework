@@ -12,7 +12,7 @@ from lcars.base.type import LCARS
 Display: type = LCARS.Retrieve(LCARS.Display) or object
 # =============================================================================
 class Surface(Display):
-    TypeName = "LCARSWidget"
+    TypeName = "LCARSSurface"
     Optics = None
     Layers = []
     PulseTimer = None
@@ -25,9 +25,6 @@ class Surface(Display):
         Policy = getattr(LCARS, "Policy", None)
         if hasattr(self, "setSizePolicy") and Policy is not None and hasattr(Policy, "Preferred"):
             self.setSizePolicy(Policy.Preferred, Policy.Preferred)
-        CursorTarget = LCARS.Retrieve(getattr(LCARS, "CursorHand", None))
-        if hasattr(self, "setCursor") and CursorTarget is not None and not isinstance(CursorTarget, str):
-            self.setCursor(CursorTarget)
         if hasattr(self, "startTimer"):
             self.PulseTimer = self.startTimer(1000)
 
@@ -159,18 +156,25 @@ class Element(Component):
     Orientation = "horizontal"  # horizontal або vertical
     Title = ""
     ActionText = ""
-    _Widget = None
+    SurfaceHost = None
+
+    def GetSurface(self):
+        if self.SurfaceHost is None:
+            SurfaceClass = LCARS.Retrieve("Base.Interface.Surface") or Surface
+            ParentRef = getattr(self, "Parent", None)
+            ParentSurface = getattr(ParentRef, "SurfaceHost", None) or getattr(ParentRef, "Widget", getattr(ParentRef, "widget", ParentRef))
+            self.SurfaceHost = SurfaceClass(ParentSurface) if ParentSurface is not None else SurfaceClass()
+            if hasattr(self.SurfaceHost, "Initialize"):
+                self.SurfaceHost.Initialize(Optics=self, Parent=ParentSurface)
+        return self.SurfaceHost
+
+    @property
+    def Surface(self):
+        return self.GetSurface()
 
     @property
     def Widget(self):
-        if self._Widget is None:
-            SurfaceClass = LCARS.Retrieve("Base.Interface.Surface") or Surface
-            ParentRef = getattr(self, "Parent", None)
-            ParentWidget = getattr(ParentRef, "Widget", getattr(ParentRef, "widget", ParentRef))
-            self._Widget = SurfaceClass(ParentWidget) if ParentWidget is not None else SurfaceClass()
-            if hasattr(self._Widget, "Initialize"):
-                self._Widget.Initialize(Optics=self, Parent=ParentWidget)
-        return self._Widget
+        return self.GetSurface()
 
     widget = Widget
 
@@ -334,44 +338,12 @@ class Element(Component):
         return self.BuildInterface()
 
     def BuildInterface(self):
-        TargetType = (self.Type).lower()
-        if TargetType == "padd":
-            return self.BuildPadd()
-        elif TargetType == "screen":
-            return self.BuildScreen()
-        elif TargetType == "segment":
-            return self.BuildSegment()
-        elif TargetType in ("header", "headerframe"):
-            return self.BuildHeader()
-        elif TargetType == "footer":
-            return self.BuildFooter()
-        elif TargetType == "sidebar":
-            return self.BuildSidebar()
-        elif TargetType == "menu":
-            return self.BuildMenu()
-        elif TargetType == "toolbar":
-            return self.BuildToolbar()
-        elif TargetType == "statusline":
-            return self.BuildStatusLine()
-        elif TargetType == "datablock":
-            return self.BuildDataBlock()
-        elif TargetType == "statbar":
-            return self.BuildStatBar()
-        elif TargetType == "scanningbar":
-            return self.BuildScanningBar()
-        elif TargetType == "overlay":
-            return self.BuildOverlay()
-        elif TargetType == "stasis":
-            return self.BuildStasis()
-        elif TargetType in ("access", "accesscode"):
-            return self.BuildAccess()
-        elif TargetType in ("coupled", "coupledblock"):
-            return self.BuildCoupled()
-        elif TargetType in ("telemetry", "telemetryblock"):
-            return self.BuildTelemetry()
-        elif TargetType in ("bracket", "framebracket"):
-            return self.BuildBracket()
-        return self.BuildPanel()
+        TargetType = str(getattr(self, "Type", "")).capitalize()
+        MethodName = f"Build{TargetType}"
+        Handler = getattr(self, MethodName, None)
+        if callable(Handler):
+            return Handler()
+        return self
 # =============================================================================
 # HEADER — ВЕРХНЯ КОМПОЗИЦІЯ / ШАПКА ПАНЕЛІ ТЕРМІНАЛА
 # Підтримує всі варіації несучих арок Окуди
@@ -994,7 +966,9 @@ class PADD(Element):
         if hasattr(Host, "geometry"):
             Geom = Host.geometry()
             self.PaddStartRect = (Geom.x(), Geom.y(), Geom.width(), Geom.height())
-        return self.PaddAction
+        if Event is not None and hasattr(Event, "accept"):
+            Event.accept()
+        return None
 
     def PaddMove(self, Event):
         if not self.PaddAction:

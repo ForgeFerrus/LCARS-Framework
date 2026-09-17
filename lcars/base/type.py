@@ -241,7 +241,7 @@ class LCARS(metaclass=Namespace):
     # Отримання канонічного екземпляра додатку через ядро
     def Launch(EntryPoint: Type.Any, *Args, **Flags) -> Type.Any:
     # 1. СПЕРШУ створюємо / отримуємо головний додаток (QApplication)
-        AppClass = LCARS.Retrieve("Base.Interface.Application")
+        AppClass = Retrieve("Base.Interface.Application")
         App = AppClass.instance() if AppClass and hasattr(AppClass, "instance") else None
         if App is None and AppClass:
             App = AppClass([])

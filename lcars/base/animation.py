@@ -381,8 +381,9 @@ class WaveStream(Graphic):
         self.Refresh()
 
     def Refresh(self):
-        if self._Widget and hasattr(self._Widget, "update"):
-            self._Widget.update()
+        Target = getattr(self, "SurfaceHost", None) or getattr(self, "Widget", getattr(self, "widget", None))
+        if Target and hasattr(Target, "update"):
+            Target.update()
 
     def SetMode(self, Mode: str):
         self.Mode = (Mode).capitalize()
