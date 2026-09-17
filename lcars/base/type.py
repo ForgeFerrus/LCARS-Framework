@@ -322,7 +322,7 @@ class LCARS(metaclass=Namespace):
     # === THREADS / TIMERS ===
     Application = "Base.Interface.Application"
     Thread = "Base.Core.Thread"
-    Timer = "Base.Core.Timer"
+    Clock = "Base.Core.Timer"
     Chronometer = "Base.Core.Timer"
     Pulser = "Base.Core.Timer"
     Mutex = "Base.Core.Sync.Mutex"

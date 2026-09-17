@@ -154,6 +154,26 @@ class Element(Component):
     Orientation = "horizontal"  # horizontal або vertical
     Title = ""
     ActionText = ""
+    _Widget = None
+
+    @property
+    def Widget(self):
+        if self._Widget is None:
+            SurfaceClass = LCARS.Retrieve("Base.Interface.Surface") or Surface
+            ParentRef = getattr(self, "Parent", None)
+            ParentWidget = getattr(ParentRef, "Widget", getattr(ParentRef, "widget", ParentRef))
+            self._Widget = SurfaceClass(Optics=self, Parent=ParentWidget)
+        return self._Widget
+
+    widget = Widget
+
+    def Show(self):
+        if hasattr(self.Widget, "show"):
+            self.Widget.show()
+        return self
+
+    show = Show
+
     # -------------------------------------------------------------------------
     # КОМПОЗИЦІЙНЕ КЕРУВАННЯ (ATTACH / DETACH)
     # -------------------------------------------------------------------------
