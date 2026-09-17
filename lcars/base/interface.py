@@ -244,7 +244,28 @@ class Element(Component):
             SubLayout = getattr(Item, "Layout", Item)
             TargetLayout.addLayout(SubLayout)
         return self
-
+    # 
+    def SetVertical(self, Left=0, Top=0, Right=0, Bottom=0, Spacing=0):
+        LayoutClass = LCARS.Retrieve("Base.Interface.Layout.Vertical")
+        if LayoutClass and callable(LayoutClass):
+            TargetWidget = getattr(self, "Widget", getattr(self, "widget", None))
+            self.Layout = LayoutClass(TargetWidget)
+            if hasattr(self.Layout, "setContentsMargins"):
+                self.Layout.setContentsMargins(Left, Top, Right, Bottom)
+            if hasattr(self.Layout, "setSpacing"):
+                self.Layout.setSpacing(Spacing)
+        return self.Layout
+    # 
+    def SetHorizontal(self, Left=0, Top=0, Right=0, Bottom=0, Spacing=0):
+        LayoutClass = LCARS.Retrieve("Base.Interface.Layout.Horizontal")
+        if LayoutClass and callable(LayoutClass):
+            TargetWidget = getattr(self, "Widget", getattr(self, "widget", None))
+            self.Layout = LayoutClass(TargetWidget)
+            if hasattr(self.Layout, "setContentsMargins"):
+                self.Layout.setContentsMargins(Left, Top, Right, Bottom)
+            if hasattr(self.Layout, "setSpacing"):
+                self.Layout.setSpacing(Spacing)
+        return self.Layout
     # Додає гнучку прокладку (стретч)
     def AddStretch(self, TargetLayout=None, Factor=1):
         LayoutObj = TargetLayout or self.Layout
@@ -340,7 +361,7 @@ class Header(Element):
     ElbowRight = 2
     DoubleElbow = 3
     PillCap = 4
-    # Композиці
+    # Композиції арок
     def Compose(self, *Objects, Form=ElbowLeft):
         self.Clear()
         
@@ -357,102 +378,165 @@ class Header(Element):
 # =============================================================================
 # FOOTER — НИЖНЯ КОМПОЗИЦІЯ / ПІДВАЛ ПАНЕЛІ ТЕРМІНАЛА
 # =============================================================================
+# =============================================================================
+# FOOTER — НИЖНЯ КОМПОЗИЦІЯ / ПІДВАЛ ТЕРМІНАЛА
+# Універсальне компонування готових об'єктів нижнього горизонту
+# =============================================================================
 class Footer(Element):
     TypeName = "Footer"
     Type = "Footer"
 
-    # --- ВАРІАЦІЇ ФОРМИ ПІДВАЛУ ---
-    ElbowBottomLeft = 1
-    ElbowBottomRight = 2
-    DoubleElbow = 3
-    Divider = 4
-
-    Form = ElbowBottomLeft
-    Height = 40
+    Height = 36
     Thickness = 16
-    Title = ""
-    Number = "SYS-47"
 
-    def Synthesize(self):
+    def Compose(self, *Objects):
         self.Clear()
-        self.Orientation = "horizontal"
-        W = float(self.Width or 800)
-        H = float(self.Height or 40)
-        Thick = float(self.Thickness or 16)
+        self.SetHorizontal(0, 0, 0, 0, Spacing=6)
 
-        if self.Form == self.ElbowBottomLeft:
-            self.Attach("Elbow", LCARSElbow(
-                Corner=LCARSElbow.BottomLeft,
-                Width=140, Height=H, Thickness=Thick,
-                Number=self.Number
-            ))
-            RailWidth = max(40.0, W - 140.0 - 30.0)
-            self.Attach("Rail", LCARSBar(Width=int(RailWidth), Height=int(Thick)))
-            self.Attach("EndCap", LCARSIndicator(
-                Form=LCARSIndicator.PillHalf, Direction=0, Width=24, Height=int(Thick)
-            ))
-
-        elif self.Form == self.ElbowBottomRight:
-            self.Attach("EndCap", LCARSIndicator(
-                Form=LCARSIndicator.PillHalf, Direction=180, Width=24, Height=int(Thick)
-            ))
-            RailWidth = max(40.0, W - 140.0 - 30.0)
-            self.Attach("Rail", LCARSBar(Width=int(RailWidth), Height=int(Thick)))
-            self.Attach("Elbow", LCARSElbow(
-                Corner=LCARSElbow.BottomRight,
-                Width=140, Height=H, Thickness=Thick,
-                Number=self.Number
-            ))
-
-        elif self.Form == self.DoubleElbow:
-            self.Attach("ElbowLeft", LCARSElbow(
-                Corner=LCARSElbow.BottomLeft, Width=120, Height=H, Thickness=Thick, Number=self.Number
-            ))
-            RailWidth = max(40.0, W - 240.0)
-            self.Attach("Rail", LCARSBar(Width=int(RailWidth), Height=int(Thick)))
-            self.Attach("ElbowRight", LCARSElbow(
-                Corner=LCARSElbow.BottomRight, Width=120, Height=H, Thickness=Thick
-            ))
-
-        else:  # Divider
-            self.Attach("CapLeft", LCARSIndicator(
-                Form=LCARSIndicator.PillHalf, Direction=180, Width=20, Height=int(Thick)
-            ))
-            RailWidth = max(40.0, W - 40.0)
-            self.Attach("Rail", LCARSBar(Width=int(RailWidth), Height=int(Thick)))
-            self.Attach("CapRight", LCARSIndicator(
-                Form=LCARSIndicator.PillHalf, Direction=0, Width=20, Height=int(Thick)
-            ))
-        return super().Synthesize()
-
-    def BuildSidebar(self):
-        if hasattr(self.Widget, "setStyleSheet"):
-            self.Widget.setStyleSheet("background-color: #000000; border: none;")
-        LayoutRef = self.Vertical(0, 0, 0, 0, 6)
-        self.Items["Top"] = LCARSElbow(
-            Direction="top-left",
-            Color=Palette.Buttons[0],
-            Parent=self.Widget
-        )
-        self.Items["Rail"] = Primitive(
-            type="rect",
-            Color=Palette.Buttons[1],
-            Parent=self.Widget
-        )
-        self.Items["Bottom"] = LCARSElbow(
-            Direction="bottom-left",
-            Color=Palette.Buttons[2],
-            Parent=self.Widget
-        )
-        self.Add(LayoutRef, self.Items["Top"])
-        self.Add(LayoutRef, self.Items["Rail"], 1)
-        self.Add(LayoutRef, self.Items["Bottom"])
+        if Objects:
+            for Obj in Objects:
+                # Балка автоматично розтягується на всю ширину
+                if getattr(Obj, "Type", "") == "Bar" or "Bar" in type(Obj).__name__:
+                    self.Add(Obj, 1)
+                else:
+                    self.Add(Obj)
         return self
+# =============================================================================
+# SIDEBAR — ВЕРТИКАЛЬНА БІЧНА КОЛОНА НАВІГАЦІЇ
+# Компонує кнопки, індикатори та розділювачі у вертикальний стек
+# =============================================================================
+class Sidebar(Element):
+    TypeName = "Sidebar"
+    Type = "Sidebar"
 
+    Width = 160
+    Spacing = 6
+
+    def Compose(self, *Objects, Align="top"):
+        self.Clear()
+        # Встановлюємо вертикальний лейаут для бічної колони
+        LayoutRef = self.SetVertical(0, 0, 0, 0, Spacing=self.Spacing)
+
+        # Якщо вирівнювання знизу — додаємо пружину на початку
+        if Align == "bottom":
+            self.AddStretch(LayoutRef, 1)
+
+        for Obj in Objects:
+            # Якщо передано ціле число або рядок "stretch" — це пружина
+            if isinstance(Obj, int):
+                self.AddStretch(LayoutRef, Obj)
+            else:
+                self.Add(Obj)
+
+        # За замовчуванням притискаємо все догори (додаємо пружину внизу)
+        if Align == "top":
+            self.AddStretch(LayoutRef, 1)
+        return self
+# =============================================================================
+# BRACKET — СКОБА / РАМКА РОБОЧОГО ВІДСІКУ LCARS
+# Обмежує зону даних або екрану. Варіації: OpenRight, OpenLeft, Box
+# =============================================================================
+class Bracket(Element):
+    TypeName = "Bracket"
+    Type = "Bracket"
+
+    # --- ВАРІАЦІЇ СКОБИ ---
+    OpenRight = 1       # С-подібна скоба зліва (відкрита праворуч)
+    OpenLeft = 2        # С-подібна скоба справа (відкрита ліворуч)
+    Box = 3             # Повна замкнена рамка
+
+    Form = OpenRight
+    Thickness = 18
+    Radius = 24
+
+    def Compose(self, TopElbow=None, Pillar=None, BottomElbow=None, Content=None):
+        self.Clear()
+        # Встановлюємо горизонтальний лейаут: [Колона-скоба | Вміст]
+        MainLayout = self.SetHorizontal(0, 0, 0, 0, Spacing=8)
+
+        # 1. Створюємо бічну С-подібну колону
+        SidebarCol = Element()
+        ColLayout = SidebarCol.SetVertical(0, 0, 0, 0, Spacing=4)
+
+        if TopElbow is not None:
+            SidebarCol.Add(TopElbow)
+
+        if Pillar is not None:
+            # Центральна колона розтягується на всю висоту вмісту
+            SidebarCol.Add(Pillar, 1)
+
+        if BottomElbow is not None:
+            SidebarCol.Add(BottomElbow)
+
+        # Розміщуємо залежно від орієнтації OpenRight чи OpenLeft
+        if self.Form == self.OpenLeft:
+            if Content is not None:
+                self.Add(Content, 1)
+            self.Add(SidebarCol)
+        else:  # OpenRight (за замовчуванням)
+            self.Add(SidebarCol)
+            if Content is not None:
+                self.Add(Content, 1)
+
+        return self
+# =============================================================================
+# DATABLOCK — ІНФОРМАЦІЙНИЙ БЛОК ДАНИХ ТА ТЕЛЕМЕТРІЇ
+# Відображає назву, значення або пари ключ-значення
+# =============================================================================
+class DataBlock(Element):
+    TypeName = "DataBlock"
+    Type = "DataBlock"
+
+    # --- ВАРІАЦІЇ БЛОКУ ---
+    Titled = 1          # Заголовок зверху, значення знизу
+    KeyValue = 2        # Список параметрів (ключ : значення)
+    Coupled = 3         # Здвоєний блок (параметри + дія/кнопка)
+
+    Form = Titled
+    Width = 200
+    Height = 64
+
+    def Compose(self, Title=None, Value=None, Action=None):
+        self.Clear()
+
+        # 1. ТИПОВИЙ БЛОК: ЗАГОЛОВОК ЗВЕРХУ, ЗНАЧЕННЯ ЗНИЗУ
+        if self.Form == self.Titled:
+            self.SetVertical(4, 4, 4, 4, Spacing=2)
+            if Title is not None:
+                self.Add(Title)
+            if Value is not None:
+                self.Add(Value, 1)
+
+        # 2. ЗДВОЄНИЙ БЛОК: ДАНІ ЗЛІВА, КНОПКА ДІЇ СПРАВА
+        elif self.Form == self.Coupled:
+            self.SetHorizontal(4, 4, 4, 4, Spacing=6)
+            
+            # Ліва частина (дані)
+            DataCol = Element()
+            DataCol.SetVertical(0, 0, 0, 0, Spacing=2)
+            if Title is not None:
+                DataCol.Add(Title)
+            if Value is not None:
+                DataCol.Add(Value, 1)
+            self.Add(DataCol, 1)
+
+            # Права частина (дія/кнопка)
+            if Action is not None:
+                self.Add(Action)
+
+        # 3. СПИСОК ПАРАМЕТРІВ (KEY-VALUE)
+        else:
+            self.SetVertical(4, 4, 4, 4, Spacing=4)
+            if Title is not None:
+                self.Add(Title)
+            if Value is not None:
+                self.Add(Value)
+        return self
+                
     def BuildMenu(self):
         if hasattr(self.Widget, "setStyleSheet"):
             self.Widget.setStyleSheet("background-color: #000000; border: none;")
-        LayoutRef = self.Vertical(0, 0, 0, 0, 6)
+        LayoutRef = self.SetVertical(0, 0, 0, 0, 6)
         Labels = self.Value if isinstance(getattr(self, "Value", None), list) else ["SYSTEM", "PROGRAMS", "SETTINGS", "DIAGNOSTICS"]
         Index = 0
         for ItemText in Labels:
