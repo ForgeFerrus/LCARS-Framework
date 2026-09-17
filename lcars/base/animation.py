@@ -3,8 +3,6 @@
 # ПРИНЦИП: Driver модулює стан графічних елементів, а класи дисплеїв формують топологічні Primitive (Elbow, Bar, Cap)
 #         для єдиного апаратного рендерера Renderer.
 # ─────────────────────────────────────────────────────────────────────────────
-from __future__ import annotations
-# Titanium Bridge Migration: import math
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from lcars.base.component import Normalize, Take
 from lcars.base.default import Palette
@@ -14,92 +12,34 @@ from lcars.base.type import LCARS, SystemComponent
 # 1. БАЗОВИЙ ДРАЙВЕР МОДУЛЯЦІЇ (DRIVER)
 # =============================================================================
 class Driver(SystemComponent):
-    Clamp = staticmethod(Graphic.Clamp)
-    Lerp = staticmethod(Graphic.Lerp)
-    HexToRgb = staticmethod(Graphic.HexToRgb)
-    RgbToHex = staticmethod(Graphic.RgbToHex)
-    LerpColor = staticmethod(Graphic.LerpColor)
+    Speed = 1.0
+    Interval = 40
+    Running = False
+    Phase = 0.0
+    Target = None
 
-    def __init__(self, Target: Any = None, Speed: float = 0.035, Interval: int = 40, Loop: bool = True, EasingFunc=None):
-        super().__init__(f"{self.__class__.__name__}{id(self)}")
-        self.Target = Target
-        self.Speed = float(Speed)
-        self.Interval = int(Interval)
-        self.Loop = bool(Loop)
-        self.Running = False
-        self.Complete = False
-        self.Phase = 0.0
-        self.Frame = 0
-        self.Easing = EasingFunc or Easing.Linear
-        self.Timer = None
-        self.OnUpdateCallback: Optional[Callable[[float], None]] = None
-        self.OnCompleteCallback: Optional[Callable[[], None]] = None
-
-    def CreateTimer(self):
-        TimerClass = LCARS.Timer
-        if not TimerClass or not callable(TimerClass):
-            return None
-        TimerInstance = TimerClass()
-        Timeout = getattr(TimerInstance, "timeout", None)
-        Connect = getattr(Timeout, "connect", None)
-        Start = getattr(TimerInstance, "start", None)
-        if not callable(Connect) or not callable(Start):
-            return TimerInstance
-        Connect(self.Tick)
-        Start(self.Interval)
-        return TimerInstance
-
-    def Start(self, Interval: Optional[int] = None):
-        if Interval is not None:
-            self.Interval = int(Interval)
+    # ЖОДНОГО __init__! Тільки чисті методи:
+    def Start(self):
         self.Running = True
-        if self.Timer is None:
-            self.Timer = self.CreateTimer()
-        else:
-            StartMethod = getattr(self.Timer, "start", None)
-            if callable(StartMethod):
-                StartMethod(self.Interval)
+        TimerClass = LCARS.Retrieve("Base.Core.Timer")
+        if TimerClass and callable(TimerClass) and self.Timer is None:
+            self.Timer = TimerClass()
+            self.Timer.timeout.connect(self.Tick)
+            self.Timer.start(int(self.Interval))
+        return self
 
     def Stop(self):
         self.Running = False
-        if self.Timer is not None:
-            StopMethod = getattr(self.Timer, "stop", None)
-            if callable(StopMethod):
-                StopMethod()
-
-    def Reset(self):
-        self.Phase = 0.0
-        self.Frame = 0
-        self.Complete = False
-
-    def GetProgress(self) -> float:
-        Clamped = self.Clamp(self.Phase, 0.0, 1.0)
-        return self.Easing(Clamped)
+        if self.Timer and hasattr(self.Timer, "stop"):
+            self.Timer.stop()
+        return self
 
     def Tick(self):
-        self.Frame += 1
-        NextPhase = self.Phase + self.Speed
-        if self.Loop:
-            self.Phase = NextPhase % 1.0
-        else:
-            self.Phase = self.Clamp(NextPhase, 0.0, 1.0)
-            self.Complete = self.Phase >= 1.0
-            if self.Complete:
-                self.Stop()
-                if callable(self.OnCompleteCallback):
-                    self.OnCompleteCallback()
-
-        Progress = self.GetProgress()
-        self.Apply(Progress)
-
-        if callable(self.OnUpdateCallback):
-            self.OnUpdateCallback(Progress)
-
-        if self.Target is not None and hasattr(self.Target, "Update"):
-            self.Target.Update()
-
-    def Apply(self, Progress: float):
-        pass
+        if not self.Running:
+            return
+        self.Phase = (self.Phase + 0.04 * float(self.Speed)) % 1.0
+        if self.Target and hasattr(self.Target, "Refresh"):
+            self.Target.Refresh()
 # =============================================================================
 # 2. СПЕЦІАЛІЗОВАНІ СИСТЕМНІ ДРАЙВЕРИ LCARS
 # Системний драйвер тривоги (Red / Yellow Alert Sweep)

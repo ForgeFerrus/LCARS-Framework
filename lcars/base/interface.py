@@ -828,63 +828,29 @@ class Frame(Element):
             self.Add(BottomBar)
 
         return self
-# =====================================================================
-# PADD — Повнофункціональний екранний термінал зорельота
-# =====================================================================
+# =============================================================================
+# PADD — ПЕРСОНАЛЬНИЙ ДОСТУПОВИЙ ДИСПЛЕЙ (ПЛАНШЕТ ОФІЦЕРА ЗОРЕЛЬОТА)
+# Портативний автономний термінал із перетягуванням та масштабуванням
+# =============================================================================
 class PADD(Element):
     Type = "PADD"
-
-    def __init__(self, Parent=None, **Args):
-        Width = self.Take(Args, ["Width", "width"], 920)
-        Height = self.Take(Args, ["Height", "height"], 580)
-        MinWidth = self.Take(Args, ["MinWidth", "minWidth"], 1)
-        MinHeight = self.Take(Args, ["MinHeight", "minHeight"], 1)
-        Portable = self.Take(Args, ["Portable", "portable"], Parent is None)
-
-        super().__init__(
-            Parent=Parent,
-            **Args
-        )
-
-        self.PaddStartWidth = int(Width)
-        self.PaddStartHeight = int(Height)
-        self.PaddMinWidth = int(MinWidth)
-        self.PaddMinHeight = int(MinHeight)
-        self.PaddPortable = bool(Portable)
-
-        self.PaddAction = ""
-        self.PaddStartGlobal = (0, 0)
-        self.PaddStartRect = (0, 0, 0, 0)
-        self.PaddOffset = (0, 0)
-
-        self.PaddCurrentWidth = int(Width)
-        self.PaddCurrentHeight = int(Height)
-
-        self.PaddFullscreen = False
-        self.PaddSavedGeometry = None
-
-        self.Builder = LCARSBuilder(self)
-        self.ConfigurePadd()
-        self.Build()
-
-    @property
-    def Content(self):
-        return self.Items.get("Content")
-
-    def Add(self, *Arguments):
-        ContentItem = self.Items.get("Content")
-        if ContentItem is not None and ContentItem is not self:
-            return ContentItem.Add(*Arguments)
-        return super().Add(*Arguments)
-
+    Type = "PADD"
+    Width = 920
+    Height = 580
+    MinWidth = 320
+    MinHeight = 240
+    Portable = True
+    PaddAction = ""
+    PaddStartGlobal = (0, 0)
+    PaddStartRect = (0, 0, 0, 0)
+    PaddOffset = (0, 0)
+    # Все наслідується чисто і без помилок сигнатури!
     def ConfigurePadd(self):
         Host = self.Widget
         if hasattr(Host, "setMinimumSize"):
-            Host.setMinimumSize(self.PaddMinWidth, self.PaddMinHeight)
-        if hasattr(Host, "setMaximumSize"):
-            Host.setMaximumSize(16777215, 16777215)
+            Host.setMinimumSize(self.MinWidth, self.MinHeight)
         if hasattr(Host, "resize"):
-            Host.resize(self.PaddStartWidth, self.PaddStartHeight)
+            Host.resize(self.Width, self.Height)
 
         OriginalResize = getattr(Host, "resizeEvent", None)
         PaddSelf = self
@@ -958,23 +924,19 @@ class PADD(Element):
             return int(Point.x()), int(Point.y())
         return 0, 0
 
-    def PaddPress(self, Event):
+    def PaddPress(self, LX, LY):
+        Margin = 8
         Host = self.Widget
-        GX, GY = self.EventGlobal(Event)
-        self.PaddStartGlobal = (GX, GY)
-        self.PaddStartRect = (
-            int(Host.x()),
-            int(Host.y()),
-            int(Host.width()),
-            int(Host.height()),
-        )
-        LX = GX - self.PaddStartRect[0]
-        LY = GY - self.PaddStartRect[1]
-        self.PaddOffset = (LX, LY)
-        self.PaddAction = self.PaddEdgeAction(LX, LY)
-        AcceptMethod = getattr(Event, "accept", None)
-        if AcceptMethod:
-            AcceptMethod()
+        W = Host.width()
+        H = Host.height()
+        
+        Action = ""
+        if LY < Margin: Action += "top"
+        elif LY > H - Margin: Action += "bottom"
+        
+        if LX < Margin: Action += "left"
+        elif LX > W - Margin: Action += "right"
+        return Action or "move"
 
     def PaddMove(self, Event):
         if not self.PaddAction:
@@ -1068,29 +1030,12 @@ class PADD(Element):
         if Parts:
             return "-".join(Parts)
         return "move"
-
 # =====================================================================
 # ЕКСПОРТНІ СИНОНІМИ ТА СИМВОЛИ
 # =====================================================================
-Button = LCARSButton
-Label = LCARSLabel
-Indicator = LCARSIndicator
-Elbow = LCARSElbow
-Bar = LCARSBar
-Pill = LCARSButton
-Frame = Panel
-Padd = PADD
-LCARSPadd = PADD
-LCARSScreen = Screen
-LCARSSegment = Segment
-LCARSInput = LCARSButton
-LCARSProgramPanel = Panel
-LCARSWaveform = ScanningBar
-
-__all__ = [
+LCARS.All = [
     "Element",
     "PADD",
-    "Padd",
     "Screen",
     "Display",
     "Panel",
@@ -1106,33 +1051,11 @@ __all__ = [
     "Stasis",
     "AccessCode",
     "Access",
-    "CoupledBlock",
-    "Coupled",
-    "TelemetryBlock",
-    "Telemetry",
     "Bracket",
     "FrameBracket",
     "DataBlock",
     "StatBar",
     "ScanningBar",
     "ButtonGroup",
-    "ChipInterfaceBuilder",
-    "Button",
-    "Label",
-    "Indicator",
-    "Elbow",
-    "Bar",
-    "Pill",
-    "Frame",
-    "LCARSButton",
-    "LCARSLabel",
-    "LCARSIndicator",
-    "LCARSElbow",
-    "LCARSBar",
-    "LCARSPadd",
-    "LCARSScreen",
-    "LCARSSegment",
-    "LCARSInput",
-    "LCARSProgramPanel",
-    "LCARSWaveform",
+    "ProgramPanel",
 ]
