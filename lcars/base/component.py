@@ -87,7 +87,10 @@ class Component(Visual):
         if not self.Power or StateStr in ("off", "stasis", "black"):
             return Palette.Disabled[0]
 
-        if StateStr in ("disabled", "inactive") or not self.Tactile:
+        if StateStr in ("disabled", "inactive"):
+            return Palette.Disabled[0]
+
+        if getattr(self, "Interactive", True) and not self.Tactile:
             return Palette.Disabled[0]
 
         if StateStr in ("alert", "red", "critical", "emergency", "redalert"):
@@ -290,7 +293,7 @@ class LCARSLabel(Component):
         W = float(self.Width)
         H = float(self.Height)
         self.Path = self.TraceRect(0, 0, W, H)
-        self.Wavefront = self.Path
+        self.Wavefront = None
         return self.Path
     # -------------------------------------------------------------------------
     # ТЕКСТОВІ МЕТОДИ ТА КАЛІБРУВАННЯ
@@ -332,6 +335,14 @@ class LCARSButton(Component):
     PillHalfType = 4    # Напівпігулка (круглий край з одного боку)
     SoftHalfType = 5    # Напівзріз (зріз лише з одного боку)
     ElbowType = 6       # Вигнута кутова кнопка-рамка
+
+    # Канонічні аліаси форм
+    Rect = RectType
+    Pill = PillType
+    Soft = SoftType
+    PillHalf = PillHalfType
+    SoftHalf = SoftHalfType
+    Elbow = ElbowType
 
     # --- НАПРЯМКИ ЗРІЗУ/ЗАОКРУГЛЕННЯ (Direction) ---
     # 0 = праворуч, 180 = ліворуч, 90 = знизу, 270 = зверху

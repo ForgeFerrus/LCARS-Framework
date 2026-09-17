@@ -1,24 +1,82 @@
-# ◤ LCARS BUTTONS DEMO 🖖
-# Один екземпляр кожного виду/типу кнопки, виводиться прямо на скло PADD.
+# ◤ LCARS BUTTONS & PADD INITIALIZATION DEMO 🖖
 # СТАНДАРТ: Titanium (Pure LCARS Surface Rendering).
+# Сценарій:
+# 1. PADD запускається у стані очікування (STANDBY) із кнопкою ініціалізації.
+# 2. Натискання кнопки активує квантове декодування (TextDecode) та потік телеметрії (DataStream).
+# 3. Термінальний посимвольний друк (Typewriter) підтверджує готовність матриці.
+# 4. Каскадне розгортання (Stagger + Reveal) розгортає повний каталог кнопок LCARS.
 from lcars.base.type import LCARS
 from lcars.base.interface import PADD, Panel
-from lcars.base.component import LCARSButton, LCARSElbow
+from lcars.base.component import LCARSButton, LCARSElbow, LCARSLabel
+from lcars.base.animation import TextDecode, Typewriter, DataStream, Reveal, Stagger
 from lcars.base.default import SystemTheme, Palette
 from lcars.system.power import PowerControl
-
-
+# =========================================================================
+# 1. ЕКРАН ОЧІКУВАННЯ ТА ІНІЦІАЛІЗАЦІЇ
+# =========================================================================
 def ButtonsInterface():
-    Padd = PADD(Title="LCARS BUTTON CATALOG", Width=1100, Height=720)
-
-    # Головна горизонтальна панель скла
-    Row = Panel(Spectrum=Palette.Background)
-    Row.SetHorizontal(16, 16, 16, 16, Spacing=12)
+    Padd = PADD(Title="LCARS INTERFACE & BUTTON CATALOG", Width=1100, Height=720)
+    BootScreen = Panel(Spectrum=Palette.Background)
+    BootScreen.SetVertical(24, 24, 24, 24, Spacing=14)
+    BootScreen.AddStretch(1)
+    # Статусний заголовок
+    StatusLabel = LCARSLabel(
+        Text="STANDBY MODE // PADD OFFLINE",
+        FontSize=18,
+        Align="center",
+        Width=600,
+        Height=36,
+        Spectrum=Palette.Buttons[1]
+    )
+    BootScreen.Add(StatusLabel)
+    # Підказка для офіцера
+    PromptLabel = LCARSLabel(
+        Text="PRESS INITIALIZE TO ENGAGE LCARS INTERFACE",
+        FontSize=12,
+        Align="center",
+        Width=600,
+        Height=24,
+        Spectrum=Palette.Disabled[1]
+    )
+    BootScreen.Add(PromptLabel)
+    # Кнопка запуску ініціалізації
+    StartButton = LCARSButton(
+        Text="INITIALIZE SYSTEM",
+        Form=LCARSButton.Pill,
+        Width=280,
+        Height=46,
+        FontSize=15,
+        Sound="acknowledge"
+    )
+    BootScreen.Add(StartButton)
+    # Потік діагностики та телеметрії ODN
+    TelemetryStream = DataStream(
+        Width=600,
+        Height=110,
+        Rows=5,
+        FontSize=11,
+        Spectrum=Palette.Buttons[2],
+        Accent=Palette.Buttons[0]
+    )
+    TelemetryStream.Lines = [
+        "ISOLINEAR OPTICAL BUS // VERIFYING",
+        "EPS POWER COUPLING // SYNCHRONIZING",
+        "ODN SUBSURFACE CARRIER // INITIALIZING",
+        "LCARS 47-ALPHA CORE // HANDSHAKE READY",
+    ]
+    BootScreen.Add(TelemetryStream)
+    BootScreen.AddStretch(1)
+    # =========================================================================
+    # 2. ГОЛОВНА РОБОЧА ПАНЕЛЬ КАТАЛОГУ КНОПОК
+    # =========================================================================
+    CatalogRow = Panel(Spectrum=Palette.Background)
+    CatalogRow.SetHorizontal(16, 16, 16, 16, Spacing=12)
 
     # ── Колонка 1: Всі форми ─────────────────────────────────────────
     Col1 = Panel(Spectrum=Palette.Background)
     Col1.SetVertical(0, 0, 0, 0, Spacing=8)
 
+    FormButtons = []
     for Text, Form, Direction in [
         ("RECT",          LCARSButton.Rect,     0),
         ("PILL",          LCARSButton.Pill,     0),
@@ -31,10 +89,11 @@ def ButtonsInterface():
         ("SOFTHALF ←",    LCARSButton.SoftHalf, 180),
     ]:
         B = LCARSButton(Text=Text, Form=Form, Direction=Direction, Width=200, Height=40, FontSize=14)
+        FormButtons.append(B)
         Col1.Add(B)
 
     Col1.AddStretch()
-    Row.Add(Col1)
+    CatalogRow.Add(Col1)
 
     # ── Колонка 2: Стани ─────────────────────────────────────────────
     Col2 = Panel(Spectrum=Palette.Background)
@@ -56,7 +115,7 @@ def ButtonsInterface():
     Col2.Add(BDark)
 
     Col2.AddStretch()
-    Row.Add(Col2)
+    CatalogRow.Add(Col2)
 
     # ── Колонка 3: Дії (Alert + Power) ───────────────────────────────
     Col3 = Panel(Spectrum=Palette.Background)
@@ -86,12 +145,61 @@ def ButtonsInterface():
     Col3.Add(BElbow)
 
     Col3.AddStretch()
-    Row.Add(Col3)
+    CatalogRow.Add(Col3)
 
-    # Виводимо панель на скло планшета PADD
-    Padd.Add(Row, 1)
+    # Спочатку каталог сховано до ініціалізації
+    if hasattr(CatalogRow.Widget, "hide"):
+        CatalogRow.Widget.hide()
+
+    # Розміщуємо обидва яруси на склі PADD
+    Padd.Add(BootScreen, 1)
+    Padd.Add(CatalogRow, 1)
+
+    # =========================================================================
+    # 3. АНІМАЦІЙНИЙ КОНВЕЄР ІНІЦІАЛІЗАЦІЇ
+    # =========================================================================
+    Decoder = TextDecode()
+    Writer = Typewriter()
+    Cascade = Stagger()
+
+    def OpenCatalog():
+        if hasattr(BootScreen.Widget, "hide"):
+            BootScreen.Widget.hide()
+        if hasattr(CatalogRow.Widget, "show"):
+            CatalogRow.Widget.show()
+
+        # Каскадне розгортання кнопок каталогу (Stagger + Reveal)
+        for Btn in FormButtons:
+            Revealer = Reveal()
+            Revealer.StartReveal(Target=Btn, Period=0.35, Direction="Left")
+            Cascade.Add(Revealer)
+
+        Cascade.Play(DelayMs=45)
+
+    def PrintReadyPrompt():
+        Writer.Write(
+            Target=PromptLabel,
+            Text="SYSTEM READY // ENGAGING LCARS INTERFACE MATRIX...",
+            Period=1.1,
+            OnFinish=OpenCatalog
+        )
+
+    def StartInitialization():
+        StartButton.Tactile = False
+        StartButton.Refresh()
+        TelemetryStream.Start(Speed=0.03)
+
+        # Фаза 1: квантове набігання/дешифрування
+        Decoder.Decode(
+            Target=StatusLabel,
+            Text="AUTHORIZATION ACCEPTED // DECRYPTING ODN NODES",
+            Period=1.0,
+            OnFinish=PrintReadyPrompt
+        )
+
+    StartButton.Clicked.Connect(StartInitialization)
+
     Padd.Show()
-
     return Padd
 
 

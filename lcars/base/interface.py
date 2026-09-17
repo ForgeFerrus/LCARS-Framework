@@ -138,10 +138,13 @@ class Surface(Display):
             ParentLeave(Event)
     # Прив'язка системних подій до графічних методів
     paintEvent = OpticalDispersion
+    resizeEvent = Rescale
     enterEvent = FocusDetection
     leaveEvent = Leave
     mousePressEvent = TouchContact
     mouseReleaseEvent = TouchRelease
+    sizeHint = PreferredSize
+    minimumSizeHint = PreferredSize
 # =====================================================================
 # ЕЛЕМЕНТИ ІНТЕРФЕЙСУ — семантичні оркестратори та композиційні вузли
 # Базовий клас Element — віртуальна конструкція, що координує фізичні віджети
@@ -233,7 +236,7 @@ class Element(Component):
             if hasattr(self.Widget, "layout") and self.Widget.layout() is not None:
                 self.Layout = self.Widget.layout()
             else:
-                self.Vertical(0, 0, 0, 0, 0)
+                self.SetVertical(0, 0, 0, 0, 0)
 
         TargetLayout = self.Layout
         Item = Arguments[0]
@@ -335,14 +338,6 @@ class Element(Component):
         if self.Items:
             self.Width = int(TotalW)
             self.Height = int(TotalH)
-        return self.BuildInterface()
-
-    def BuildInterface(self):
-        TargetType = str(getattr(self, "Type", "")).capitalize()
-        MethodName = f"Build{TargetType}"
-        Handler = getattr(self, MethodName, None)
-        if callable(Handler):
-            return Handler()
         return self
 # =============================================================================
 # HEADER — ВЕРХНЯ КОМПОЗИЦІЯ / ШАПКА ПАНЕЛІ ТЕРМІНАЛА
