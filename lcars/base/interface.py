@@ -965,8 +965,21 @@ class PADD(Element):
             LX = int(Pos.x()) if Pos else 0
             LY = int(Pos.y()) if Pos else 0
 
-        Margin = 8
         Host = self.GetSurface()
+        if Host is not None and hasattr(Host, "childAt"):
+            PointClass = LCARS.Retrieve("Base.Geometry.Point.Int")
+            Pt = PointClass(LX, LY) if callable(PointClass) else None
+            Child = Host.childAt(Pt) if Pt else None
+            if Child is not None and Child is not Host:
+                ChildOptics = getattr(Child, "Optics", None)
+                if ChildOptics is not None and getattr(ChildOptics, "Interactive", False) and getattr(ChildOptics, "Tactile", False):
+                    # Пропускаємо сенсорний контакт прямо до кнопки
+                    TouchFn = getattr(Child, "TouchContact", None)
+                    if callable(TouchFn):
+                        TouchFn(Event)
+                    return None
+
+        Margin = 12
         W = Host.width() if hasattr(Host, "width") else 0
         H = Host.height() if hasattr(Host, "height") else 0
         
