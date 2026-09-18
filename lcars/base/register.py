@@ -57,12 +57,6 @@ registry: dict[str, Any] = {
 # Архітектура зорельота, обчислювальні вузли, параметри комп'ютерного ядра
 # ────────────────────────────────────────────────────────────────────────────
     "System.Platform" : ("platform", None),
-
-    "System.Platform.System" : ("platform", "system"),
-    "System.Platform.Node" : ("platform", "node"),
-    "System.Platform.Release" : ("platform", "release"),
-    "System.Platform.Version" : ("platform", "version"),
-
     "System.Platform.Machine" : ("platform", "machine"),
     "System.Platform.Processor" : ("platform", "processor"),
     "System.Platform.Architecture" : ("platform", "architecture"),
@@ -78,7 +72,6 @@ registry: dict[str, Any] = {
     "System.Core.Modules" : ("sys", "modules"),
     "System.Core.MetaPath" : ("sys", "meta_path"),
     "System.Core.PathHooks" : ("sys", "path_hooks"),
-    "System.Core.PathCache" : ("sys", "path_importer_cache"),
     "System.Core.Version" : ("sys", "version"),
     "System.Core.Version.Info" : ("sys", "version_info"),
     "System.Core.StdIn" : ("sys", "stdin"),

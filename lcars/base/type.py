@@ -215,7 +215,7 @@ class LCARS(metaclass=Namespace):
     # Канонічний синонім індексу (його читають Retrieve / Register)
     RegistryKeys = Keys
     # Службовий метод первинної індексації реєстру (викликається автоматично)
-    def MountRegistry(self, cls):
+    def IndexRegistry(self, cls):
         if isinstance(cls.Registry, dict) and not cls.Keys:
             Index = {k.lower(): k for k in cls.Registry.keys()}
             cls.Keys = Index

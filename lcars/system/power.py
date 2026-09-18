@@ -21,12 +21,15 @@ class SystemPower(LCARS):
     @classmethod
     def GetInstance(cls) -> SystemPower:
         if cls.InstanceRef is None:
-            cls.InstanceRef = SystemPower()
+            cls.InstanceRef = SystemPower().Initialize()
         return cls.InstanceRef
 
-    def __init__(self):
-        super().__init__(Id="System.Power")
+    def Initialize(self, **kwargs):
+        super().Initialize(SystemId="System.Power", Id="System.Power", **kwargs)
         self.PowerActionInitiated = Transmission()
+        return self
+
+    Init = Initialize
 
     def PowerOff(self):
         self.State = PowerState.OFF
