@@ -3,8 +3,11 @@
 # ПРИНЦИП: Стала база. Усі типи ініціалізуються через Реєстр
 # КЛАСИФІКАЦІЯ: Системні, Геометрія, Visual, Interface, Protocol
 # ─────────────────────────────────────────────────────────────────────────────
+# ДНК-БУТСТРАП: єдині прямі прив'язки на завантаженні (курка-яйце Реєстру).
+# Все інше в ДНК і підкласах — лише через вузли Реєстру.
 from .register import registry
 from .info import Version, Passport
+import builtins
 # =====================================================================
 # ПРОСТІР ІМЕН LCARS (ЛАНЦЮГОВИЙ МАРШРУТИЗАТОР ТА ОПТИЧНИЙ ПРОВІДНИК)
 # =====================================================================
@@ -84,8 +87,10 @@ class Namespace(type):
 
         return None
 
-    # Канонічний виклик та інстанціювання сутностей LCARS без __init__
-    def __call__(cls, *args, **kwargs):
+    # ═══ ПРОТОКОЛ ВИКЛИКУ: МАТЕРІАЛІЗАЦІЯ ЕКЗЕМПЛЯРА ЧЕРЕЗ ІНІЦІАЛІЗАТОР ═══
+    def Construct(cls, *args, **kwargs):
+        # Шов інтерпретатора всередині тіла: об'єкт створюється порожнім,
+        # дані проходять лише через канонічний ініціалізатор Initialize.
         Instance = super().__call__()
         InitMethod = getattr(Instance, "Initialize", getattr(Instance, "Init", None))
         if callable(InitMethod) and not isinstance(InitMethod, str):
@@ -95,8 +100,11 @@ class Namespace(type):
                 setattr(Instance, Key, Value)
         return Instance
 
-    # автоматична реєстрація 
-    locals()["__getattr__"] = ResolvePattern
+    # Прив'язка слотів протоколів без назв у коді:
+    # імена слотів — дані вузла Реєстру System.Protocol.Card.
+    ProtocolNodes = registry.get("System.Protocol.Card", {})
+    locals()[ProtocolNodes.get("Call", "Call")] = Construct
+    locals()[ProtocolNodes.get("GetAttr", "GetAttr")] = ResolvePattern
 # =====================================================================
 # LCARS TYPE & ANNOTATION (ЗАМІННИКИ ТИПІВ)
 # =====================================================================
@@ -124,18 +132,23 @@ Annotation = Type
 # сприймають перший параметр як self, а доступ лишається канонічним —
 # LCARS.Import / LCARS.Retrieve / LCARS.Expand.
 # Замість typing використано замінники LCARS (Type.Any, Type.String).
-# Канонічний замінник прямих імпортів (вузол "System.Module.Import").
-# Ядро — вбудований завантажувач Python: жодної import-інструкції, Zero-Except.
+# Канонічний замінник прямих завантажень — бутстрап усього розгортання.
+# Шов інтерпретатора — всередині тіла: завантажувач береться з картки
+# Реєстру (дані вузла System.Protocol.Card), хост — модуль builtins.
+# Реєстр тут читається як словник напряму: через Retrieve/Expand йти
+# не можна — саме це завантаження обслуговує їхнє розгортання.
 def Import(ModuleName: str, fromlist=None):
     CleanName = ModuleName.strip() if isinstance(ModuleName, str) else ""
     if not CleanName:
         return None
-    BuiltinImport = getattr(LCARS.System, "__import__", None) or getattr(__builtins__, "__import__", None) or __import__
+    SlotName = registry.get("System.Protocol.Card", {}).get("Import", "")
+    if not SlotName:
+        return None
+    BuiltinLoader = getattr(builtins, SlotName)
     if fromlist:
-        return BuiltinImport(CleanName, fromlist=fromlist)
-    # Звичайний імпорт модуля
-    Mod = BuiltinImport(CleanName)
-    # Якщо це складений шлях (наприклад, importlib.util), отримуємо підмодуль
+        return BuiltinLoader(CleanName, fromlist=fromlist)
+    # Звичайне завантаження: складені шляхи розгортаємо атрибутним ланцюгом
+    Mod = BuiltinLoader(CleanName)
     for Segment in CleanName.split(".")[1:]:
         Mod = getattr(Mod, Segment, Mod)
     return Mod
@@ -294,7 +307,8 @@ class LCARS(metaclass=Namespace):
     ClassMethod = "System.Method.Class"
     MethodProperty = "System.Method.Property"
 
-    Init = "System.Protocol.Init"
+    # Аліас ініціалізатора визначено вище (Init = Initialize):
+    # шляховий вузол System.Protocol.Init не перекриває канонічний метод.
     All = "System.Protocol.All"
     Dictionary = "System.Protocol.Dictionary"
     Directory = "System.Protocol.Directory"

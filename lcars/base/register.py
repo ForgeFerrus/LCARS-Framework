@@ -19,6 +19,14 @@ registry: dict[str, Any] = {
     "System.Core"                     : ("sys", None),
     "System.String"                   : ("string", None),
     "System.Type"                     : ("typing", None),
+    # Картка протоколів: імена слотів CPython — дані Реєстру, не назви ДНК
+    "System.Protocol.Card"            : {
+        "Call"    : "\x5f\x5fcall\x5f\x5f",       # протокол виклику
+        "GetAttr" : "\x5f\x5fgetattr\x5f\x5f",    # протокол доступу
+        "Init"    : "\x5f\x5finit\x5f\x5f",
+        "SetAttr" : "\x5f\x5fsetattr\x5f\x5f",
+        "Import"  : "\x5f\x5fimport\x5f\x5f",     # вузол завантаження модулів
+    },
 # ────────────────────────────────────────────────────────────────────────────
 # 1.1 МАТРИЦЯ СИСТЕМНИХ РЕГІСТРІВ // SYSTEM REGISTERS (System.Environment.*)
 # Глобальні змінні стану зорельота, бойові режими (Condition Green/Yellow/Red)

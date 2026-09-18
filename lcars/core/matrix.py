@@ -15,8 +15,8 @@ from lcars.base.info import Version
 from lcars.base.type import LCARS, SystemComponent
 
 class QuantumState(SystemComponent):
-    def __init__(self, Amplitude: complex = 1 + 0j, Phase: float = 0.0, Probability: float = 1.0, Measured: bool = False, Entangled: list | None = None):
-        super().__init__()
+    def Initialize(self, Amplitude: complex = 1 + 0j, Phase: float = 0.0, Probability: float = 1.0, Measured: bool = False, Entangled: list | None = None):
+        super().Initialize()
         self.Amplitude = Amplitude
         self.Phase = Phase
         self.Probability = Probability
@@ -24,8 +24,8 @@ class QuantumState(SystemComponent):
         self.Entangled = Entangled or []
 
 class MatrixNode(SystemComponent):
-    def __init__(self, X: int, Y: int, Z: int, Value: any = None, State: str = "idle", Type: str = "Generic", Metadata: dict | None = None, Links: list | None = None, Quantum: QuantumState | None = None):
-        super().__init__()
+    def Initialize(self, X: int, Y: int, Z: int, Value: any = None, State: str = "idle", Type: str = "Generic", Metadata: dict | None = None, Links: list | None = None, Quantum: QuantumState | None = None):
+        super().Initialize()
         self.X = X
         self.Y = Y
         self.Z = Z
@@ -38,7 +38,7 @@ class MatrixNode(SystemComponent):
 
 class SystemMatrix(SystemComponent):
     # Ініціалізація матриці з розмірностями та залежностями.
-    def __init__(
+    def Initialize(
         self,
         Dimensions: Optional[List[int]] = None,
         Id: Optional[str] = None,
@@ -47,7 +47,7 @@ class SystemMatrix(SystemComponent):
         Nexus=None,
         Parent=None,
     ):
-        super().__init__(SystemId=Id or f"Matrix-{id(self)}")
+        super().Initialize(SystemId=Id or f"Matrix-{id(self)}")
         self.Parent = Parent
         self.Version = Version
         self.Role = "Core.Matrix"
