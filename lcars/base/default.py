@@ -1,7 +1,6 @@
 # LCARS FRAMEWORK TITANIUM DEFAULT — Базові візуальні константи та палітра (Канон)
 # ОПИС: Модуль визначає колірну схему LCARS, графічну тему SystemTheme та системні часові цикли.
 # ----------------------------------------------------------------------------------------------------------------------------------
-from __future__ import annotations
 from lcars.base.type import LCARS, Type
 from lcars.base.info import Version
 
@@ -45,7 +44,7 @@ class Palette(LCARS):
                 "#D37445", "#CC7700", "#996600"]
     Red = ["#CC0000", "#990000", "#E63946", "#CC3300", 
            "#800000", "#B30000","#660000", "#FFFFFF"]
-    Disabled = ["#606060", "#333333", "#000000"]
+    Disabled = ["#313131", "#333333", "#000000"]
     YellowAlert = Yellow
     RedAlert = Red
     Alert = Red

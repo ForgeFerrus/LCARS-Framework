@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LCARSControls")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1d8b3024b4d008b427bccdd2476e1980129d34f5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7d6bfcfb35fa13325879f38e2c96f75ec5522e96")]
 [assembly: System.Reflection.AssemblyProductAttribute("LCARSControls")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LCARSControls")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
