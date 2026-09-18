@@ -165,25 +165,25 @@ class Element(Component):
         if self.SurfaceHost is None:
             SurfaceClass = LCARS.Retrieve("Base.Interface.Surface") or Surface
             ParentRef = getattr(self, "Parent", None)
-            ParentSurface = getattr(ParentRef, "SurfaceHost", None) or getattr(ParentRef, "Widget", getattr(ParentRef, "widget", ParentRef))
+            ParentSurface = getattr(ParentRef, "SurfaceHost", None)
+            if ParentSurface is None and ParentRef is not None:
+                GetParentSurface = getattr(ParentRef, "GetSurface", None)
+                if callable(GetParentSurface):
+                    ParentSurface = GetParentSurface()
+                else:
+                    ParentSurface = ParentRef
             self.SurfaceHost = SurfaceClass(ParentSurface) if ParentSurface is not None else SurfaceClass()
             if hasattr(self.SurfaceHost, "Initialize"):
                 self.SurfaceHost.Initialize(Optics=self, Parent=ParentSurface)
         return self.SurfaceHost
 
-    @property
     def Surface(self):
         return self.GetSurface()
 
-    @property
-    def Widget(self):
-        return self.GetSurface()
-
-    widget = Widget
-
     def Show(self):
-        if hasattr(self.Widget, "show"):
-            self.Widget.show()
+        Host = self.GetSurface()
+        if hasattr(Host, "show"):
+            Host.show()
         return self
 
     show = Show
@@ -233,8 +233,9 @@ class Element(Component):
             return self
 
         if self.Layout is None:
-            if hasattr(self.Widget, "layout") and self.Widget.layout() is not None:
-                self.Layout = self.Widget.layout()
+            Host = self.GetSurface()
+            if hasattr(Host, "layout") and Host.layout() is not None:
+                self.Layout = Host.layout()
             else:
                 self.SetVertical(0, 0, 0, 0, 0)
 
@@ -259,24 +260,28 @@ class Element(Component):
         if Item is None or TargetLayout is None:
             return self
 
-        TargetWidget = getattr(Item, "Widget", getattr(Item, "widget", None))
-        if TargetWidget is None:
-            from lcars.base.component import Component
-            if isinstance(Item, Component):
-                SurfaceClass = LCARS.Retrieve("Base.Interface.Surface") or Surface
-                TargetWidget = SurfaceClass()
-                if hasattr(TargetWidget, "Initialize"):
-                    TargetWidget.Initialize(Optics=Item)
-                Item.Widget = TargetWidget
-                Item.Parent = self
+        TargetSurface = getattr(Item, "SurfaceHost", None)
+        if TargetSurface is None:
+            GetItemSurface = getattr(Item, "GetSurface", None)
+            if callable(GetItemSurface):
+                TargetSurface = GetItemSurface()
             else:
-                TargetWidget = Item
+                from lcars.base.component import Component
+                if isinstance(Item, Component):
+                    SurfaceClass = LCARS.Retrieve("Base.Interface.Surface") or Surface
+                    TargetSurface = SurfaceClass()
+                    if hasattr(TargetSurface, "Initialize"):
+                        TargetSurface.Initialize(Optics=Item)
+                    Item.SurfaceHost = TargetSurface
+                    Item.Parent = self
+                else:
+                    TargetSurface = Item
 
-        if hasattr(TargetLayout, "addWidget") and (not hasattr(Item, "addWidget") or TargetWidget is not Item):
+        if hasattr(TargetLayout, "addWidget") and (not hasattr(Item, "addWidget") or TargetSurface is not Item):
             if Stretch is None:
-                TargetLayout.addWidget(TargetWidget)
+                TargetLayout.addWidget(TargetSurface)
             else:
-                TargetLayout.addWidget(TargetWidget, int(Stretch))
+                TargetLayout.addWidget(TargetSurface, int(Stretch))
         elif hasattr(TargetLayout, "addLayout"):
             SubLayout = getattr(Item, "Layout", Item)
             TargetLayout.addLayout(SubLayout)
@@ -285,8 +290,8 @@ class Element(Component):
     def SetVertical(self, Left=0, Top=0, Right=0, Bottom=0, Spacing=0):
         LayoutClass = LCARS.Retrieve("Base.Interface.Layout.Vertical")
         if LayoutClass and callable(LayoutClass):
-            TargetWidget = getattr(self, "Widget", getattr(self, "widget", None))
-            self.Layout = LayoutClass(TargetWidget)
+            Host = self.GetSurface()
+            self.Layout = LayoutClass(Host)
             if hasattr(self.Layout, "setContentsMargins"):
                 self.Layout.setContentsMargins(Left, Top, Right, Bottom)
             if hasattr(self.Layout, "setSpacing"):
@@ -296,8 +301,8 @@ class Element(Component):
     def SetHorizontal(self, Left=0, Top=0, Right=0, Bottom=0, Spacing=0):
         LayoutClass = LCARS.Retrieve("Base.Interface.Layout.Horizontal")
         if LayoutClass and callable(LayoutClass):
-            TargetWidget = getattr(self, "Widget", getattr(self, "widget", None))
-            self.Layout = LayoutClass(TargetWidget)
+            Host = self.GetSurface()
+            self.Layout = LayoutClass(Host)
             if hasattr(self.Layout, "setContentsMargins"):
                 self.Layout.setContentsMargins(Left, Top, Right, Bottom)
             if hasattr(self.Layout, "setSpacing"):
