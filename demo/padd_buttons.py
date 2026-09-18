@@ -1,373 +1,309 @@
 # ◤ LCARS PADD — SECURITY ACCESS PANEL
 # Функціональний планшет офіцера з клавіатурою, анімаціями та системою авторизації.
-# Побудовано виключно з компонентів LCARS Framework.
+# Код доступу: 4721 | Макс. спроб: 3 | Lockout після 3-х невдач.
 # ─────────────────────────────────────────────────────────────────────────────
-import sys
 from lcars.base.type import LCARS
-from lcars.base.interface import Segment, Panel
-from lcars.base.component import LCARSButton, LCARSLabel, LCARSElbow, LCARSBar, LCARSIndicator
+from lcars.base.interface import PADD, Panel, Header, Footer
+from lcars.base.component import LCARSButton, LCARSElbow, LCARSLabel, LCARSIndicator, LCARSBar
 from lcars.base.animation import TextDecode, Typewriter, Reveal, Stagger
 from lcars.base.default import Palette, SystemTheme
 from lcars.modules.sound import ActiveAudio
-from lcars.modules.process import CreateApplication
 
-# ============================================================================
-# КОНСТАНТИ
-# ============================================================================
 AUTH_CODE = "4721"
-MAX_CODE_LENGTH = 8
-
-COLOR_READY   = Palette.Buttons[2]
-COLOR_ACTIVE  = Palette.Buttons[4]
-COLOR_SUCCESS = "#00CC66"
-COLOR_ERROR   = Palette.RedAlert[0]
-COLOR_LOCKOUT = Palette.Disabled[0]
+MAX_CODE = 8
 
 
-class PaddAccessPanel(Segment):
-    def __init__(self, ParentNode=None):
-        super().__init__(Parent=ParentNode)
-        self.widget.setStyleSheet("background-color: #000000;")
-        self.Code = ""
-        self.Authenticated = False
-        self.Attempts = 0
-        self.CodeDisplay = None
-        self.StatusMsg = None
-        self.SysIndicator = None
-        self.FooterLabel = None
-        self.KeypadButtons = []
-        self.Build()
+def PaddAccessInterface():
+    # ═══════════════════════════════════════════════════════════════════════
+    # PADD
+    # ═══════════════════════════════════════════════════════════════════════
+    Padd = PADD(Title="LCARS PADD // SECURITY ACCESS TERMINAL", Width=1100, Height=720)
+    Padd.SetVertical(10, 10, 10, 10, Spacing=8)
 
-    # -------------------------------------------------------------------- #
-    #  БУДІВНИЦТВО ІНТЕРФЕЙСУ
-    # -------------------------------------------------------------------- #
-    def Build(self):
-        Root = self.Vertical(16, 16, 16, 16, 10)
+    # ═══════════════════════════════════════════════════════════════════════
+    # HEADER
+    # ═══════════════════════════════════════════════════════════════════════
+    TopHeader = Header(Title="SECURITY ACCESS TERMINAL // AUTHORIZATION REQUIRED", Spectrum=Palette.Buttons[2])
+    Padd.Add(TopHeader)
 
-        # ═══════════════ HEADER ═══════════════
-        head = Segment(Parent=self.widget)
-        head_layout = head.Horizontal(0, 0, 0, 0, 0)
-        head_layout.setSpacing(10)
+    # ═══════════════════════════════════════════════════════════════════════
+    # BODY — три колонки
+    # ═══════════════════════════════════════════════════════════════════════
+    Body = Panel(Spectrum=Palette.Background)
+    Body.SetHorizontal(0, 0, 0, 0, Spacing=12)
 
-        head_elbow = LCARSElbow(Direction="top-left", Width=260, Height=56, Thickness=40, Radius=28,
-                                ColorGroup="accent", Parent=head.widget)
-        head_layout.addWidget(head_elbow.widget)
+    # ─── ЛІВА: навігація ──────────────────────────────────────────────────
+    LeftCol = Panel(Spectrum=Palette.Background)
+    LeftCol.SetVertical(0, 0, 0, 0, Spacing=6)
 
-        head_bar = LCARSBar(Height=40, ColorGroup="accent", Parent=head.widget)
-        hb_inner = LCARS.Horizontal(head_bar.widget)
-        hb_inner.setContentsMargins(18, 0, 18, 0)
-        hb_inner.addWidget(LCARSLabel(Text="SECURITY ACCESS TERMINAL // AUTHORIZATION REQUIRED",
-                                      Color="#000000", FontSize=15, Parent=head_bar.widget).widget, 1)
-        head_layout.addWidget(head_bar.widget, 1)
+    ElbowNav = LCARSElbow(Direction="top-left", Text="SECURITY", Number="01-SEC",
+                          Width=210, Height=56, Spectrum=Palette.Buttons[1])
+    LeftCol.Add(ElbowNav)
 
-        head_end = LCARSBar(Type="rect", Color=Palette.Buttons[2], Width=60, Height=56, Parent=head.widget)
-        head_layout.addWidget(head_end.widget)
+    NavBtns = []
+    for Txt, Clr in [("ACCESS LOG", Palette.Buttons[2]), ("USER MATRIX", Palette.Buttons[0]),
+                     ("CLEARANCE", Palette.Buttons[1]), ("AUDIT TRAIL", Palette.Buttons[3])]:
+        B = LCARSButton(Text=Txt, Form=LCARSButton.PillHalfType, Direction=0,
+                        Width=210, Height=36, FontSize=12, Spectrum=Clr)
+        NavBtns.append(B)
+        LeftCol.Add(B)
 
-        Root.addWidget(head.widget)
+    LockBtn = LCARSButton(Text="LOCKOUT", Form=LCARSButton.PillHalfType, Direction=0,
+                          Width=210, Height=36, FontSize=12, Spectrum=Palette.Disabled[0], State="disabled")
+    LeftCol.Add(LockBtn)
 
-        # ═══════════════ BODY ═══════════════
-        body = Segment(Parent=self.widget)
-        body_layout = body.Horizontal(0, 0, 0, 0, 16)
+    LeftCol.AddStretch()
 
-        # ─── ЛІВА КОЛОНКА ───
-        left_col = Segment(Parent=body.widget)
-        left_col.widget.setFixedWidth(220)
-        ll = left_col.Vertical(0, 0, 0, 0, 6)
+    SysIndicator = LCARSIndicator(Form=LCARSIndicator.SoftType, Width=210, Height=16,
+                                  Spectrum=Palette.Buttons[2])
+    LeftCol.Add(SysIndicator)
 
-        ll.addWidget(LCARSLabel(Text="NAVIGATION", ColorGroup="accent", FontSize=11, Parent=left_col.widget).widget)
+    Body.Add(LeftCol)
 
-        nav_items = [
-            ("ACCESS LOG",    Palette.Buttons[2]),
-            ("USER MATRIX",   Palette.Buttons[0]),
-            ("CLEARANCE",     Palette.Buttons[1]),
-            ("AUDIT TRAIL",   Palette.Buttons[3]),
-        ]
-        for label, color in nav_items:
-            btn = LCARSButton(label, Type="soft-left", Color=color, Width=220, Height=36, FontSize=12, Parent=left_col.widget)
-            ll.addWidget(btn.widget)
+    # ─── ЦЕНТР: дисплей + клавіатура ─────────────────────────────────────
+    CenterCol = Panel(Spectrum=Palette.Background)
+    CenterCol.SetVertical(0, 0, 0, 0, Spacing=8)
 
-        lockout_btn = LCARSButton("LOCKOUT", Type="soft-left", Color=COLOR_LOCKOUT, Width=220, Height=36, FontSize=12, Parent=left_col.widget)
-        lockout_btn.widget.setEnabled(False)
-        ll.addWidget(lockout_btn.widget)
+    # --- Дисплей ---
+    DisplayCard = Panel(Spectrum=Palette.Background)
+    DisplayCard.SetVertical(12, 10, 12, 10, Spacing=4)
 
-        ll.addStretch(1)
+    DisplayTitle = LCARSLabel(Text="ENTER ACCESS CODE", FontSize=13, Spectrum=Palette.Buttons[2],
+                              Width=480, Height=24)
+    DisplayCard.Add(DisplayTitle)
 
-        self.SysIndicator = LCARSIndicator(Type="rect", Color=COLOR_READY, Width=220, Height=16, Parent=left_col.widget)
-        ll.addWidget(self.SysIndicator.widget)
+    CodeDisplay = LCARSLabel(Text="_", FontSize=36, Align="center", Spectrum=Palette.Buttons[4],
+                             Width=480, Height=56)
+    DisplayCard.Add(CodeDisplay)
 
-        body_layout.addWidget(left_col.widget)
+    StatusMsg = LCARSLabel(Text="AWAITING INPUT...", FontSize=11, Align="center",
+                           Spectrum=Palette.Buttons[2], Width=480, Height=22)
+    DisplayCard.Add(StatusMsg)
 
-        # ─── ЦЕНТРАЛЬНА КОЛОНКА ───
-        center = Segment(Parent=body.widget)
-        cl = center.Vertical(0, 0, 0, 0, 10)
+    CenterCol.Add(DisplayCard)
 
-        # Дисплей
-        display_card = Segment(Parent=center.widget)
-        dc_layout = display_card.Vertical(16, 12, 16, 12, 6)
+    # Розділювач
+    CenterCol.Add(LCARSBar(Form=LCARSBar.RectType, Height=3, Spectrum=Palette.Buttons[2]))
 
-        dc_layout.addWidget(LCARSLabel(Text="ENTER ACCESS CODE", Color=COLOR_READY, FontSize=13, Parent=display_card.widget).widget)
+    # --- Клавіатура ---
+    KeypadPanel = Panel(Spectrum=Palette.Background)
+    KeypadPanel.SetVertical(0, 0, 0, 0, Spacing=5)
 
-        self.CodeDisplay = LCARSLabel(Text="_", Color=COLOR_ACTIVE, FontSize=36, Parent=display_card.widget)
-        self.CodeDisplay.widget.setMinimumHeight(56)
-        dc_layout.addWidget(self.CodeDisplay.widget)
+    # Стан
+    State = {"code": "", "auth": False, "attempts": 0}
 
-        self.StatusMsg = LCARSLabel(Text="AWAITING INPUT...", Color=COLOR_READY, FontSize=11, Parent=display_card.widget)
-        dc_layout.addWidget(self.StatusMsg.widget)
+    KeypadBtns = []
 
-        cl.addWidget(display_card.widget)
-
-        # Розділювач
-        cl.addWidget(LCARSBar(Type="rect", Color=COLOR_READY, Height=3, Parent=center.widget).widget)
-
-        # ─── КЛАВІАТУРА ───
-        keypad = Segment(Parent=center.widget)
-        kp = keypad.Vertical(0, 0, 0, 0, 5)
-
-        rows = [
-            [("1", Palette.Buttons[2]), ("2", Palette.Buttons[0]), ("3", Palette.Buttons[1])],
-            [("4", Palette.Buttons[0]), ("5", Palette.Buttons[1]), ("6", Palette.Buttons[2])],
-            [("7", Palette.Buttons[1]), ("8", Palette.Buttons[2]), ("9", Palette.Buttons[0])],
-        ]
-
-        for row_data in rows:
-            row_seg = Segment(Parent=keypad.widget)
-            row_lay = row_seg.Horizontal(0, 0, 0, 0, 6)
-            for digit, color in row_data:
-                btn = LCARSButton(digit, Type="rect", Color=color, Width=160, Height=54, FontSize=22,
-                                  Parent=keypad.widget)
-                target = digit
-                btn.Clicked.Connect(lambda d=target: self.OnDigit(d))
-                self.KeypadButtons.append(btn)
-                row_lay.addWidget(btn.widget, 1)
-            kp.addWidget(row_seg.widget)
-
-        # Ряд 0: CLR 0 BSP
-        bottom_row = Segment(Parent=keypad.widget)
-        br_lay = bottom_row.Horizontal(0, 0, 0, 0, 6)
-
-        clr_btn = LCARSButton("CLR", Type="soft-left", Color=Palette.Buttons[3], Width=160, Height=54, FontSize=15,
-                              Parent=keypad.widget)
-        clr_btn.Clicked.Connect(self.OnClear)
-        self.KeypadButtons.append(clr_btn)
-        br_lay.addWidget(clr_btn.widget, 1)
-
-        zero_btn = LCARSButton("0", Type="rect", Color=Palette.Buttons[4], Width=160, Height=54, FontSize=22,
-                               Parent=keypad.widget)
-        zero_btn.Clicked.Connect(lambda: self.OnDigit("0"))
-        self.KeypadButtons.append(zero_btn)
-        br_lay.addWidget(zero_btn.widget, 1)
-
-        bsp_btn = LCARSButton("BSP", Type="soft-right", Color=Palette.Buttons[5], Width=160, Height=54, FontSize=15,
-                              Parent=keypad.widget)
-        bsp_btn.Clicked.Connect(self.OnBackspace)
-        self.KeypadButtons.append(bsp_btn)
-        br_lay.addWidget(bsp_btn.widget, 1)
-
-        kp.addWidget(bottom_row.widget)
-        cl.addWidget(keypad.widget, 1)
-
-        # Ряд дій
-        actions = Segment(Parent=center.widget)
-        act_lay = actions.Horizontal(0, 0, 0, 0, 10)
-
-        abort_btn = LCARSButton("ABORT", Type="soft-left", Color=Palette.Buttons[3], Width=200, Height=44, FontSize=14,
-                                Parent=actions.widget)
-        abort_btn.Clicked.Connect(self.OnClear)
-        self.KeypadButtons.append(abort_btn)
-        act_lay.addWidget(abort_btn.widget)
-
-        act_lay.addStretch(1)
-
-        confirm_btn = LCARSButton("CONFIRM", Type="soft-right", Color=Palette.Buttons[4], Width=200, Height=44, FontSize=14,
-                                  Parent=actions.widget)
-        confirm_btn.Clicked.Connect(self.OnEnter)
-        self.KeypadButtons.append(confirm_btn)
-        act_lay.addWidget(confirm_btn.widget)
-
-        cl.addWidget(actions.widget)
-        cl.addStretch(1)
-        body_layout.addWidget(center.widget, 1)
-
-        # ─── ПРАВА КОЛОНКА ───
-        right_col = Segment(Parent=body.widget)
-        right_col.widget.setFixedWidth(230)
-        rl = right_col.Vertical(0, 0, 0, 0, 6)
-
-        rl.addWidget(LCARSLabel(Text="SYSTEM TELEMETRY", ColorGroup="buttons", FontSize=11, Parent=right_col.widget).widget)
-
-        # Індикатори
-        ind_row = Segment(Parent=right_col.widget)
-        ind_lay = ind_row.Horizontal(0, 0, 0, 0, 4)
-        ind_lay.addWidget(LCARSIndicator(Type="rect", Color=COLOR_SUCCESS, Width=70, Height=24, Parent=right_col.widget).widget)
-        ind_lay.addWidget(LCARSIndicator(Type="rect", Color=COLOR_READY, Width=70, Height=24, Parent=right_col.widget).widget)
-        ind_lay.addWidget(LCARSIndicator(Type="rect", Color=COLOR_LOCKOUT, Width=70, Height=24, Parent=right_col.widget).widget)
-        rl.addWidget(ind_row.widget)
-
-        rl.addWidget(LCARSLabel(Text="PWR: ONLINE",  Color=COLOR_SUCCESS, FontSize=10, Parent=right_col.widget).widget)
-        rl.addWidget(LCARSLabel(Text="NET: STABLE",  Color=COLOR_READY,   FontSize=10, Parent=right_col.widget).widget)
-        rl.addWidget(LCARSLabel(Text="SEC: STANDBY", Color=COLOR_LOCKOUT, FontSize=10, Parent=right_col.widget).widget)
-
-        rl.addSpacing(10)
-        rl.addWidget(LCARSBar(Type="rect", Color=Palette.Neutral[1], Height=2, Parent=right_col.widget).widget)
-        rl.addSpacing(4)
-
-        rl.addWidget(LCARSLabel(Text="ALERT DIRECTIVES", ColorGroup="buttons", FontSize=11, Parent=right_col.widget).widget)
-
-        red_btn = LCARSButton("RED ALERT", Type="pill", Color=Palette.RedAlert[0], Width=230, Height=38, FontSize=13,
-                              Parent=right_col.widget)
-        red_btn.Clicked.Connect(lambda: SystemTheme.SetSystemState("Red"))
-        rl.addWidget(red_btn.widget)
-
-        yel_btn = LCARSButton("YELLOW ALERT", Type="pill", Color=Palette.YellowAlert[0], Width=230, Height=38, FontSize=13,
-                              Parent=right_col.widget)
-        rl.addWidget(yel_btn.widget)
-
-        grn_btn = LCARSButton("CONDITION GREEN", Type="pill", Color=Palette.Buttons[0], Width=230, Height=38, FontSize=13,
-                              Parent=right_col.widget)
-        rl.addWidget(grn_btn.widget)
-
-        rl.addStretch(1)
-        body_layout.addWidget(right_col.widget)
-
-        Root.addWidget(body.widget, 1)
-
-        # ═══════════════ FOOTER ═══════════════
-        foot = Segment(Parent=self.widget)
-        foot.widget.setFixedHeight(36)
-        fl = foot.Horizontal(0, 0, 0, 0, 0)
-        fl.setSpacing(10)
-
-        foot_elbow = LCARSElbow(Direction="bottom-left", Width=260, Height=36, Thickness=26, Radius=18,
-                                ColorGroup="buttons", Parent=foot.widget)
-        fl.addWidget(foot_elbow.widget)
-
-        foot_bar = LCARSBar(Height=26, ColorGroup="buttons", Parent=foot.widget)
-        fb_inner = LCARS.Horizontal(foot_bar.widget)
-        fb_inner.setContentsMargins(16, 0, 16, 0)
-        self.FooterLabel = LCARSLabel(Text="PADD SECURITY v5.1 // ISOLINEAR OPTICAL INTERFACE ACTIVE",
-                                      Color="#000000", FontSize=10, Parent=foot_bar.widget)
-        fb_inner.addWidget(self.FooterLabel.widget)
-        fl.addWidget(foot_bar.widget, 1)
-
-        foot_end = LCARSElbow(Direction="bottom-right", Width=100, Height=36, Thickness=26, Radius=18,
-                              ColorGroup="buttons", Parent=foot.widget)
-        fl.addWidget(foot_end.widget)
-
-        Root.addWidget(foot.widget)
-
-    # -------------------------------------------------------------------- #
-    #  ЛОГІКА КЛАВІАТУРИ
-    # -------------------------------------------------------------------- #
-    def OnDigit(self, digit):
-        if self.Authenticated or self.Attempts >= 3:
-            ActiveAudio.play("denied")
-            return
-        if len(self.Code) >= MAX_CODE_LENGTH:
-            ActiveAudio.play("denied")
-            return
-        self.Code += digit
-        ActiveAudio.play("click")
-        self._UpdateDisplay()
-
-    def OnClear(self):
-        ActiveAudio.play("click")
-        self.Code = ""
-        self.Authenticated = False
-        self.Attempts = 0
-        self._UpdateDisplay()
-
-    def OnBackspace(self):
-        if self.Authenticated:
-            ActiveAudio.play("denied")
-            return
-        if self.Code:
-            self.Code = self.Code[:-1]
-            ActiveAudio.play("click")
-            self._UpdateDisplay()
-
-    def OnEnter(self):
-        if self.Authenticated or not self.Code:
-            ActiveAudio.play("denied")
-            return
-
-        if self.Code == AUTH_CODE:
-            self.Authenticated = True
-            ActiveAudio.play("acknowledge")
-            self._UpdateDisplay()
-            self._OnGranted()
+    def UpdateDisplay():
+        c = State["code"]
+        CodeDisplay.SetText("*" * len(c) if c else "_")
+        if State["auth"]:
+            StatusMsg.SetText("ACCESS GRANTED // WELCOME, COMMANDER")
+            StatusMsg.Spectrum = "#00CC66"
+            SysIndicator.Spectrum = "#00CC66"
+        elif State["attempts"] >= 3:
+            StatusMsg.SetText("LOCKOUT ENGAGED // CONTACT STARFLEET COMMAND")
+            StatusMsg.Spectrum = Palette.RedAlert[0]
+            SysIndicator.Spectrum = Palette.RedAlert[0]
+        elif State["attempts"] > 0:
+            rem = 3 - State["attempts"]
+            StatusMsg.SetText(f"ACCESS DENIED // {rem} ATTEMPTS REMAINING")
+            StatusMsg.Spectrum = Palette.RedAlert[0]
+            SysIndicator.Spectrum = Palette.RedAlert[0]
         else:
-            self.Attempts += 1
+            StatusMsg.SetText(f"CODE LENGTH: {len(c)}/{MAX_CODE}")
+            StatusMsg.Spectrum = Palette.Buttons[2]
+            SysIndicator.Spectrum = Palette.Buttons[2]
+
+    def OnDigit(d):
+        if State["auth"] or State["attempts"] >= 3:
             ActiveAudio.play("denied")
-            self.Code = ""
-            self._UpdateDisplay()
+            return
+        if len(State["code"]) >= MAX_CODE:
+            ActiveAudio.play("denied")
+            return
+        State["code"] += d
+        ActiveAudio.play("click")
+        UpdateDisplay()
 
-    def _OnGranted(self):
-        if self.SysIndicator:
-            self.SysIndicator.SetSpectrum(COLOR_SUCCESS)
-        if self.FooterLabel:
-            self.FooterLabel.SetText("ACCESS GRANTED // ENTERING SECURE TERMINAL...")
-        if self.StatusMsg:
-            self.StatusMsg.SetText("ACCESS GRANTED // WELCOME, COMMANDER")
-            self.StatusMsg.SetState("confirm")
+    def OnClear():
+        ActiveAudio.play("click")
+        State["code"] = ""
+        State["auth"] = False
+        State["attempts"] = 0
+        UpdateDisplay()
 
-    def _UpdateDisplay(self):
-        if self.CodeDisplay:
-            if not self.Code:
-                self.CodeDisplay.SetText("_")
-            else:
-                self.CodeDisplay.SetText("*" * len(self.Code))
+    def OnBackspace():
+        if State["auth"]:
+            ActiveAudio.play("denied")
+            return
+        if State["code"]:
+            State["code"] = State["code"][:-1]
+            ActiveAudio.play("click")
+            UpdateDisplay()
 
-        if self.StatusMsg:
-            if self.Authenticated:
-                self.StatusMsg.SetText("ACCESS GRANTED")
-                self.StatusMsg.SetState("confirm")
-            elif self.Attempts >= 3:
-                self.StatusMsg.SetText("LOCKOUT ENGAGED // CONTACT STARFLEET COMMAND")
-                self.StatusMsg.SetState("alert")
-                if self.SysIndicator:
-                    self.SysIndicator.SetSpectrum(COLOR_ERROR)
-            elif self.Attempts > 0:
-                remaining = 3 - self.Attempts
-                self.StatusMsg.SetText(f"ACCESS DENIED // {remaining} ATTEMPTS REMAINING")
-                self.StatusMsg.SetState("warning")
-                if self.SysIndicator:
-                    self.SysIndicator.SetSpectrum(COLOR_ERROR)
-            else:
-                self.StatusMsg.SetText(f"CODE LENGTH: {len(self.Code)}/{MAX_CODE_LENGTH}")
-                self.StatusMsg.SetState("normal")
-                if self.SysIndicator:
-                    self.SysIndicator.SetSpectrum(COLOR_READY)
+    def OnEnter():
+        if State["auth"] or not State["code"]:
+            ActiveAudio.play("denied")
+            return
+        if State["code"] == AUTH_CODE:
+            State["auth"] = True
+            ActiveAudio.play("acknowledge")
+            UpdateDisplay()
+        else:
+            State["attempts"] += 1
+            ActiveAudio.play("denied")
+            State["code"] = ""
+            UpdateDisplay()
 
-    # -------------------------------------------------------------------- #
-    #  АНІМАЦІЇ СТАРТУ
-    # -------------------------------------------------------------------- #
-    def PlayStartupAnimation(self):
-        Cascade = Stagger()
-        for btn in self.KeypadButtons:
-            R = Reveal()
-            R.StartReveal(Target=btn, Period=0.25, Direction="Left")
-            Cascade.Add(R)
-        Cascade.Play(DelayMs=30)
+    # Ряд 1: 1 2 3
+    R1 = Panel(Spectrum=Palette.Background)
+    R1.SetHorizontal(0, 0, 0, 0, Spacing=6)
+    for d, c in [("1", Palette.Buttons[2]), ("2", Palette.Buttons[0]), ("3", Palette.Buttons[1])]:
+        B = LCARSButton(Text=d, Form=LCARSButton.RectType, Width=155, Height=54, FontSize=22, Spectrum=c)
+        B.Clicked.Connect(lambda digit=d: OnDigit(digit))
+        KeypadBtns.append(B)
+        R1.Add(B)
+    KeypadPanel.Add(R1)
 
-        Decoder = TextDecode()
-        if self.StatusMsg:
-            Decoder.Decode(
-                Target=self.StatusMsg,
-                Text="SYSTEM READY // ENTER ACCESS CODE TO PROCEED",
-                Period=1.4
-            )
+    # Ряд 2: 4 5 6
+    R2 = Panel(Spectrum=Palette.Background)
+    R2.SetHorizontal(0, 0, 0, 0, Spacing=6)
+    for d, c in [("4", Palette.Buttons[0]), ("5", Palette.Buttons[1]), ("6", Palette.Buttons[2])]:
+        B = LCARSButton(Text=d, Form=LCARSButton.RectType, Width=155, Height=54, FontSize=22, Spectrum=c)
+        B.Clicked.Connect(lambda digit=d: OnDigit(digit))
+        KeypadBtns.append(B)
+        R2.Add(B)
+    KeypadPanel.Add(R2)
+
+    # Ряд 3: 7 8 9
+    R3 = Panel(Spectrum=Palette.Background)
+    R3.SetHorizontal(0, 0, 0, 0, Spacing=6)
+    for d, c in [("7", Palette.Buttons[1]), ("8", Palette.Buttons[2]), ("9", Palette.Buttons[0])]:
+        B = LCARSButton(Text=d, Form=LCARSButton.RectType, Width=155, Height=54, FontSize=22, Spectrum=c)
+        B.Clicked.Connect(lambda digit=d: OnDigit(digit))
+        KeypadBtns.append(B)
+        R3.Add(B)
+    KeypadPanel.Add(R3)
+
+    # Ряд 4: CLR 0 BSP
+    R4 = Panel(Spectrum=Palette.Background)
+    R4.SetHorizontal(0, 0, 0, 0, Spacing=6)
+
+    BtnClr = LCARSButton(Text="CLR", Form=LCARSButton.SoftHalfType, Direction=180,
+                         Width=155, Height=54, FontSize=15, Spectrum=Palette.Buttons[3])
+    BtnClr.Clicked.Connect(OnClear)
+    KeypadBtns.append(BtnClr)
+    R4.Add(BtnClr)
+
+    Btn0 = LCARSButton(Text="0", Form=LCARSButton.RectType,
+                       Width=155, Height=54, FontSize=22, Spectrum=Palette.Buttons[4])
+    Btn0.Clicked.Connect(lambda: OnDigit("0"))
+    KeypadBtns.append(Btn0)
+    R4.Add(Btn0)
+
+    BtnBsp = LCARSButton(Text="BSP", Form=LCARSButton.SoftHalfType, Direction=0,
+                         Width=155, Height=54, FontSize=15, Spectrum=Palette.Buttons[5])
+    BtnBsp.Clicked.Connect(OnBackspace)
+    KeypadBtns.append(BtnBsp)
+    R4.Add(BtnBsp)
+
+    KeypadPanel.Add(R4)
+    CenterCol.Add(KeypadPanel, 1)
+
+    # Ряд дій
+    ActionRow = Panel(Spectrum=Palette.Background)
+    ActionRow.SetHorizontal(0, 0, 0, 0, Spacing=10)
+
+    BtnAbort = LCARSButton(Text="ABORT", Form=LCARSButton.PillHalfType, Direction=180,
+                           Width=180, Height=44, FontSize=14, Spectrum=Palette.Buttons[3])
+    BtnAbort.Clicked.Connect(OnClear)
+    KeypadBtns.append(BtnAbort)
+    ActionRow.Add(BtnAbort)
+
+    ActionRow.AddStretch()
+
+    BtnConfirm = LCARSButton(Text="CONFIRM", Form=LCARSButton.PillHalfType, Direction=0,
+                             Width=180, Height=44, FontSize=14, Spectrum=Palette.Buttons[4])
+    BtnConfirm.Clicked.Connect(OnEnter)
+    KeypadBtns.append(BtnConfirm)
+    ActionRow.Add(BtnConfirm)
+
+    CenterCol.Add(ActionRow)
+    CenterCol.AddStretch()
+    Body.Add(CenterCol, 1)
+
+    # ─── ПРАВА: телеметрія + тривога ──────────────────────────────────────
+    RightCol = Panel(Spectrum=Palette.Background)
+    RightCol.SetVertical(0, 0, 0, 0, Spacing=6)
+
+    RightCol.Add(LCARSLabel(Text="SYSTEM TELEMETRY", FontSize=11, Spectrum=Palette.Buttons[0]))
+
+    IndRow = Panel(Spectrum=Palette.Background)
+    IndRow.SetHorizontal(0, 0, 0, 0, Spacing=4)
+    IndRow.Add(LCARSIndicator(Form=LCARSIndicator.RectType, Width=65, Height=24, Spectrum="#00CC66"))
+    IndRow.Add(LCARSIndicator(Form=LCARSIndicator.SoftType, Width=65, Height=24, Spectrum=Palette.Buttons[2]))
+    IndRow.Add(LCARSIndicator(Form=LCARSIndicator.PillHalf, Width=65, Height=24, Spectrum=Palette.Disabled[0]))
+    RightCol.Add(IndRow)
+
+    RightCol.Add(LCARSLabel(Text="PWR: ONLINE",  FontSize=10, Spectrum="#00CC66"))
+    RightCol.Add(LCARSLabel(Text="NET: STABLE",  FontSize=10, Spectrum=Palette.Buttons[2]))
+    RightCol.Add(LCARSLabel(Text="SEC: STANDBY", FontSize=10, Spectrum=Palette.Disabled[0]))
+
+    RightCol.Add(LCARSBar(Form=LCARSBar.RectType, Height=2, Spectrum=Palette.Disabled[1]))
+
+    RightCol.Add(LCARSLabel(Text="ALERT DIRECTIVES", FontSize=11, Spectrum=Palette.Buttons[0]))
+
+    BRed = LCARSButton(Text="RED ALERT", Form=LCARSButton.PillType,
+                       Width=210, Height=38, FontSize=13, Spectrum=Palette.RedAlert[0])
+    BRed.Clicked.Connect(lambda: SystemTheme.SetSystemState("Red"))
+    RightCol.Add(BRed)
+
+    BYel = LCARSButton(Text="YELLOW ALERT", Form=LCARSButton.PillType,
+                       Width=210, Height=38, FontSize=13, Spectrum=Palette.YellowAlert[0])
+    BYel.Clicked.Connect(lambda: SystemTheme.SetSystemState("Yellow"))
+    RightCol.Add(BYel)
+
+    BGrn = LCARSButton(Text="CONDITION GREEN", Form=LCARSButton.PillType,
+                       Width=210, Height=38, FontSize=13, Spectrum=Palette.Buttons[0])
+    BGrn.Clicked.Connect(lambda: SystemTheme.SetSystemState("Normal"))
+    RightCol.Add(BGrn)
+
+    BReset = LCARSButton(Text="RESET CONSOLE", Form=LCARSButton.SoftType,
+                         Width=210, Height=36, FontSize=12, Spectrum=Palette.Buttons[3])
+    BReset.Clicked.Connect(OnClear)
+    RightCol.Add(BReset)
+
+    RightCol.AddStretch()
+    Body.Add(RightCol)
+
+    Padd.Add(Body, 1)
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # FOOTER
+    # ═══════════════════════════════════════════════════════════════════════
+    BottomFoot = Footer(Title="PADD SECURITY v5.1 // ISOLINEAR OPTICAL INTERFACE ACTIVE",
+                        Spectrum=Palette.Buttons[0])
+    Padd.Add(BottomFoot)
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # SHOW + ANIMATIONS
+    # ═══════════════════════════════════════════════════════════════════════
+    Padd.Show()
+
+    # Каскадне розгортання кнопок
+    Cascade = Stagger()
+    for Btn in KeypadBtns:
+        R = Reveal()
+        R.StartReveal(Target=Btn, Period=0.25, Direction="Left")
+        Cascade.Add(R)
+    Cascade.Play(DelayMs=30)
+
+    # Декодування статусу
+    Decoder = TextDecode()
+    Decoder.Decode(Target=StatusMsg, Text="SYSTEM READY // ENTER ACCESS CODE TO PROCEED", Period=1.4)
+
+    return Padd
 
 
-# ============================================================================
-# ЗАПУСК (як в access.py)
-# ============================================================================
-if __name__ == "__main__":
-    app = CreateApplication(sys.argv)
-    if app:
-        panel = PaddAccessPanel()
-        Host = LCARS.Segment()
-        Host.widget.setGeometry(100, 100, 1100, 720)
-        Host.Add(Host.Vertical(), panel)
-        Host.widget.show()
-        panel.PlayStartupAnimation()
-        sys.exit(app.exec())
+LCARS.Launch(PaddAccessInterface)
