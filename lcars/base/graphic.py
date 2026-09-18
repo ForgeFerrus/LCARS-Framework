@@ -658,18 +658,38 @@ class Emitter(Graphic):
         if hasattr(GraphicObj, "Draw") and callable(GraphicObj.Draw):
             return bool(GraphicObj.Draw(self.Context, self.Device))
         # 3. Прояв топологічних сегментів (якщо вони зареєстровані)
-        Primitives = getattr(GraphicObj, "Primitives", [])
+        Primitives = getattr(GraphicObj, "Primitives", None)
         if Primitives:
             for Segment in Primitives:
                 self.ProjectSegment(Segment)
-        elif hasattr(GraphicObj, "Wavefront") and GraphicObj.Wavefront is not None:
-            self.Fill(GraphicObj.Wavefront, GraphicObj.Spectrum, GraphicObj.Luminance)
-        # 3. Нанесення символьного маркування (якщо вузол містить власний напис)
-        Label = getattr(GraphicObj, "Designation", getattr(GraphicObj, "Text", None))
+        else:
+            # 4. Прояв власної топології Окуди: шлях компонента → заливка світлом.
+            #    Синтез будує Path/Wavefront/Trajectory — читаємо весь ланцюг.
+            Wavefront = getattr(GraphicObj, "Wavefront", None) or getattr(GraphicObj, "Path", None) or getattr(GraphicObj, "Trajectory", None)
+            if Wavefront is None and hasattr(GraphicObj, "Synthesize") and callable(GraphicObj.Synthesize):
+                GraphicObj.Synthesize()
+                Wavefront = getattr(GraphicObj, "Wavefront", None) or getattr(GraphicObj, "Path", None) or getattr(GraphicObj, "Trajectory", None)
+            # Плоскі текстові вузли (Label) не заливаються — тільки символка
+            IsFlatNode = str(getattr(GraphicObj, "Type", "")).lower() == "label"
+            if Wavefront is not None and not IsFlatNode:
+                ColorFn = getattr(GraphicObj, "GetColor", None)
+                SpectrumVal = ColorFn() if callable(ColorFn) else getattr(GraphicObj, "Spectrum", "#7A9CC6")
+                self.Fill(Wavefront, SpectrumVal, getattr(GraphicObj, "Luminance", 1.0))
+        # 5. Нанесення символьного маркування (якщо вузол містить власний напис)
+        Label = getattr(GraphicObj, "Designation", None) or getattr(GraphicObj, "Text", None)
         if Label:
-            RectObj = getattr(GraphicObj, "GetField", None)
-            Field = RectObj() if callable(RectObj) else LCARS.Geometry.RectF(float(GraphicObj.X), float(GraphicObj.Y), float(GraphicObj.Width), float(GraphicObj.Height))
-            self.RadiateContext(Field, Label, GraphicObj.Spectrum, GraphicObj.FontSize, GraphicObj.Align)
+            ColorFn = getattr(GraphicObj, "GetColor", None)
+            InkVal = ColorFn() if callable(ColorFn) else getattr(GraphicObj, "Spectrum", "#FFFFFF")
+            TopologyPath = getattr(GraphicObj, "Wavefront", None) or getattr(GraphicObj, "Path", None) or getattr(GraphicObj, "Trajectory", None)
+            if TopologyPath is not None:
+                # Залита форма (кнопка/бар): текст чорний за каноном Окуди
+                Field = TopologyPath.boundingRect()
+                if str(getattr(GraphicObj, "Type", "")).lower() != "label":
+                    InkVal = "#000000"
+            else:
+                RectObj = getattr(GraphicObj, "GetField", None)
+                Field = RectObj() if callable(RectObj) else LCARS.Geometry.RectF(float(GraphicObj.X), float(GraphicObj.Y), float(GraphicObj.Width), float(GraphicObj.Height))
+            self.RadiateContext(Field, str(Label), InkVal, int(getattr(GraphicObj, "FontSize", 16)), getattr(GraphicObj, "Align", "center") or "center")
         return True
     # Диспетчер прояву окремого топологічного сегмента
     def ProjectSegment(self, Segment):
@@ -723,11 +743,16 @@ class Emitter(Graphic):
             return False
         ColorObj = LCARS.Visual.Color(Spectrum)
         FontObj = LCARS.Visual.Font("LCARS", FontSize)
-        AlignStr = Align.lower()
-        AlignFlag = LCARS.AlignLeft if AlignStr == "left" else (LCARS.AlignRight if AlignStr == "right" else LCARS.AlignCenter)
+        AlignStr = (Align or "center").lower()
+        RawFlag = LCARS.AlignLeft if AlignStr == "left" else (LCARS.AlignRight if AlignStr == "right" else LCARS.AlignCenter)
+        # Шляховий вузол вирівнювання → живий прапорець Qt
+        if isinstance(RawFlag, str):
+            RawFlag = LCARS.Retrieve(RawFlag)
+        if RawFlag is None:
+            RawFlag = 132   # AlignHCenter | AlignVCenter
         self.Context.setFont(FontObj)
         self.Context.setPen(LCARS.Visual.Pen(ColorObj))
-        self.Context.drawText(Field, int(AlignFlag), Content)
+        self.Context.drawText(Field, RawFlag, Content)
         return True
     # Прояв оптичної матриці (растрове зображення)
     def RadiateMatrix(self, X: int, Y: int, Image):

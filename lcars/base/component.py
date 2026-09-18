@@ -100,7 +100,9 @@ class Component(Topology):
             return SystemTheme.DynamicColor("yellow", Dynamic=True, Key=str(id(self)))
 
         ExplicitColor = getattr(self, "Spectrum", getattr(self, "Color", None))
-        if ExplicitColor:
+        # Дефолт темного тла не рахується явним спектром: вузол без заданого
+        # спектру світиться канонічною палітрою Окуди
+        if ExplicitColor and ExplicitColor is not DefaultBackground:
             return ExplicitColor
         return SystemTheme.DynamicColor("buttons", Dynamic=True, Key=str(id(self)))
 
