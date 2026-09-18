@@ -437,9 +437,21 @@ class LCARSButton(Component):
     def Hover(self, Active: bool):
         if not self.Tactile and not self.IsWakeupTrigger:
             return self
-        self.IsHovered = (Active)
+        self.IsHovered = bool(Active)
+        if self.SwapMode and self.Number:
+            self.Designation = self.Text if Active else self.Number
         self.Refresh()
         return self
+
+    def Initialize(self, *args, **kwargs):
+        super().Initialize(*args, **kwargs)
+        if self.SwapMode and self.Number:
+            self.Designation = self.Number
+        return self
+
+    Init = Initialize
+
+    Focus = Hover
     # -------------------------------------------------------------------------
     # ЧИСТИЙ СИНТЕЗ ЧЕРЕЗ TOPOLOGY (БЕЗ ЗАЙВИХ ПРИМІТИВІВ)
     # Кнопка бере готову геометрію з топологічного ядра Okuda

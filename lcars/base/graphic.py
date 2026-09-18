@@ -689,6 +689,10 @@ class Emitter(Graphic):
                 Field = RawPath.boundingRect()
                 if str(getattr(GraphicObj, "Type", "")).lower() != "label":
                     InkVal = "#000000"
+                    # Внутрішній фірмовий відступ Окуди, щоб текст не лип до скруглених кінців
+                    PadX = float(getattr(GraphicObj, "TextPadding", 14.0))
+                    if hasattr(Field, "adjusted"):
+                        Field = Field.adjusted(PadX, 0.0, -PadX, 0.0)
             else:
                 RectObj = getattr(GraphicObj, "GetField", None)
                 Field = RectObj() if callable(RectObj) else LCARS.Geometry.RectF(float(GraphicObj.X), float(GraphicObj.Y), float(GraphicObj.Width), float(GraphicObj.Height))
@@ -747,12 +751,12 @@ class Emitter(Graphic):
         ColorObj = LCARS.Visual.Color(Spectrum)
         FontObj = LCARS.Visual.Font("LCARS", FontSize)
         AlignStr = (Align or "center").lower()
-        RawFlag = LCARS.AlignLeft if AlignStr == "left" else (LCARS.AlignRight if AlignStr == "right" else LCARS.AlignCenter)
-        # Шляховий вузол вирівнювання → живий прапорець Qt
-        if isinstance(RawFlag, str):
-            RawFlag = LCARS.Retrieve(RawFlag)
-        if RawFlag is None:
-            RawFlag = 132   # AlignHCenter | AlignVCenter
+        if AlignStr == "left":
+            RawFlag = 129  # AlignLeft | AlignVCenter
+        elif AlignStr == "right":
+            RawFlag = 130  # AlignRight | AlignVCenter
+        else:
+            RawFlag = 132  # AlignHCenter | AlignVCenter
         self.Context.setFont(FontObj)
         self.Context.setPen(LCARS.Visual.Pen(ColorObj))
         self.Context.drawText(Field, RawFlag, Content)

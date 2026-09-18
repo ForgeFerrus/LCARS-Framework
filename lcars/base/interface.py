@@ -25,6 +25,12 @@ class Surface(Display):
         Policy = getattr(LCARS, "Policy", None)
         if hasattr(self, "setSizePolicy") and Policy is not None and hasattr(Policy, "Preferred"):
             self.setSizePolicy(Policy.Preferred, Policy.Preferred)
+        if self.Optics is not None and hasattr(self, "setFixedHeight"):
+            OpticsHeight = getattr(self.Optics, "Height", None)
+            OpticsType = str(getattr(self.Optics, "Type", "")).lower()
+            IsRigid = not getattr(self.Optics, "Flexible", False) or OpticsType in ("button", "indicator", "elbow")
+            if OpticsHeight is not None and IsRigid:
+                self.setFixedHeight(int(OpticsHeight))
         if hasattr(self, "startTimer"):
             self.PulseTimer = self.startTimer(1000)
 
@@ -145,7 +151,7 @@ class Surface(Display):
     # Датчик наближення (фокус при наведенні курсора або руки)
     def FocusDetection(self, Event):
         if self.Optics is not None:
-            TargetFocus = getattr(self.Optics, "Focus", None)
+            TargetFocus = getattr(self.Optics, "Focus", getattr(self.Optics, "Hover", None))
             if callable(TargetFocus):
                 TargetFocus(True)
             self.update()
@@ -155,7 +161,7 @@ class Surface(Display):
     # Вихід із зони наближення
     def Leave(self, Event):
         if self.Optics is not None:
-            TargetFocus = getattr(self.Optics, "Focus", None)
+            TargetFocus = getattr(self.Optics, "Focus", getattr(self.Optics, "Hover", None))
             if callable(TargetFocus):
                 TargetFocus(False)
             self.update()

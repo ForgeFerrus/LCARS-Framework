@@ -101,16 +101,16 @@ def ButtonsInterface():
     Col1.Add(LblForms)
 
     FormButtons = []
-    for Text, FormVal, DirVal in [
-        ("RECT BUTTON",      LCARSButton.RectType,     0),
-        ("PILL CAPSULE",     LCARSButton.PillType,     0),
-        ("SOFT CHAMFER",     LCARSButton.SoftType,     0),
-        ("PILL-HALF EAST",   LCARSButton.PillHalfType, 0),
-        ("PILL-HALF WEST",   LCARSButton.PillHalfType, 180),
-        ("SOFT-HALF EAST",   LCARSButton.SoftHalfType, 0),
-        ("SOFT-HALF WEST",   LCARSButton.SoftHalfType, 180),
+    for Text, Num, FormVal, DirVal in [
+        ("RECT BUTTON",      "01-RCT", LCARSButton.RectType,     0),
+        ("PILL CAPSULE",     "02-PIL", LCARSButton.PillType,     0),
+        ("SOFT CHAMFER",     "03-SFT", LCARSButton.SoftType,     0),
+        ("PILL-HALF EAST",   "04-PHE", LCARSButton.PillHalfType, 0),
+        ("PILL-HALF WEST",   "05-PHW", LCARSButton.PillHalfType, 180),
+        ("SOFT-HALF EAST",   "06-SHE", LCARSButton.SoftHalfType, 0),
+        ("SOFT-HALF WEST",   "07-SHW", LCARSButton.SoftHalfType, 180),
     ]:
-        B = LCARSButton(Text=Text, Form=FormVal, Direction=DirVal, Width=210, Height=36, FontSize=12, Spectrum=Palette.Buttons[2])
+        B = LCARSButton(Text=Text, Number=Num, SwapMode=True, Form=FormVal, Direction=DirVal, Width=210, Height=36, FontSize=12, Spectrum=Palette.Buttons[2])
         FormButtons.append(B)
         Col1.Add(B)
 
@@ -124,16 +124,16 @@ def ButtonsInterface():
     LblStates = LCARSLabel(Text="OPERATIONAL STATES", FontSize=12, Spectrum=Palette.Buttons[1])
     Col2.Add(LblStates)
 
-    for Text, State, Sensory, Color in [
-        ("NORMAL MATRIX",  "normal",   True,  Palette.Buttons[1]),
-        ("STANDBY OFF",    "disabled", False, Palette.Disabled[0]),
-        ("WARNING YELLOW", "yellow",   True,  Palette.YellowAlert[0]),
-        ("CRITICAL ALERT", "alert",    True,  Palette.RedAlert[0]),
+    for Text, Num, State, Sensory, Color in [
+        ("NORMAL MATRIX",  "10-NRM", "normal",   True,  Palette.Buttons[1]),
+        ("STANDBY OFF",    "11-OFF", "disabled", False, Palette.Disabled[0]),
+        ("WARNING YELLOW", "12-WRN", "yellow",   True,  Palette.YellowAlert[0]),
+        ("CRITICAL ALERT", "13-ALT", "alert",    True,  Palette.RedAlert[0]),
     ]:
-        B = LCARSButton(Text=Text, Form=LCARSButton.Pill, State=State, Sensory=Sensory, Spectrum=Color, Width=210, Height=36, FontSize=12)
+        B = LCARSButton(Text=Text, Number=Num, SwapMode=True, Form=LCARSButton.Pill, State=State, Sensory=Sensory, Spectrum=Color, Width=210, Height=36, FontSize=12)
         Col2.Add(B)
 
-    BSplit1 = LCARSButton(Text="SPLIT SYS", Number="47-A", SplitMode=True, Form=LCARSButton.RectType, Width=210, Height=36, FontSize=12, Spectrum=Palette.Buttons[0])
+    BSplit1 = LCARSButton(Text="SPLIT SYS", Number="47-SPL", SplitMode=True, Form=LCARSButton.RectType, Width=210, Height=36, FontSize=12, Spectrum=Palette.Buttons[0])
     Col2.Add(BSplit1)
 
     BDark = LCARSButton(Text="DARK CYCLE", Form=LCARSButton.PillHalf, Direction=0, Number="SEC-01", DarkCycle=True, IsWakeupTrigger=True, Width=210, Height=36, FontSize=12, Spectrum=Palette.Buttons[3])
@@ -162,27 +162,27 @@ def ButtonsInterface():
     LblAlert = LCARSLabel(Text="TACTICAL DIRECTIVES", FontSize=12, Spectrum=Palette.Buttons[0])
     Col3.Add(LblAlert)
 
-    BRed = LCARSButton(Text="RED ALERT", Form=LCARSButton.Pill, State="alert", Sound="alert_red", Spectrum=Palette.RedAlert[0], Width=210, Height=38, FontSize=13)
+    BRed = LCARSButton(Text="RED ALERT", Number="01-RED", SwapMode=True, Form=LCARSButton.Pill, State="alert", Sound="alert_red", Spectrum=Palette.RedAlert[0], Width=210, Height=38, FontSize=13)
     BRed.Clicked.Connect(lambda: SystemTheme.SetSystemState("Red"))
     Col3.Add(BRed)
 
-    BYellow = LCARSButton(Text="YELLOW ALERT", Form=LCARSButton.PillHalf, Direction=180, State="yellow", Sound="alert_yellow", Spectrum=Palette.YellowAlert[0], Width=210, Height=38, FontSize=13)
+    BYellow = LCARSButton(Text="YELLOW ALERT", Number="02-YEL", SwapMode=True, Form=LCARSButton.PillHalf, Direction=180, State="yellow", Sound="alert_yellow", Spectrum=Palette.YellowAlert[0], Width=210, Height=38, FontSize=13)
     BYellow.Clicked.Connect(lambda: SystemTheme.SetSystemState("Yellow"))
     Col3.Add(BYellow)
 
-    BGreen = LCARSButton(Text="CONDITION GREEN", Form=LCARSButton.Pill, State="normal", Sound="acknowledge", Spectrum=Palette.Buttons[0], Width=210, Height=38, FontSize=13)
+    BGreen = LCARSButton(Text="CONDITION GREEN", Number="03-GRN", SwapMode=True, Form=LCARSButton.Pill, State="normal", Sound="acknowledge", Spectrum=Palette.Buttons[0], Width=210, Height=38, FontSize=13)
     BGreen.Clicked.Connect(lambda: SystemTheme.SetSystemState("Normal"))
     Col3.Add(BGreen)
 
-    BPower = LCARSButton(Text="GRID POWER", Form=LCARSButton.Pill, Sound="acknowledge", IsWakeupTrigger=True, Spectrum=Palette.Buttons[3], Width=210, Height=36, FontSize=12)
+    BPower = LCARSButton(Text="GRID POWER", Number="04-PWR", SwapMode=True, Form=LCARSButton.Pill, Sound="acknowledge", IsWakeupTrigger=True, Spectrum=Palette.Buttons[3], Width=210, Height=36, FontSize=12)
     BPower.Clicked.Connect(lambda: PowerControl.PowerOff() if PowerControl.State != 0 else PowerControl.PowerOn())
     Col3.Add(BPower)
 
-    BLock = LCARSButton(Text="STASIS LOCK", Form=LCARSButton.PillHalf, Direction=0, Sound="alert_yellow", IsWakeupTrigger=True, DarkCycle=True, Spectrum=Palette.Buttons[5], Width=210, Height=36, FontSize=12)
+    BLock = LCARSButton(Text="STASIS LOCK", Number="05-LCK", SwapMode=True, Form=LCARSButton.PillHalf, Direction=0, Sound="alert_yellow", IsWakeupTrigger=True, DarkCycle=True, Spectrum=Palette.Buttons[5], Width=210, Height=36, FontSize=12)
     BLock.Clicked.Connect(lambda: PowerControl.Unlock() if PowerControl.Locked else PowerControl.Lock())
     Col3.Add(BLock)
 
-    BElbow = LCARSElbow(Direction="top-left", Text="NAV DECK", Number="01-NAV", Width=210, Height=60, Thickness=24, Radius=20, Spectrum=Palette.Buttons[1])
+    BElbow = LCARSElbow(Corner="top-left", Text="NAV DECK", Number="01-NAV", Width=210, Height=60, Thickness=24, Radius=20, Spectrum=Palette.Buttons[1])
     Col3.Add(BElbow)
 
     Col3.AddStretch(1)
