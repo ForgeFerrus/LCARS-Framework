@@ -46,10 +46,10 @@ class Surface(Display):
     # Рекомендований розмір поверхні для систем компонування
     def PreferredSize(self):
         Node = self.Optics
-        W = getattr(Node, "Width", 100) if Node is not None else 100
-        H = getattr(Node, "Height", 30) if Node is not None else 30
-        SizeClass = LCARS.Geometry.Size
-        return SizeClass(max(10, W), max(10, H))
+        W = int(getattr(Node, "Width", 100) if Node is not None else 100)
+        H = int(getattr(Node, "Height", 30) if Node is not None else 30)
+        SizeClass = LCARS.Retrieve("Base.Geometry.Size.Int")
+        return SizeClass(max(10, W), max(10, H)) if SizeClass and callable(SizeClass) else None
     # Просторове вирівнювання сенсорного поля
     def AlignContent(self, Flag):
         if hasattr(self.Optics, "Align"):
@@ -289,6 +289,8 @@ class Element(Component):
                 TargetLayout.addWidget(TargetSurface)
             else:
                 TargetLayout.addWidget(TargetSurface, int(Stretch))
+            if hasattr(TargetSurface, "show"):
+                TargetSurface.show()
         elif hasattr(TargetLayout, "addLayout"):
             SubLayout = getattr(Item, "Layout", Item)
             TargetLayout.addLayout(SubLayout)

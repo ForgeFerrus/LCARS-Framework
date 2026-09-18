@@ -16,8 +16,10 @@ from lcars.system.power import PowerControl
 # =========================================================================
 def ButtonsInterface():
     Padd = PADD(Title="LCARS INTERFACE & BUTTON CATALOG", Width=1100, Height=720)
+    Padd.SetVertical(24, 24, 24, 24, Spacing=14)
+
     BootScreen = Panel(Spectrum=Palette.Background)
-    BootScreen.SetVertical(24, 24, 24, 24, Spacing=14)
+    BootScreen.SetVertical(0, 0, 0, 0, Spacing=14)
     BootScreen.AddStretch(1)
     # Статусний заголовок
     StatusLabel = LCARSLabel(

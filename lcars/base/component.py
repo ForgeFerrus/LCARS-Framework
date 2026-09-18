@@ -43,10 +43,10 @@ def NormalizeDirection(Direction):
     return str(Direction)
 # =============================================================================
 # ГОЛОВНИЙ КЛАС COMPONENT (СЕНСОРНИЙ ОПТИЧНИЙ ВУЗОЛ LCARS)
-# Наслідує Visual (Graphic) -> SystemComponent -> LCARS.
-# Це логічний вузол системи, з'єднаний через шину ODN.
+# Наслідує Topology (Graphic) -> SystemComponent -> LCARS.
+# Забезпечує векторні трейсери Okuda (TraceRect, TraceCap, TraceRounded, TraceElbow).
 # =============================================================================
-class Component(Visual):
+class Component(Topology):
     TypeName = "LCARSComponent"
     Type = "Component"
     Form: int | str = 0
@@ -272,6 +272,9 @@ class Component(Visual):
     def GetSurface(self):
         if getattr(self, "SurfaceHost", None) is None:
             SurfaceClass = LCARS.Retrieve("Base.Interface.Surface")
+            if SurfaceClass is None:
+                InterfaceMod = LCARS.Import("lcars.base.interface")
+                SurfaceClass = getattr(InterfaceMod, "Surface", None)
             if SurfaceClass is not None and callable(SurfaceClass):
                 self.SurfaceHost = SurfaceClass()
                 if hasattr(self.SurfaceHost, "Initialize"):
