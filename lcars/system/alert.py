@@ -1,65 +1,23 @@
-# ◤ TITANIUM SYSTEM ALERT & TACTICAL CONTROLLER // CANONICAL STARFLEET 🖖
+# ◤ TITANIUM SYSTEM ALERT & TACTICAL CONTROLLER // STARFLEET CANON 🖖
 # =============================================================================
 # ФАЙЛ: lcars/system/alert.py
-# ОПИС: Тактична система тривог, бойової готовності та повного перемикання станів
-#       усіх підсистем, конфігурацій та візуального оформлення LCARS.
+# ОПИС: Тактичний контролер бойової готовності та розподілу станів LCARS.
 #       КАНОНІЧНІ РІВНІ ТРИВОГ ЗОРЯНОГО ФЛОТУ:
-#       - GREEN (0 / Normal / Nominal) — штатний режим, стандартне освітлення, щити 0%.
-#       - YELLOW (1 / Caution / Standby) — підвищена готовність, бурштиновий інтерфейс, щити 50%.
-#       - RED (2 / Tactical / Combat) — бойова тривога, червона пульсація, щити 100%, бойовий імпульс.
-#       АРХІТЕКТУРНИЙ ПОДІЛ ВІДПОВІДАЛЬНОСТІ (SEPARATION OF CONCERNS):
-#       - AlertConfiguration: зберігає всі налаштування кольорів, порогів заліза та звуків.
-#       - AlertSystem: контролер станів, аудит-журнал, оцінка телеметрії та аварійний перехід.
-#       - Palette (в default.py): чисті декларативні константи кольорів.
-# СТАНДАРТ: Titanium LCARS (Zero-Direct-Imports, Zero-Underscores, Strict PascalCase, Pure Classes).
+#       - GREEN (0 / Nominal)  — штатний режим, стандартне освітлення, щити 0%.
+#       - YELLOW (1 / Caution) — підвищена готовність, бурштиновий інтерфейс, щити 50%.
+#       - RED (2 / Tactical)   — бойова тривога, червона пульсація, щити 100%.
+# СТАНДАРТ: Titanium LCARS (Pure PascalCase, No-Init, No-Property, Zero-Underscore, No-Get).
 # =============================================================================
-
-from __future__ import annotations
 
 from lcars.base.type import LCARS, SystemComponent
 from lcars.base.info import Version
 from lcars.core.signal import ODN, Transmission
 from lcars.base.default import Palette
 
-from enum import IntEnum, EnumMeta
-
-# ═════════════════════════════════════════════════════════════════════
-# 1. МЕТАКЛАС ТА СТАТУСИ РІВНІВ БОЙОВОЇ ГОТОВНОСТІ (ALERT LEVELS)
-# ═════════════════════════════════════════════════════════════════════
-class AlertLevelMeta(EnumMeta):
-    @property
-    def Members(cls):
-        return {
-            "GREEN": cls.GREEN,
-            "YELLOW": cls.YELLOW,
-            "RED": cls.RED,
-        }
-
-    def __iter__(cls):
-        return iter([cls.GREEN, cls.YELLOW, cls.RED])
-
-    def __contains__(cls, Item):
-        return Item in [cls.GREEN, cls.YELLOW, cls.RED] or any(Item == m.value or Item == m for m in cls)
-
-    def __getitem__(cls, Name):
-        NameStr = str(Name).upper().strip()
-        MembersMap = {
-            "GREEN": cls.GREEN,
-            "NORMAL": cls.GREEN,
-            "NOMINAL": cls.GREEN,
-            "YELLOW": cls.YELLOW,
-            "CAUTION": cls.YELLOW,
-            "STANDBY": cls.YELLOW,
-            "RED": cls.RED,
-            "TACTICAL": cls.RED,
-            "COMBAT": cls.RED,
-            "BATTLE": cls.RED,
-        }
-        if NameStr in MembersMap:
-            return MembersMap[NameStr]
-        raise KeyError(Name)
-
-class AlertLevel(IntEnum, metaclass=AlertLevelMeta):
+# =============================================================================
+# 1. СТАТУСИ РІВНІВ БОЙОВОЇ ГОТОВНОСТІ (ALERT LEVELS)
+# =============================================================================
+class AlertLevel:
     GREEN = 0
     NORMAL = 0
     NOMINAL = 0
@@ -73,32 +31,27 @@ class AlertLevel(IntEnum, metaclass=AlertLevelMeta):
     COMBAT = 2
     BATTLE = 2
 
-    @property
-    def Name(self) -> str:
-        if self.value == 0:
-            return "GREEN"
-        elif self.value == 1:
-            return "YELLOW"
-        elif self.value == 2:
-            return "RED"
-        return self.name
+    # Канонічні імена рівнів
+    Names = {
+        0: "GREEN",
+        1: "YELLOW",
+        2: "RED",
+    }
 
-    @property
-    def Value(self) -> int:
-        return self.value
+    @staticmethod
+    def Designation(Level: int) -> str:
+        return AlertLevel.Names.get(int(Level), "GREEN")
 
-# ═════════════════════════════════════════════════════════════════════
+# =============================================================================
 # 2. АРХІТЕКТУРНА КОНФІГУРАЦІЯ ТРИВОГ (ALERT CONFIGURATION)
-# ═════════════════════════════════════════════════════════════════════
+# =============================================================================
 class AlertConfiguration(LCARS):
-    # Кольорові палітри для кожного рівня тривоги (беруться з канону Palette)
     Palettes = {
         "GREEN": Palette.Buttons,
         "YELLOW": Palette.Yellow,
         "RED": Palette.Red,
     }
 
-    # Пороги апаратного навантаження (CPU / RAM)
     Thresholds = {
         "CpuCritical": 92.0,
         "CpuWarning": 80.0,
@@ -106,96 +59,68 @@ class AlertConfiguration(LCARS):
         "MemoryWarning": 82.0,
     }
 
-    # Звукові сигнали тривоги
     Sounds = {
         "GREEN": "alert_green",
         "YELLOW": "alert_yellow",
         "RED": "alert_red",
     }
 
-    # Назви візуальних тем
     Themes = {
         "GREEN": "Standard",
         "YELLOW": "YellowAlert",
         "RED": "RedAlert",
     }
 
-# ═════════════════════════════════════════════════════════════════════
+# =============================================================================
 # 3. СИСТЕМНИЙ КОНТРОЛЕР ТРИВОГ (ALERT SYSTEM & ACTUATOR)
-# ═════════════════════════════════════════════════════════════════════
+# =============================================================================
 class AlertSystem(SystemComponent):
+    TypeName = "LCARSAlertSystem"
+    SystemId = "System.Alert"
+    Id = "System.Alert"
     SystemVersion = Version.Release
-    InstanceRef = None
 
-    # Канали сигналів LCARS Transmission для підписки компонентів
+    Level = AlertLevel.GREEN
+    PreviousLevel = AlertLevel.GREEN
+    Reason = "System Nominal"
+    AuthorizedBy = "SystemBootstrap"
+    AlertHistory = []
+
+    # Фізичні та тактичні параметри корабля
+    ShieldPower = 0.0
+    WeaponsStatus = "Safe"
+    WarpDriveMode = "Cruise"
+    SensorsPower = "Standard"
+    SubspaceComms = "Online"
+    StructuralIntegrity = "Nominal"
+    InertialDampeners = "Standard"
+    ActiveTheme = "Standard"
+
+    EmergencyFailoverActive = False
+    FailoverSubsystem = ""
+    IsDrillActive = False
+
+    # Сигнали ODN
     Changed = Transmission(dict)
     LevelRaised = Transmission(dict)
     LevelLowered = Transmission(dict)
     EmergencyFailover = Transmission(dict)
 
-    def __new__(cls, *args, **kwargs):
-        if cls.InstanceRef is None:
-            cls.InstanceRef = super().__new__(cls)
-        return cls.InstanceRef
+    # Канонічне позначення поточного рівня тривоги
+    def LevelDesignation(self) -> str:
+        return AlertLevel.Designation(self.Level)
 
-    def __init__(self, SystemId: str = "System.Alert"):
-        if getattr(self, "Initialized", False):
-            return
-        super().__init__(SystemId=SystemId)
-        self.Initialized = True
-        self.Version = Version.Release
-        self.Passport = Version.Passport()
-        self.Level = AlertLevel.GREEN
-        self.PreviousLevel = AlertLevel.GREEN
-        self.Reason = "System Nominal"
-        self.AuthorizedBy = "SystemBootstrap"
-        self.EventBus = None
-        self.Controller = None
-        self.AlertHistory = []
-
-        # Фізичні та тактичні параметри корабля
-        self.ShieldPower = 0.0
-        self.WeaponsStatus = "Safe"
-        self.WarpDriveMode = "Cruise"
-        self.SensorsPower = "Standard"
-        self.SubspaceComms = "Online"
-        self.StructuralIntegrity = "Nominal"
-        self.InertialDampeners = "Standard"
-        self.ActiveTheme = AlertConfiguration.Themes["GREEN"]
-
-        # Аварійний режим та дублюючі контури
-        self.EmergencyFailoverActive = False
-        self.FailoverSubsystem = ""
-        self.IsDrillActive = False
-
-    @classmethod
-    def GetInstance(cls) -> AlertSystem:
-        if cls.InstanceRef is None:
-            cls.InstanceRef = AlertSystem()
-        return cls.InstanceRef
-
-    def Init(self, EventBus=None, Controller=None) -> AlertSystem:
-        self.EventBus = EventBus
-        self.Controller = Controller
-        self.Level = AlertLevel.GREEN
-        self.PreviousLevel = AlertLevel.GREEN
-        self.Reason = "System Nominal"
-        self.AuthorizedBy = "SystemBootstrap"
-        self.EmergencyFailoverActive = False
-        self.ApplyTacticalProfile(self.Level)
-        return self
-
-    # Повертає активну палітру кольорів відповідно до поточного рівня тривоги
-    def GetActivePalette(self) -> list[str]:
-        return AlertConfiguration.Palettes.get(self.Level.Name, Palette.Buttons)
+    # Активна оптична палітра
+    def Palette(self) -> list[str]:
+        return AlertConfiguration.Palettes.get(self.LevelDesignation(), Palette.Buttons)
 
     # Головна точка повного перемикання стану та вигляду фреймворка
-    def SetLevel(self, LevelInput: any, Reason: str = "Manual Directive", AuthorizedBy: str = "Captain") -> AlertLevel:
+    def SetLevel(self, LevelInput: any, Reason: str = "Manual Directive", AuthorizedBy: str = "Captain") -> int:
         OldLevel = self.Level
         NewLevel = self.ParseLevel(LevelInput)
 
         if self.Level != NewLevel:
-            NowTime = LCARS.System.Time.time() if hasattr(LCARS.System, "Time") else 0.0
+            NowTime = LCARS.System.Time.time() if hasattr(LCARS.System, "Time") and callable(getattr(LCARS.System.Time, "time", None)) else 0.0
             self.PreviousLevel = OldLevel
             self.Level = NewLevel
             self.Reason = str(Reason)
@@ -204,8 +129,8 @@ class AlertSystem(SystemComponent):
             # Фіксація в історії тривог
             HistoryRecord = {
                 "Timestamp": round(NowTime, 2),
-                "FromLevel": OldLevel.Name,
-                "ToLevel": NewLevel.Name,
+                "FromLevel": AlertLevel.Designation(OldLevel),
+                "ToLevel": AlertLevel.Designation(NewLevel),
                 "Reason": self.Reason,
                 "AuthorizedBy": self.AuthorizedBy,
                 "IsFailover": self.EmergencyFailoverActive,
@@ -215,58 +140,46 @@ class AlertSystem(SystemComponent):
             # 1. Перемикання тактичного стану
             self.ApplyTacticalProfile(NewLevel)
 
-            # 2. Синхронізація з Інженерним комплексом (Engineering: щити, варп, розподіл живлення)
+            # 2. Синхронізація з Інженерним комплексом
             self.SyncEngineeringLayer(NewLevel)
 
-            # 3. Синхронізація з Системним Середовищем (SystemEnvironment)
+            # 3. Синхронізація з Системним Середовищем
             self.SyncSystemEnvironment(NewLevel)
 
-            # 4. Активація корабельної звукової сигналізації
+            # 4. Активація звукової сигналізації
             self.ActuateAlertSound(NewLevel)
 
             # 5. Оновлення візуальної теми інтерфейсу всього фреймворка
             self.ActuateInterfaceTheme(NewLevel)
 
-            # 6. Квантово-оптична мережа ODN (мовлення для всіх станцій)
-            StateMap = self.GetState()
+            # 6. Квантово-оптична мережа ODN
+            TelemetryMap = self.Telemetry()
             ODN.Transmit(
                 "Alert.Changed",
-                Level=NewLevel.Name,
-                Value=NewLevel.Value,
-                Previous=OldLevel.Name,
+                Level=AlertLevel.Designation(NewLevel),
+                Value=NewLevel,
+                Previous=AlertLevel.Designation(OldLevel),
                 Reason=self.Reason,
                 AuthorizedBy=self.AuthorizedBy,
-                ActiveColors=self.GetActivePalette(),
-                Tactical=self.GetTacticalState()
+                ActiveColors=self.Palette(),
+                Tactical=self.TacticalProfile()
             )
-            ODN.Transmit("UI.AlertChanged", Level=NewLevel.Name, Theme=self.ActiveTheme, Colors=self.GetActivePalette())
-            ODN.Transmit("ODN.06.RemoteAlertPush", Level=NewLevel.Name, Reason=self.Reason)
+            ODN.Transmit("UI.AlertChanged", Level=AlertLevel.Designation(NewLevel), Theme=self.ActiveTheme, Colors=self.Palette())
 
-            # 7. EventBus integration
-            if self.EventBus:
-                EventPayload = {
-                    "level": NewLevel.Name,
-                    "previous_level": OldLevel.Name,
-                    "reason": self.Reason,
-                    "authorized_by": self.AuthorizedBy,
-                }
-                if hasattr(self.EventBus, "emit"):
-                    self.EventBus.emit("CHANGED", EventPayload)
-                elif hasattr(self.EventBus, "Emit"):
-                    self.EventBus.Emit("CHANGED", EventPayload)
-
-            # 8. Внутрішні канали сигналів
-            self.Changed.Emit(StateMap)
-            if NewLevel.Value > OldLevel.Value:
-                self.LevelRaised.Emit(StateMap)
+            # 7. Сигнали передачі
+            self.Changed.Emit(TelemetryMap)
+            if NewLevel > OldLevel:
+                self.LevelRaised.Emit(TelemetryMap)
             else:
-                self.LevelLowered.Emit(StateMap)
+                self.LevelLowered.Emit(TelemetryMap)
 
         return self.Level
 
     # Налаштування інженерних та тактичних параметрів
-    def ApplyTacticalProfile(self, Level: AlertLevel) -> None:
-        self.ActiveTheme = AlertConfiguration.Themes.get(Level.Name, "Standard")
+    def ApplyTacticalProfile(self, Level: int) -> None:
+        LevelName = AlertLevel.Designation(Level)
+        self.ActiveTheme = AlertConfiguration.Themes.get(LevelName, "Standard")
+
         if Level == AlertLevel.RED:
             self.ShieldPower = 100.0
             self.WeaponsStatus = "Hot"
@@ -275,7 +188,6 @@ class AlertSystem(SystemComponent):
             self.SubspaceComms = "SecurePriority"
             self.StructuralIntegrity = "Maximum100Percent"
             self.InertialDampeners = "HeavyCombat"
-
         elif Level == AlertLevel.YELLOW:
             self.ShieldPower = 50.0
             self.WeaponsStatus = "Armed"
@@ -284,7 +196,6 @@ class AlertSystem(SystemComponent):
             self.SubspaceComms = "Online"
             self.StructuralIntegrity = "Reinforced"
             self.InertialDampeners = "Standard"
-
         else:
             self.ShieldPower = 0.0
             self.WeaponsStatus = "Safe"
@@ -294,53 +205,31 @@ class AlertSystem(SystemComponent):
             self.StructuralIntegrity = "Nominal"
             self.InertialDampeners = "Standard"
 
-    # Синхронізація з Інженерним комплексом
-    def SyncEngineeringLayer(self, Level: AlertLevel) -> None:
-        from lcars.engineering.controller import Engineering
-        Eng = Engineering.GetInstance()
-        if Eng:
-            Eng.ApplyAlertLevel(Level.Name)
+    # Синхронізація з Інженерним комплексом корабля
+    def SyncEngineeringLayer(self, Level: int) -> None:
+        ODN.Transmit("Engineering.AlertSync", AlertLevel=AlertLevel.Designation(Level))
 
     # Синхронізація з Системним Середовищем
-    def SyncSystemEnvironment(self, Level: AlertLevel) -> None:
-        from lcars.system.environment import SystemEnvironment
+    def SyncSystemEnvironment(self, Level: int) -> None:
+        LevelName = AlertLevel.Designation(Level)
         import lcars.base.default as DefaultMod
-        DefaultMod.SystemState = Level.Name
-        SystemEnvironment.Set("AlertLevel", Level.Name)
-        ModeStr = "TACTICAL" if Level == AlertLevel.RED else ("ALERT" if Level == AlertLevel.YELLOW else "NORMAL")
-        SystemEnvironment.Set("SystemMode", ModeStr)
+        DefaultMod.SystemState = LevelName
+        ODN.Transmit("System.Environment.Alert", AlertLevel=LevelName)
 
     # Активація звукової сигналізації
-    def ActuateAlertSound(self, Level: AlertLevel) -> None:
-        from lcars.modules.sound import ActiveAudio
-        if Level == AlertLevel.RED:
-            ActiveAudio.StartAlertLoop("red")
-        elif Level == AlertLevel.YELLOW:
-            ActiveAudio.StartAlertLoop("yellow")
-        else:
-            ActiveAudio.StopAlertLoop()
-            SoundName = AlertConfiguration.Sounds.get(Level.Name, "alert_green")
-            ActiveAudio.Play(SoundName)
+    def ActuateAlertSound(self, Level: int) -> None:
+        LevelName = AlertLevel.Designation(Level)
+        SoundName = AlertConfiguration.Sounds.get(LevelName, "alert_green")
+        ODN.Transmit("Audio.PlayAlert", Sound=SoundName, Loop=(Level != AlertLevel.GREEN))
 
     # Оновлення візуального оформлення фреймворка
-    def ActuateInterfaceTheme(self, Level: AlertLevel) -> None:
-        if self.Controller:
-            if hasattr(self.Controller, "ApplyLevel"):
-                self.Controller.ApplyLevel(Level)
-            elif hasattr(self.Controller, "apply_level"):
-                self.Controller.apply_level(Level)
-            elif hasattr(self.Controller, "SetAlertLevel"):
-                self.Controller.SetAlertLevel(Level)
-            elif hasattr(self.Controller, "set_alert_level"):
-                self.Controller.set_alert_level(Level)
-            elif callable(self.Controller):
-                self.Controller(Level)
-        ActiveColors = self.GetActivePalette()
-        ODN.Transmit("UI.ThemeChanged", Theme=self.ActiveTheme, Level=Level.Name, Colors=ActiveColors)
-        ODN.Transmit("UI.PaletteChanged", CurrentAlert=Level.Name, Colors=ActiveColors)
+    def ActuateInterfaceTheme(self, Level: int) -> None:
+        ActiveColors = self.Palette()
+        ODN.Transmit("UI.ThemeChanged", Theme=self.ActiveTheme, Level=AlertLevel.Designation(Level), Colors=ActiveColors)
+        ODN.Transmit("UI.PaletteChanged", CurrentAlert=AlertLevel.Designation(Level), Colors=ActiveColors)
 
-    # Обробка критичних збоїв, помилок та автоматичний перехід в аварійний режим
-    def HandleSystemFailure(self, FailedSubsystem: str, ErrorMessage: str, Criticality: str = "HIGH") -> AlertLevel:
+    # Обробка критичних збоїв, помилок та аварійний перехід
+    def Failover(self, FailedSubsystem: str, ErrorMessage: str, Criticality: str = "HIGH") -> int:
         self.EmergencyFailoverActive = True
         self.FailoverSubsystem = str(FailedSubsystem)
         CritUpper = str(Criticality or "").upper()
@@ -349,7 +238,7 @@ class AlertSystem(SystemComponent):
             "Subsystem": FailedSubsystem,
             "Error": ErrorMessage,
             "Criticality": CritUpper,
-            "Timestamp": LCARS.System.Time.time() if hasattr(LCARS.System, "Time") else 0.0,
+            "Timestamp": LCARS.System.Time.time() if hasattr(LCARS.System, "Time") and callable(getattr(LCARS.System.Time, "time", None)) else 0.0,
         }
         self.EmergencyFailover.Emit(FailoverEvent)
         ODN.Transmit("System.EmergencyFailoverEngaged", **FailoverEvent)
@@ -367,14 +256,8 @@ class AlertSystem(SystemComponent):
                 AuthorizedBy="AutomatedHealthFailover"
             )
 
-    # Автоматична оцінка апаратної телеметрії (CPU, пам'ять, диски)
-    def EvaluateHardwareTelemetry(self, Stats: dict | None = None) -> AlertLevel:
-        from lcars.system.environment import SystemEnvironment
-        HardwareStats = Stats or SystemEnvironment.GetSystemStats()
-
-        Cpu = float(HardwareStats.get("CpuPercent", 0.0))
-        Memory = float(HardwareStats.get("MemoryPercent", 0.0))
-
+    # Оцінка апаратної телеметрії
+    def AuditTelemetry(self, Cpu: float = 0.0, Memory: float = 0.0) -> int:
         CpuCrit = AlertConfiguration.Thresholds["CpuCritical"]
         MemCrit = AlertConfiguration.Thresholds["MemoryCritical"]
         CpuWarn = AlertConfiguration.Thresholds["CpuWarning"]
@@ -398,82 +281,66 @@ class AlertSystem(SystemComponent):
                 Reason="Hardware Resources Normalized",
                 AuthorizedBy="AutomatedTelemetryGrid"
             )
-
         return self.Level
 
     # Навчальна тривога (Alert Drill)
-    def TriggerDrill(self, LevelInput: any = AlertLevel.RED) -> AlertLevel:
+    def TriggerDrill(self, LevelInput: any = AlertLevel.RED) -> int:
         self.IsDrillActive = True
         TargetLvl = self.ParseLevel(LevelInput)
         return self.SetLevel(TargetLvl, Reason="Tactical Readiness Drill", AuthorizedBy="CommandDrill")
 
     # Зняття тривоги
-    def ClearAlert(self, AuthorizedBy: str = "Captain") -> AlertLevel:
+    def ClearAlert(self, AuthorizedBy: str = "Captain") -> int:
         self.EmergencyFailoverActive = False
         self.IsDrillActive = False
         return self.SetLevel(AlertLevel.GREEN, Reason="All Systems Nominal", AuthorizedBy=AuthorizedBy)
 
-    # Швидкі директиви
-    def EngageRedAlert(self, Reason: str = "Tactical Engagement", AuthorizedBy: str = "Captain") -> AlertLevel:
+    # Швидка бойова тривога (Red Alert)
+    def EngageRedAlert(self, Reason: str = "Tactical Engagement", AuthorizedBy: str = "Captain") -> int:
         return self.SetLevel(AlertLevel.RED, Reason=Reason, AuthorizedBy=AuthorizedBy)
 
-    def EngageYellowAlert(self, Reason: str = "Heightened Readiness", AuthorizedBy: str = "TacticalOfficer") -> AlertLevel:
+    # Швидка підвищена готовність (Yellow Alert)
+    def EngageYellowAlert(self, Reason: str = "Heightened Readiness", AuthorizedBy: str = "TacticalOfficer") -> int:
         return self.SetLevel(AlertLevel.YELLOW, Reason=Reason, AuthorizedBy=AuthorizedBy)
 
-    # Парсинг вхідного значення у канонічний AlertLevel
-    def ParseLevel(self, LevelInput: any) -> AlertLevel:
-        if isinstance(LevelInput, AlertLevel):
-            return LevelInput
+    # Парсинг вхідного значення у канонічний числовий рівень (0, 1, 2)
+    def ParseLevel(self, LevelInput: any) -> int:
         if isinstance(LevelInput, int):
-            for Lvl in AlertLevel:
-                if int(Lvl) == LevelInput:
-                    return Lvl
-            return AlertLevel.GREEN
-
-        Normalized = str(LevelInput or "").upper().strip()
-        if hasattr(AlertLevel, "Members") and Normalized in AlertLevel.Members:
-            return AlertLevel.Members[Normalized]
-        if Normalized.isdigit():
-            Num = int(Normalized)
-            for Lvl in AlertLevel:
-                if int(Lvl) == Num:
-                    return Lvl
+            return max(0, min(2, LevelInput))
+        Norm = str(LevelInput or "").upper().strip()
+        if "RED" in Norm or "TACTICAL" in Norm or "COMBAT" in Norm or "BATTLE" in Norm:
+            return AlertLevel.RED
+        elif "YELLOW" in Norm or "CAUTION" in Norm or "STANDBY" in Norm:
+            return AlertLevel.YELLOW
         return AlertLevel.GREEN
 
     # Послідовне циклічне перемикання (Green -> Yellow -> Red -> Green)
-    def CycleLevel(self) -> AlertLevel:
-        Order = [AlertLevel.GREEN, AlertLevel.YELLOW, AlertLevel.RED]
-        CurrentIdx = 0
-        for Idx, L in enumerate(Order):
-            if self.Level == L:
-                CurrentIdx = Idx
-                break
-        NextLevel = Order[(CurrentIdx + 1) % len(Order)]
+    def CycleLevel(self) -> int:
+        NextLevel = (self.Level + 1) % 3
         return self.SetLevel(NextLevel, Reason="Level Cycled", AuthorizedBy="OfficerCycle")
 
     # Покрокове підвищення готовності (Green -> Yellow -> Red)
-    def RaiseLevel(self) -> AlertLevel:
-        if self.Level == AlertLevel.GREEN:
-            return self.SetLevel(AlertLevel.YELLOW, Reason="Alert Raised", AuthorizedBy="TacticalEscalation")
-        elif self.Level == AlertLevel.YELLOW:
-            return self.SetLevel(AlertLevel.RED, Reason="Alert Raised", AuthorizedBy="TacticalEscalation")
+    def RaiseLevel(self) -> int:
+        if self.Level < AlertLevel.RED:
+            return self.SetLevel(self.Level + 1, Reason="Alert Raised", AuthorizedBy="TacticalEscalation")
         return self.Level
 
     # Покрокове зниження тривоги (Red -> Yellow -> Green)
-    def LowerLevel(self) -> AlertLevel:
-        if self.Level == AlertLevel.RED:
-            return self.SetLevel(AlertLevel.YELLOW, Reason="Alert Lowered", AuthorizedBy="TacticalDeescalation")
-        elif self.Level == AlertLevel.YELLOW:
-            return self.SetLevel(AlertLevel.GREEN, Reason="Alert Lowered", AuthorizedBy="TacticalDeescalation")
+    def LowerLevel(self) -> int:
+        if self.Level > AlertLevel.GREEN:
+            return self.SetLevel(self.Level - 1, Reason="Alert Lowered", AuthorizedBy="TacticalDeescalation")
         return self.Level
 
+    # Перевірка чи активний певний рівень
     def IsLevel(self, LevelInput: any) -> bool:
         return self.Level == self.ParseLevel(LevelInput)
 
+    # Чи активна будь-яка тривога (не зелений режим)
     def IsAlert(self) -> bool:
         return self.Level != AlertLevel.GREEN
 
-    def GetTacticalState(self) -> dict:
+    # Тактичний профіль корабля
+    def TacticalProfile(self) -> dict:
         return {
             "ShieldPowerPercent": self.ShieldPower,
             "WeaponsStatus": self.WeaponsStatus,
@@ -483,51 +350,36 @@ class AlertSystem(SystemComponent):
             "StructuralIntegrity": self.StructuralIntegrity,
             "InertialDampeners": self.InertialDampeners,
             "ActiveTheme": self.ActiveTheme,
-            "ActivePaletteColors": self.GetActivePalette(),
+            "ActivePaletteColors": self.Palette(),
             "EmergencyFailover": self.EmergencyFailoverActive,
             "FailoverSubsystem": self.FailoverSubsystem,
         }
 
-    def GetState(self) -> dict:
+    # Повна телеметрія контролера тривог
+    def Telemetry(self) -> dict:
         return {
             "SystemId": self.SystemId,
-            "Version": self.Version,
-            "Level": self.Level.Name,
-            "Value": self.Level.Value,
-            "PreviousLevel": self.PreviousLevel.Name,
+            "Version": self.SystemVersion,
+            "Level": AlertLevel.Designation(self.Level),
+            "Value": self.Level,
+            "PreviousLevel": AlertLevel.Designation(self.PreviousLevel),
             "IsAlertActive": self.IsAlert(),
             "Reason": self.Reason,
             "AuthorizedBy": self.AuthorizedBy,
             "EmergencyFailover": self.EmergencyFailoverActive,
-            "Tactical": self.GetTacticalState(),
+            "Tactical": self.TacticalProfile(),
             "TotalHistoryRecords": len(self.AlertHistory),
         }
 
-    def GetAlertHistory(self) -> list[dict]:
+    # Журнал історії зміни тривог
+    def History(self) -> list[dict]:
         return list(self.AlertHistory)
 
-# Точки доступу та канонічний експорт
-ActiveAlerts = AlertSystem.GetInstance()
-AlertStatus = AlertSystem.GetInstance()
+# Канонічний активний вузол системи LCARS (автоматично ініціалізований як SystemComponent)
+AlertControl = AlertSystem()
+ActiveAlerts = AlertControl
+AlertStatus = AlertControl
 
-def GetAlertSystem(EventBus=None, Controller=None) -> AlertSystem:
-    Sys = AlertSystem.GetInstance()
-    if EventBus is not None or Controller is not None:
-        Sys.Init(EventBus=EventBus, Controller=Controller)
-    return Sys
-
-def GetSystemVersion() -> str:
-    return str(Version.Release)
-
-getSystemVersion = GetSystemVersion
-
-__all__ = [
-    "AlertLevel",
-    "AlertConfiguration",
-    "AlertSystem",
-    "ActiveAlerts",
-    "AlertStatus",
-    "GetAlertSystem",
-    "GetSystemVersion",
-    "getSystemVersion",
-]
+# Реєстрація в ядрі LCARS
+LCARS.Alert = AlertControl
+LCARS.Register("System.Alert", AlertControl)
