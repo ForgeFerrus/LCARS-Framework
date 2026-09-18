@@ -15,13 +15,10 @@ class Namespace(type):
     PatternBuffer: str = ""
     Entity: object = None
 
-    # Прямий резолвінг вузла за повним шляхом
-    def Pattern(cls, Path: str):
-        return LCARS.Retrieve(Path)
-
     # Побудова ланцюжка та прохід углиб через крапку
     def ResolvePattern(cls, AttributeName: str):
-        if AttributeName.startswith("mro") or AttributeName.startswith("class") or AttributeName.startswith("_"):
+        # Протокольні проби інтерпретатора завжди починаються з підкреслення
+        if AttributeName.startswith("_"):
             return None
 
         ParentPath = getattr(cls, "PatternBuffer", "")
@@ -45,7 +42,6 @@ class Namespace(type):
         }
 
         CleanAttrName = SegmentAliases.get(AttributeName, AttributeName)
-
         if not ParentPath:
             CurrentPath = RootMap.get(AttributeName, AttributeName)
         else:
@@ -76,14 +72,6 @@ class Namespace(type):
 
         if Resolved is not None:
             return Resolved
-
-        # Канонічний фолбек: останній сегмент ланцюга може бути шляховою
-        # константою кореня LCARS (наприклад RectF -> "Base.Geometry.Rect")
-        DictRef = getattr(LCARS, "Dictionary", None)
-        if isinstance(DictRef, dict):
-            CanonicalPath = DictRef.get(AttributeName)
-            if isinstance(CanonicalPath, str) and CanonicalPath:
-                return LCARS.Retrieve(CanonicalPath)
 
         return None
 
@@ -310,9 +298,7 @@ class LCARS(metaclass=Namespace):
     # Аліас ініціалізатора визначено вище (Init = Initialize):
     # шляховий вузол System.Protocol.Init не перекриває канонічний метод.
     All = "System.Protocol.All"
-    Dictionary = "System.Protocol.Dictionary"
     Directory = "System.Protocol.Directory"
-    Name = "System.Protocol.Name"
     Doc = "System.Protocol.Doc"
     File = "System.Protocol.File"
     Annotations = "System.Protocol.Annotations"
