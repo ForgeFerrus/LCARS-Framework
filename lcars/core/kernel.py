@@ -256,8 +256,8 @@ class Kernel(LCARS):
         self.System = None
 
         self.Ready = True
-        registry.Register("Core.Kernel", "lcars.core.kernel", "Kernel")
-        registry.Register("Core.Matrix", "lcars.core.matrix", "SystemMatrix")
+        LCARS.Register("Core.Kernel", "lcars.core.kernel", "Kernel")
+        LCARS.Register("Core.Matrix", "lcars.core.matrix", "SystemMatrix")
 
     # Отримання синглтона мікроядра
     @classmethod

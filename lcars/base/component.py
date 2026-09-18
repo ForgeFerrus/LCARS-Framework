@@ -268,6 +268,18 @@ class Component(Visual):
         self.Refresh()
         return self
 
+    # Канонічне отримання та створення оптичної поверхні сенсорного скла
+    def GetSurface(self):
+        if getattr(self, "SurfaceHost", None) is None:
+            SurfaceClass = LCARS.Retrieve("Base.Interface.Surface")
+            if SurfaceClass is not None and callable(SurfaceClass):
+                self.SurfaceHost = SurfaceClass()
+                if hasattr(self.SurfaceHost, "Initialize"):
+                    self.SurfaceHost.Initialize(Optics=self)
+        return getattr(self, "SurfaceHost", None)
+
+    Surface = GetSurface
+
 # Канонічний аліас для зворотної сумісності
 Interactable = Component
 # =============================================================================

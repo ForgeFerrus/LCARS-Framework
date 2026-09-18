@@ -251,14 +251,20 @@ class LCARS(metaclass=Namespace):
 
     # Отримання канонічного екземпляра додатку через ядро
     def Launch(EntryPoint: Type.Any, *Args, **Flags) -> Type.Any:
-    # 1. СПЕРШУ створюємо / отримуємо головний додаток (QApplication)
-        AppClass = Retrieve("Base.Interface.Application")
+        # 1. СПЕРШУ створюємо / отримуємо головний додаток (QApplication)
+        AppClass = LCARS.Retrieve("Base.Interface.Application")
         App = AppClass.instance() if AppClass and hasattr(AppClass, "instance") else None
-        if App is None and AppClass:
+        if App is None and AppClass and callable(AppClass):
             App = AppClass([])
 
+        # Якщо викликано як метод класу LCARS.Launch(EntryPoint)
+        TargetEntryPoint = EntryPoint
+        if TargetEntryPoint is LCARS and Args:
+            TargetEntryPoint = Args[0]
+            Args = Args[1:]
+
         # 2. ТІЛЬКИ ТЕПЕР викликаємо інтерфейс — тепер створення QWidget дозволено!
-        Instance = EntryPoint(*Args, **Flags) if callable(EntryPoint) else EntryPoint
+        Instance = TargetEntryPoint(*Args, **Flags) if callable(TargetEntryPoint) else TargetEntryPoint
 
         if hasattr(Instance, "Show"):
             Instance.Show()
@@ -543,6 +549,7 @@ if StaticNode is not None:
     LCARS.Catalog = CatalogNode
     LCARS.Library = CatalogNode
     LCARS.Constant = StaticNode(Constant)
+    LCARS.Launch = StaticNode(LCARS.Launch)
 # =====================================================================
 # COMPONENT CLASS - Базовий клас для компонентів
 class SystemComponent(LCARS):
