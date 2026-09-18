@@ -7,7 +7,6 @@
 # Все інше в ДНК і підкласах — лише через вузли Реєстру.
 from .register import registry
 from .info import Version, Passport
-import builtins
 # =====================================================================
 # ПРОСТІР ІМЕН LCARS (ЛАНЦЮГОВИЙ МАРШРУТИЗАТОР ТА ОПТИЧНИЙ ПРОВІДНИК)
 # =====================================================================
@@ -22,7 +21,6 @@ class Namespace(type):
             return None
 
         ParentPath = getattr(cls, "PatternBuffer", "")
-        
         # Канонічні кореневі точки входу в реєстр
         RootMap = {
             "Visual": "Base.Visual",
@@ -31,7 +29,6 @@ class Namespace(type):
             "Interface": "Base.Interface",
             "Graphics": "Base.Graphics",
         }
-
         # Канонічні аліаси сегментів
         SegmentAliases = {
             "RectF": "Rect",
@@ -40,7 +37,6 @@ class Namespace(type):
             "LineF": "Line",
             "MarginsF": "Margins",
         }
-
         CleanAttrName = SegmentAliases.get(AttributeName, AttributeName)
         if not ParentPath:
             CurrentPath = RootMap.get(AttributeName, AttributeName)
@@ -49,7 +45,6 @@ class Namespace(type):
 
         # 1. Шукаємо запис у Реєстрі LCARS
         Resolved = LCARS.Retrieve(CurrentPath)
-
         # Якщо знайдено дійсний клас або функцію — віддаємо напряму
         if Resolved is not None and (callable(Resolved) or isinstance(Resolved, type)):
             return Resolved
@@ -72,7 +67,6 @@ class Namespace(type):
 
         if Resolved is not None:
             return Resolved
-
         return None
 
     # ═══ ПРОТОКОЛ ВИКЛИКУ: МАТЕРІАЛІЗАЦІЯ ЕКЗЕМПЛЯРА ЧЕРЕЗ ІНІЦІАЛІЗАТОР ═══
@@ -132,6 +126,8 @@ def Import(ModuleName: str, fromlist=None):
     SlotName = registry.get("System.Protocol.Card", {}).get("Import", "")
     if not SlotName:
         return None
+    # Отримуємо завантажувач із картки Реєстру (System.Protocol.Card)
+    import builtins
     BuiltinLoader = getattr(builtins, SlotName)
     if fromlist:
         return BuiltinLoader(CleanName, fromlist=fromlist)

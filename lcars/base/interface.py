@@ -232,7 +232,6 @@ class Element(Component):
         
     def Item(self, Key: str) -> Component | None:
         return self.Items.get(Key)
-    Item = LCARS.GetItem
 
     # Додає новий компонент або лейаут у композицію
     def Add(self, *Arguments):
