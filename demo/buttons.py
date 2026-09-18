@@ -4,73 +4,72 @@
 # 1. PADD запускається у стані очікування (STANDBY) із кнопкою ініціалізації.
 # 2. Натискання кнопки активує квантове декодування (TextDecode) та потік телеметрії (DataStream).
 # 3. Термінальний посимвольний друк (Typewriter) підтверджує готовність матриці.
-# 4. Каскадне розгортання (Stagger + Reveal) розгортає повний каталог кнопок LCARS.
+# 4. Каскадне розгортання (Stagger + Reveal) переводить PADD у повний каталог кнопок LCARS.
 from lcars.base.type import LCARS
-from lcars.base.interface import PADD, Panel
-from lcars.base.component import LCARSButton, LCARSElbow, LCARSLabel
+from lcars.base.interface import PADD, Panel, Header, Footer
+from lcars.base.component import LCARSButton, LCARSElbow, LCARSLabel, LCARSIndicator
 from lcars.base.animation import TextDecode, Typewriter, DataStream, Reveal, Stagger
 from lcars.base.default import SystemTheme, Palette
 from lcars.system.power import PowerControl
-# =========================================================================
-# 1. ЕКРАН ОЧІКУВАННЯ ТА ІНІЦІАЛІЗАЦІЇ
-# =========================================================================
+
 def ButtonsInterface():
-    Padd = PADD(Title="LCARS INTERFACE & BUTTON CATALOG", Width=1100, Height=720)
-    Padd.SetVertical(24, 24, 24, 24, Spacing=14)
+    Padd = PADD(Title="LCARS INTERFACE & BUTTON CATALOG", Width=1180, Height=760)
+    Padd.SetVertical(10, 10, 10, 10, Spacing=8)
 
+    # 1. Верхня та нижня консольні смуги планшета
+    TopHeader = Header(Title="LCARS 47 // STARFLEET TACTICAL INTERFACE", Spectrum=Palette.Buttons[2])
+    Padd.Add(TopHeader)
+
+    # 2. Центральна робоча область (контейнер для перемикання екранів)
+    WorkArea = Panel(Spectrum=Palette.Background)
+    WorkArea.SetVertical(0, 0, 0, 0, Spacing=0)
+
+    # =========================================================================
+    # ЕКРАН 1: СТАН ОЧІКУВАННЯ ТА ІНІЦІАЛІЗАЦІЯ (BOOT / STANDBY)
+    # =========================================================================
     BootScreen = Panel(Spectrum=Palette.Background)
-    BootScreen.SetVertical(0, 0, 0, 0, Spacing=14)
-    BootScreen.AddStretch(1)
-    BootScreen.SetVertical(40, 40, 40, 40, Spacing=16)
+    BootScreen.SetVertical(20, 20, 20, 20, Spacing=16)
 
-    # Статусний заголовок
     StatusLabel = LCARSLabel(
         Text="STANDBY MODE // PADD OFFLINE",
-        FontSize=18,
         FontSize=20,
         Align="center",
-        Width=600,
-        Height=36,
         Width=800,
-        Height=40,
+        Height=36,
         Spectrum=Palette.Buttons[1]
     )
     BootScreen.Add(StatusLabel)
 
-    # Підказка для офіцера
     PromptLabel = LCARSLabel(
-        Text="PRESS INITIALIZE TO ENGAGE LCARS INTERFACE",
-        FontSize=12,
+        Text="PRESS INITIALIZE TO ENGAGE LCARS INTERFACE MATRIX",
         FontSize=13,
         Align="center",
-        Width=600,
-        Height=24,
         Width=800,
-        Height=28,
+        Height=26,
         Spectrum=Palette.Disabled[1]
     )
     BootScreen.Add(PromptLabel)
 
-    # Кнопка запуску ініціалізації
+    # Центрована панель для фірмової кнопки запуску
+    ButtonRow = Panel(Spectrum=Palette.Background)
+    ButtonRow.SetHorizontal(0, 0, 0, 0, Spacing=0)
+    ButtonRow.AddStretch(1)
+
     StartButton = LCARSButton(
         Text="INITIALIZE SYSTEM",
         Form=LCARSButton.Pill,
-        Width=280,
-        Height=46,
-        FontSize=15,
-        Width=340,
-        Height=50,
+        Width=360,
+        Height=48,
         FontSize=16,
-        Sound="acknowledge"
+        Sound="acknowledge",
+        Spectrum=Palette.Buttons[4]
     )
-    BootScreen.Add(StartButton)
+    ButtonRow.Add(StartButton)
+    ButtonRow.AddStretch(1)
+    BootScreen.Add(ButtonRow)
 
     # Потік діагностики та телеметрії ODN
     TelemetryStream = DataStream(
-        Width=600,
-        Height=110,
-        Rows=5,
-        FontSize=11,
         Width=800,
         Height=180,
         Rows=6,
@@ -87,97 +86,124 @@ def ButtonsInterface():
     ]
     BootScreen.Add(TelemetryStream)
     BootScreen.AddStretch(1)
-    # =========================================================================
-    # 2. ГОЛОВНА РОБОЧА ПАНЕЛЬ КАТАЛОГУ КНОПОК
-    # =========================================================================
-    CatalogRow = Panel(Spectrum=Palette.Background)
-    CatalogRow.SetHorizontal(16, 16, 16, 16, Spacing=12)
 
-    # ── Колонка 1: Всі форми ─────────────────────────────────────────
+    # =========================================================================
+    # ЕКРАН 2: ПОВНИЙ КАТАЛОГ УСІХ ФОРМ, СТАНІВ І ТИПІВ КНОПОК LCARS
+    # =========================================================================
+    CatalogScreen = Panel(Spectrum=Palette.Background)
+    CatalogScreen.SetHorizontal(0, 0, 0, 0, Spacing=12)
+
+    # ─── КОЛОНКА 1: ФОРМИ ОКУДИ (PILL, RECT, SOFT, HALF) ───
     Col1 = Panel(Spectrum=Palette.Background)
-    Col1.SetVertical(0, 0, 0, 0, Spacing=8)
+    Col1.SetVertical(0, 0, 0, 0, Spacing=6)
+
+    LblForms = LCARSLabel(Text="CANONICAL BUTTON FORMS", FontSize=12, Spectrum=Palette.Buttons[2])
+    Col1.Add(LblForms)
 
     FormButtons = []
-    for Text, Form, Direction in [
-        ("RECT",          LCARSButton.Rect,     0),
-        ("PILL",          LCARSButton.Pill,     0),
-        ("SOFT",          LCARSButton.Soft,     0),
-        ("PILLHALF →",    LCARSButton.PillHalf, 0),
-        ("PILLHALF ←",    LCARSButton.PillHalf, 180),
-        ("PILLHALF ↓",    LCARSButton.PillHalf, 90),
-        ("PILLHALF ↑",    LCARSButton.PillHalf, 270),
-        ("SOFTHALF →",    LCARSButton.SoftHalf, 0),
-        ("SOFTHALF ←",    LCARSButton.SoftHalf, 180),
+    for Text, FormVal, DirVal in [
+        ("RECT BUTTON",      LCARSButton.RectType,     0),
+        ("PILL CAPSULE",     LCARSButton.PillType,     0),
+        ("SOFT CHAMFER",     LCARSButton.SoftType,     0),
+        ("PILL-HALF EAST",   LCARSButton.PillHalfType, 0),
+        ("PILL-HALF WEST",   LCARSButton.PillHalfType, 180),
+        ("SOFT-HALF EAST",   LCARSButton.SoftHalfType, 0),
+        ("SOFT-HALF WEST",   LCARSButton.SoftHalfType, 180),
     ]:
-        B = LCARSButton(Text=Text, Form=Form, Direction=Direction, Width=200, Height=40, FontSize=14)
+        B = LCARSButton(Text=Text, Form=FormVal, Direction=DirVal, Width=210, Height=36, FontSize=12, Spectrum=Palette.Buttons[2])
         FormButtons.append(B)
         Col1.Add(B)
 
-    Col1.AddStretch()
-    CatalogRow.Add(Col1)
+    Col1.AddStretch(1)
+    CatalogScreen.Add(Col1)
 
-    # ── Колонка 2: Стани ─────────────────────────────────────────────
+    # ─── КОЛОНКА 2: СТАНИ, РЕЖИМИ ТА ІНДИКАТОРИ ───
     Col2 = Panel(Spectrum=Palette.Background)
-    Col2.SetVertical(0, 0, 0, 0, Spacing=8)
+    Col2.SetVertical(0, 0, 0, 0, Spacing=6)
 
-    for Text, State, Sensory in [
-        ("NORMAL",    "normal",   True),
-        ("DISABLED",  "disabled", False),
-        ("ALERT RED", "alert",    True),
-        ("YELLOW",    "yellow",   True),
+    LblStates = LCARSLabel(Text="OPERATIONAL STATES", FontSize=12, Spectrum=Palette.Buttons[1])
+    Col2.Add(LblStates)
+
+    for Text, State, Sensory, Color in [
+        ("NORMAL MATRIX",  "normal",   True,  Palette.Buttons[1]),
+        ("STANDBY OFF",    "disabled", False, Palette.Disabled[0]),
+        ("WARNING YELLOW", "yellow",   True,  Palette.YellowAlert[0]),
+        ("CRITICAL ALERT", "alert",    True,  Palette.RedAlert[0]),
     ]:
-        B = LCARSButton(Text=Text, Form=LCARSButton.Pill, State=State, Sensory=Sensory, Width=200, Height=40, FontSize=14)
+        B = LCARSButton(Text=Text, Form=LCARSButton.Pill, State=State, Sensory=Sensory, Spectrum=Color, Width=210, Height=36, FontSize=12)
         Col2.Add(B)
 
-    BSplit = LCARSButton(Text="SPLIT MODE", Form=LCARSButton.Rect, Number="47-001", SplitMode=True, Width=200, Height=40, FontSize=14)
-    Col2.Add(BSplit)
+    BSplit1 = LCARSButton(Text="SPLIT SYS", Number="47-A", SplitMode=True, Form=LCARSButton.RectType, Width=210, Height=36, FontSize=12, Spectrum=Palette.Buttons[0])
+    Col2.Add(BSplit1)
 
-    BDark = LCARSButton(Text="DARK CYCLE", Form=LCARSButton.PillHalf, Direction=0, Number="SEC-01", DarkCycle=True, IsWakeupTrigger=True, Width=200, Height=40, FontSize=14)
+    BDark = LCARSButton(Text="DARK CYCLE", Form=LCARSButton.PillHalf, Direction=0, Number="SEC-01", DarkCycle=True, IsWakeupTrigger=True, Width=210, Height=36, FontSize=12, Spectrum=Palette.Buttons[3])
     Col2.Add(BDark)
 
-    Col2.AddStretch()
-    CatalogRow.Add(Col2)
+    LblInd = LCARSLabel(Text="OPTICAL INDICATORS", FontSize=11, Spectrum=Palette.Buttons[0])
+    Col2.Add(LblInd)
 
-    # ── Колонка 3: Дії (Alert + Power) ───────────────────────────────
+    IndRow = Panel(Spectrum=Palette.Background)
+    IndRow.SetHorizontal(0, 0, 0, 0, Spacing=6)
+    Ind1 = LCARSIndicator(Form=LCARSIndicator.RectType, Width=65, Height=32, Spectrum=Palette.Buttons[2])
+    Ind2 = LCARSIndicator(Form=LCARSIndicator.SoftType, Width=65, Height=32, Spectrum=Palette.Buttons[0])
+    Ind3 = LCARSIndicator(Form=LCARSIndicator.PillHalf, Width=65, Height=32, Spectrum=Palette.Buttons[1])
+    IndRow.Add(Ind1)
+    IndRow.Add(Ind2)
+    IndRow.Add(Ind3)
+    Col2.Add(IndRow)
+
+    Col2.AddStretch(1)
+    CatalogScreen.Add(Col2)
+
+    # ─── КОЛОНКА 3: ДИРЕКТИВИ ТРИВОГИ, ЖИВЛЕННЯ ТА ЛІКОТЬ ───
     Col3 = Panel(Spectrum=Palette.Background)
-    Col3.SetVertical(0, 0, 0, 0, Spacing=8)
+    Col3.SetVertical(0, 0, 0, 0, Spacing=6)
 
-    BAlert = LCARSButton(Text="RED ALERT", Form=LCARSButton.Pill, State="alert", Sound="alert_red", Width=200, Height=40, FontSize=14)
-    BAlert.Clicked.Connect(lambda: SystemTheme.SetSystemState("Red"))
-    Col3.Add(BAlert)
+    LblAlert = LCARSLabel(Text="TACTICAL DIRECTIVES", FontSize=12, Spectrum=Palette.Buttons[0])
+    Col3.Add(LblAlert)
 
-    BYellow = LCARSButton(Text="YELLOW ALERT", Form=LCARSButton.PillHalf, Direction=180, State="yellow", Sound="alert_yellow", Width=200, Height=40, FontSize=14)
+    BRed = LCARSButton(Text="RED ALERT", Form=LCARSButton.Pill, State="alert", Sound="alert_red", Spectrum=Palette.RedAlert[0], Width=210, Height=38, FontSize=13)
+    BRed.Clicked.Connect(lambda: SystemTheme.SetSystemState("Red"))
+    Col3.Add(BRed)
+
+    BYellow = LCARSButton(Text="YELLOW ALERT", Form=LCARSButton.PillHalf, Direction=180, State="yellow", Sound="alert_yellow", Spectrum=Palette.YellowAlert[0], Width=210, Height=38, FontSize=13)
     BYellow.Clicked.Connect(lambda: SystemTheme.SetSystemState("Yellow"))
     Col3.Add(BYellow)
 
-    BNormal = LCARSButton(Text="CONDITION GREEN", Form=LCARSButton.Pill, State="normal", Sound="acknowledge", Width=200, Height=40, FontSize=14)
-    BNormal.Clicked.Connect(lambda: SystemTheme.SetSystemState("Normal"))
-    Col3.Add(BNormal)
+    BGreen = LCARSButton(Text="CONDITION GREEN", Form=LCARSButton.Pill, State="normal", Sound="acknowledge", Spectrum=Palette.Buttons[0], Width=210, Height=38, FontSize=13)
+    BGreen.Clicked.Connect(lambda: SystemTheme.SetSystemState("Normal"))
+    Col3.Add(BGreen)
 
-    BPower = LCARSButton(Text="GRID POWER", Form=LCARSButton.Pill, Sound="acknowledge", IsWakeupTrigger=True, Width=200, Height=40, FontSize=14)
+    BPower = LCARSButton(Text="GRID POWER", Form=LCARSButton.Pill, Sound="acknowledge", IsWakeupTrigger=True, Spectrum=Palette.Buttons[3], Width=210, Height=36, FontSize=12)
     BPower.Clicked.Connect(lambda: PowerControl.PowerOff() if PowerControl.State != 0 else PowerControl.PowerOn())
     Col3.Add(BPower)
 
-    BLock = LCARSButton(Text="STASIS LOCK", Form=LCARSButton.PillHalf, Direction=0, Sound="alert_yellow", IsWakeupTrigger=True, DarkCycle=True, Width=200, Height=40, FontSize=14)
+    BLock = LCARSButton(Text="STASIS LOCK", Form=LCARSButton.PillHalf, Direction=0, Sound="alert_yellow", IsWakeupTrigger=True, DarkCycle=True, Spectrum=Palette.Buttons[5], Width=210, Height=36, FontSize=12)
     BLock.Clicked.Connect(lambda: PowerControl.Unlock() if PowerControl.Locked else PowerControl.Lock())
     Col3.Add(BLock)
 
-    BElbow = LCARSElbow(Direction="top-left", Text="NAV DECK", Number="01-NAV", Width=200, Height=64, Thickness=24, Radius=20)
+    BElbow = LCARSElbow(Direction="top-left", Text="NAV DECK", Number="01-NAV", Width=210, Height=60, Thickness=24, Radius=20, Spectrum=Palette.Buttons[1])
     Col3.Add(BElbow)
 
-    Col3.AddStretch()
-    CatalogRow.Add(Col3)
+    Col3.AddStretch(1)
+    CatalogScreen.Add(Col3)
 
-    # Додаємо обидва екрани до PADD (BootScreen активний, CatalogRow приховано)
-    Padd.Add(BootScreen, 1)
-    Padd.Add(CatalogRow, 1)
+    # Додаємо екрани до робочої області
+    WorkArea.Add(BootScreen, 1)
+    WorkArea.Add(CatalogScreen, 1)
 
-    CatalogSurface = CatalogRow.GetSurface()
+    CatalogSurface = CatalogScreen.GetSurface()
     if hasattr(CatalogSurface, "hide"):
         CatalogSurface.hide()
 
+    Padd.Add(WorkArea, 1)
+
+    # 3. Підвал планшета
+    BottomFoot = Footer(Title="PADD HARDWARE v4.7 // ISOLINEAR OPTICAL INTERFACE ACTIVE", Spectrum=Palette.Buttons[0])
+    Padd.Add(BottomFoot)
+
     # =========================================================================
-    # 3. АНІМАЦІЙНИЙ КОНВЕЄР ІНІЦІАЛІЗАЦІЇ
+    # АНІМАЦІЙНИЙ КОНВЕЄР ІНІЦІАЛІЗАЦІЇ ТА ПЕРЕХОДУ
     # =========================================================================
     Decoder = TextDecode()
     Writer = Typewriter()
@@ -211,7 +237,6 @@ def ButtonsInterface():
         StartButton.Refresh()
         TelemetryStream.Start(Speed=0.03)
 
-        # Фаза 1: квантове набігання/дешифрування
         Decoder.Decode(
             Target=StatusLabel,
             Text="AUTHORIZATION ACCEPTED // DECRYPTING ODN NODES",
@@ -223,7 +248,6 @@ def ButtonsInterface():
 
     Padd.Show()
     return Padd
-
 
 # Запуск через канонічне ядро LCARS:
 LCARS.Launch(ButtonsInterface)

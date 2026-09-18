@@ -25,6 +25,7 @@ class DriverAnimation(SystemComponent):
     Loop = True
     Phase = 0.0
     Target = None
+    Timer = None
 
     # Колбеки життєвого циклу
     OnUpdate = None
@@ -209,6 +210,7 @@ class Stagger(SystemComponent):
     CompletedCount: int = 0
     CurrentLaunchIndex: int = 0
     OnFinish: Optional[Callable[[], None]] = None
+    Timer = None
 
     def Add(self, *DriverInstances):
         if self.Drivers is None or self.Drivers is Stagger.Drivers:
