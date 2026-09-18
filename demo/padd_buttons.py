@@ -3,7 +3,7 @@
 from lcars.base.type import LCARS
 from lcars.base.interface import PADD, Panel, Header, Footer
 from lcars.base.component import LCARSButton, LCARSElbow, LCARSLabel, LCARSIndicator, LCARSBar
-from lcars.base.animation import TextDecode, Typewriter, Reveal, Stagger
+from lcars.base.animation import TextDecode, Typewriter, Reveal, Stagger, Blink
 from lcars.base.default import Palette, SystemTheme
 from lcars.modules.sound import ActiveAudio
 
@@ -26,8 +26,7 @@ def PaddAccessInterface():
     for t, c in [("ACCESS LOG", Palette.Buttons[2]), ("USER MATRIX", Palette.Buttons[0]),
                  ("CLEARANCE", Palette.Buttons[1]), ("AUDIT TRAIL", Palette.Buttons[3])]:
         Left.Add(LCARSButton(Text=t, Form=LCARSButton.PillHalfType, Direction=0,
-                             Width=210, Height=36, FontSize=12, Spectrum=c,
-                             Sound="click"))
+                             Width=210, Height=36, FontSize=12, Spectrum=c, Sound="click"))
     Left.Add(LCARSButton(Text="LOCKOUT", Form=LCARSButton.PillHalfType, Direction=0,
                          Width=210, Height=36, FontSize=12, Spectrum=Palette.Disabled[0],
                          State="disabled"))
@@ -162,37 +161,51 @@ def PaddAccessInterface():
     Right = Panel(Spectrum=Palette.Background)
     Right.SetVertical(0, 0, 0, 0, Spacing=6)
     Right.Add(LCARSLabel(Text="TELEMETRY", FontSize=11, Spectrum=Palette.Buttons[0]))
+
     IR = Panel(Spectrum=Palette.Background)
     IR.SetHorizontal(0, 0, 0, 0, Spacing=4)
-    IR.Add(LCARSIndicator(Form=LCARSIndicator.RectType, Width=65, Height=24, Spectrum="#00CC66"))
-    IR.Add(LCARSIndicator(Form=LCARSIndicator.SoftType, Width=65, Height=24, Spectrum=Palette.Buttons[2]))
-    IR.Add(LCARSIndicator(Form=LCARSIndicator.PillHalf, Width=65, Height=24, Spectrum=Palette.Disabled[0]))
+    IndPwr  = LCARSIndicator(Form=LCARSIndicator.RectType, Width=65, Height=24, Spectrum="#00CC66")
+    IndNet  = LCARSIndicator(Form=LCARSIndicator.SoftType, Width=65, Height=24, Spectrum=Palette.Buttons[2])
+    IndSec  = LCARSIndicator(Form=LCARSIndicator.PillHalf, Width=65, Height=24, Spectrum=Palette.Disabled[0])
+    IR.Add(IndPwr); IR.Add(IndNet); IR.Add(IndSec)
     Right.Add(IR)
+
     Right.Add(LCARSLabel(Text="PWR: ONLINE",  FontSize=10, Spectrum="#00CC66"))
     Right.Add(LCARSLabel(Text="NET: STABLE",  FontSize=10, Spectrum=Palette.Buttons[2]))
     Right.Add(LCARSLabel(Text="SEC: STANDBY", FontSize=10, Spectrum=Palette.Disabled[0]))
     Right.Add(LCARSBar(Height=2, Spectrum=Palette.Disabled[1]))
+
     Right.Add(LCARSLabel(Text="ALERT DIRECTIVES", FontSize=11, Spectrum=Palette.Buttons[0]))
 
-    def SetRed():    SystemTheme.SetSystemState("Red")
-    def SetYellow(): SystemTheme.SetSystemState("Yellow")
-    def SetGreen():  SystemTheme.SetSystemState("Normal")
+    def SetRed():
+        SystemTheme.SetSystemState("Red")
+        IndPwr.Spectrum = Palette.RedAlert[0]; IndPwr.Refresh()
+        IndNet.Spectrum = Palette.RedAlert[1]; IndNet.Refresh()
+        IndSec.Spectrum = Palette.RedAlert[2]; IndSec.Refresh()
+
+    def SetYellow():
+        SystemTheme.SetSystemState("Yellow")
+        IndPwr.Spectrum = Palette.YellowAlert[0]; IndPwr.Refresh()
+        IndNet.Spectrum = Palette.YellowAlert[1]; IndNet.Refresh()
+        IndSec.Spectrum = Palette.YellowAlert[2]; IndSec.Refresh()
+
+    def SetGreen():
+        SystemTheme.SetSystemState("Normal")
+        IndPwr.Spectrum = "#00CC66"; IndPwr.Refresh()
+        IndNet.Spectrum = Palette.Buttons[2]; IndNet.Refresh()
+        IndSec.Spectrum = Palette.Disabled[0]; IndSec.Refresh()
 
     br = LCARSButton(Text="RED ALERT", Form=LCARSButton.PillType, Width=210, Height=38,
-                     FontSize=13, Spectrum=Palette.RedAlert[0], Sound="alert_red",
-                     Handler=SetRed)
+                     FontSize=13, State="alert", Sound="alert_red", Handler=SetRed)
     Right.Add(br)
     by = LCARSButton(Text="YELLOW ALERT", Form=LCARSButton.PillType, Width=210, Height=38,
-                     FontSize=13, Spectrum=Palette.YellowAlert[0], Sound="alert_yellow",
-                     Handler=SetYellow)
+                     FontSize=13, State="yellow", Sound="alert_yellow", Handler=SetYellow)
     Right.Add(by)
     bg = LCARSButton(Text="CONDITION GREEN", Form=LCARSButton.PillType, Width=210, Height=38,
-                     FontSize=13, Spectrum=Palette.Buttons[0], Sound="ack",
-                     Handler=SetGreen)
+                     FontSize=13, State="normal", Sound="ack", Handler=SetGreen)
     Right.Add(bg)
     brst = LCARSButton(Text="RESET CONSOLE", Form=LCARSButton.SoftType, Width=210, Height=36,
-                       FontSize=12, Spectrum=Palette.Buttons[3], Sound="click",
-                       Handler=Clear)
+                       FontSize=12, Spectrum=Palette.Buttons[3], Sound="click", Handler=Clear)
     Right.Add(brst)
     Right.AddStretch()
     Body.Add(Right)
@@ -210,6 +223,10 @@ def PaddAccessInterface():
     Cascade.Play(DelayMs=30)
 
     TextDecode().Decode(Target=StatusMsg, Text="SYSTEM READY // ENTER ACCESS CODE TO PROCEED", Period=1.4)
+
+    Blink(Target=IndPwr, Period=0.6, Loop=True).Start()
+    Blink(Target=IndNet, Period=0.8, Loop=True).Start()
+    Blink(Target=IndSec, Period=1.0, Loop=True).Start()
 
     return Padd
 
