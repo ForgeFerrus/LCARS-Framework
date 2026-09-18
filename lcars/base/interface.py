@@ -158,8 +158,15 @@ class Element(Component):
     Spacing = 6.0       # Фірмовий зазор Окуди між компонентами
     Orientation = "horizontal"  # horizontal або vertical
     Title = ""
-    ActionText = ""
     SurfaceHost = None
+
+    # Канонічна ініціалізація складеного елемента
+    def Initialize(self, *args, **kwargs):
+        self.Items = {}
+        super().Initialize(*args, **kwargs)
+        return self
+
+    Init = Initialize
 
     def GetSurface(self):
         if self.SurfaceHost is None:

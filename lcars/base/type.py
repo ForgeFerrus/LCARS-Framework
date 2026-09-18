@@ -72,6 +72,18 @@ class Namespace(type):
                 return LCARS.Retrieve(CanonicalPath)
 
         return None
+
+    # Канонічний виклик та інстанціювання сутностей LCARS без __init__
+    def __call__(cls, *args, **kwargs):
+        Instance = super().__call__()
+        InitMethod = getattr(Instance, "Initialize", getattr(Instance, "Init", None))
+        if callable(InitMethod) and not isinstance(InitMethod, str):
+            InitMethod(*args, **kwargs)
+        elif kwargs:
+            for Key, Value in kwargs.items():
+                setattr(Instance, Key, Value)
+        return Instance
+
     # автоматична реєстрація 
     locals()["__getattr__"] = ResolvePattern
 # =====================================================================
