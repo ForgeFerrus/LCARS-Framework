@@ -677,5 +677,6 @@ Elbow = LCARSElbow
 Button = LCARSButton
 Indicator = LCARSIndicator
 Normalize = NormalizeValue
+Take = getattr(LCARS, "Take", lambda Collection, Count: Collection[:Count] if hasattr(Collection, "__getitem__") else Collection)
 ValidateIndex = ValidateIndex
 
