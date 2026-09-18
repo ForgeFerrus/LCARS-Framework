@@ -18,7 +18,6 @@
 # 9. BIOS CONFIG CHIP — доступність сховища конфігурації.
 # СТАНДАРТ: Titanium LCARS (Zero-Direct-Imports, Zero-Except, Zero-Underscores, Strict PascalCase, Pure Classes).
 # =============================================================================
-from __future__ import annotations
 from lcars.base.type import LCARS, SystemComponent
 from lcars.core.signal import ODN, Transmission
 from lcars.base.info import Version
@@ -64,11 +63,9 @@ def SafeJsonLoads(Text: str, Default: LCARS.Typing.Any = None) -> LCARS.Typing.A
     if EndIdx == len(Stripped):
         return Result
     return Text
-
 # ═════════════════════════════════════════════════════════════════════
 # 1. СИСТЕМНІ СТРУКТУРИ ТА ПАРАМЕТРИ НАЛАШТУВАНЬ BIOS
 # ═════════════════════════════════════════════════════════════════════
-@LCARS.DataClass
 class BiosSetting(LCARS):
     # Окремий системний параметр BIOS/UEFI з валідацією варіантів вибору
     Name: str = ""
@@ -78,10 +75,6 @@ class BiosSetting(LCARS):
     Section: str = "SYSTEM"
     Description: str = ""
 
-    def __post_init__(self):
-        super().__init__(Id=f"BiosSetting.{self.Name}")
-
-@LCARS.DataClass
 class BiosCheck(LCARS):
     # Окремий діагностичний пункт перевірки POST
     Name: str = ""
@@ -89,10 +82,6 @@ class BiosCheck(LCARS):
     Detail: str = ""
     Critical: bool = True
 
-    def __post_init__(self):
-        super().__init__(Id=f"BiosCheck.{self.Name}")
-
-@LCARS.DataClass
 class BiosReport(LCARS):
     # Підсумковий звіт діагностики POST для екранів запуску, логів та чорної скриньки
     Status: str = ""
@@ -100,9 +89,6 @@ class BiosReport(LCARS):
     Settings: LCARS.Typing.Dict[str, LCARS.Typing.Any] = LCARS.Field(default_factory=dict)
     Started: float = 0.0
     Finished: float = 0.0
-
-    def __post_init__(self):
-        super().__init__(Id="BiosReport")
 
     def Lines(self) -> LCARS.Typing.List[str]:
         # Формування текстового протоколу POST для терміналу
@@ -121,9 +107,6 @@ class BiosReport(LCARS):
 # ═════════════════════════════════════════════════════════════════════
 class UEFI(LCARS):
     # UEFI-рівень зорельота відповідає за вибір та керування записами запуску
-    def __init__(self, Owner: "BIOS"):
-        super().__init__(Id="UEFI")
-        self.Owner = Owner
 
     def Entries(self) -> LCARS.Typing.List[LCARS.Typing.Dict[str, LCARS.Typing.Any]]:
         # Повертає список доступних записів завантаження

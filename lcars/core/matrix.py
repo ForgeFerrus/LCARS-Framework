@@ -13,8 +13,6 @@ from typing import Any, Optional, Dict, List, Tuple, Iterable
 
 from lcars.base.info import Version
 from lcars.base.type import LCARS, SystemComponent
-from lcars.base.register import registry
-registry.Register("System.Threading", "threading", None)
 
 class QuantumState(SystemComponent):
     def __init__(self, Amplitude: complex = 1 + 0j, Phase: float = 0.0, Probability: float = 1.0, Measured: bool = False, Entangled: list | None = None):

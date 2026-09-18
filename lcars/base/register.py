@@ -151,6 +151,8 @@ registry: dict[str, Any] = {
 
     # Internationalization
     "System.Python.Gettext": ("gettext", None),
+    # Canonical concurrency root (System.Threading.*) — паралельні оптичні потоки
+    "System.Threading"               : ("threading", None),
     # Synchronization
     "System.Thread.Lock"             : ("threading", "Lock"),
     "System.Thread.RLock"            : ("threading", "RLock"),
