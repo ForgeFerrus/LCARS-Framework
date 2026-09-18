@@ -147,7 +147,7 @@ class Surface(Display):
     minimumSizeHint = PreferredSize
 # =====================================================================
 # ЕЛЕМЕНТИ ІНТЕРФЕЙСУ — семантичні оркестратори та композиційні вузли
-# Базовий клас Element — віртуальна конструкція, що координує фізичні віджети
+# Базовий клас Element — віртуальна конструкція, що координує фізичні поверхні
 # =====================================================================
 class Element(Component):
     TypeName = "LCARSElement"
@@ -849,7 +849,7 @@ class PADD(Element):
     PaddOffset = (0, 0)
     # Все наслідується чисто і без помилок сигнатури!
     def ConfigurePadd(self):
-        Host = self.Widget
+        Host = self.GetSurface()
         if hasattr(Host, "setMinimumSize"):
             Host.setMinimumSize(self.MinWidth, self.MinHeight)
         if hasattr(Host, "resize"):
@@ -877,14 +877,15 @@ class PADD(Element):
 
     def Show(self):
         self.ConfigurePadd()
-        if hasattr(self.Widget, "show"):
-            self.Widget.show()
+        Host = self.GetSurface()
+        if hasattr(Host, "show"):
+            Host.show()
         return self
 
     show = Show
 
     def AdaptPaddGeometry(self, Event):
-        Host = self.Widget
+        Host = self.GetSurface()
         if not Host:
             return
         W = Host.width() if hasattr(Host, "width") else 0
@@ -913,12 +914,20 @@ class PADD(Element):
             self.Items.get("Body"),
         ]
         for Target in Targets:
-            TargetWidget = getattr(Target, "Widget", getattr(Target, "widget", Target))
-            if TargetWidget is None:
+            if Target is None:
                 continue
-            TargetWidget.mousePressEvent = self.PaddPress
-            TargetWidget.mouseMoveEvent = self.PaddMove
-            TargetWidget.mouseReleaseEvent = self.PaddRelease
+            TargetSurface = getattr(Target, "SurfaceHost", None)
+            if TargetSurface is None:
+                GetTargetSurface = getattr(Target, "GetSurface", None)
+                if callable(GetTargetSurface):
+                    TargetSurface = GetTargetSurface()
+                else:
+                    TargetSurface = Target
+            if TargetSurface is None:
+                continue
+            TargetSurface.mousePressEvent = self.PaddPress
+            TargetSurface.mouseMoveEvent = self.PaddMove
+            TargetSurface.mouseReleaseEvent = self.PaddRelease
 
     def EventGlobal(self, Event):
         Method = getattr(Event, "globalPosition", None)
@@ -949,7 +958,7 @@ class PADD(Element):
             LY = int(Pos.y()) if Pos else 0
 
         Margin = 8
-        Host = self.Widget
+        Host = self.GetSurface()
         W = Host.width() if hasattr(Host, "width") else 0
         H = Host.height() if hasattr(Host, "height") else 0
         
@@ -973,7 +982,7 @@ class PADD(Element):
     def PaddMove(self, Event):
         if not self.PaddAction:
             return
-        Host = self.Widget
+        Host = self.GetSurface()
         if not Host:
             return
         GX, GY = self.EventGlobal(Event)
@@ -1022,7 +1031,7 @@ class PADD(Element):
             AcceptMethod()
 
     def PaddEdgeAction(self, X, Y):
-        Host = self.Widget
+        Host = self.GetSurface()
         Edge = 28
         Width = int(Host.width())
         Height = int(Host.height())

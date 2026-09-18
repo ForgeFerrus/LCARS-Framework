@@ -147,13 +147,13 @@ def ButtonsInterface():
     Col3.AddStretch()
     CatalogRow.Add(Col3)
 
-    # Спочатку каталог сховано до ініціалізації
-    if hasattr(CatalogRow.Widget, "hide"):
-        CatalogRow.Widget.hide()
-
-    # Розміщуємо обидва яруси на склі PADD
+    # Додаємо обидва екрани до PADD (BootScreen активний, CatalogRow приховано)
     Padd.Add(BootScreen, 1)
     Padd.Add(CatalogRow, 1)
+
+    CatalogSurface = CatalogRow.GetSurface()
+    if hasattr(CatalogSurface, "hide"):
+        CatalogSurface.hide()
 
     # =========================================================================
     # 3. АНІМАЦІЙНИЙ КОНВЕЄР ІНІЦІАЛІЗАЦІЇ
@@ -163,10 +163,11 @@ def ButtonsInterface():
     Cascade = Stagger()
 
     def OpenCatalog():
-        if hasattr(BootScreen.Widget, "hide"):
-            BootScreen.Widget.hide()
-        if hasattr(CatalogRow.Widget, "show"):
-            CatalogRow.Widget.show()
+        BootSurface = BootScreen.GetSurface()
+        if hasattr(BootSurface, "hide"):
+            BootSurface.hide()
+        if hasattr(CatalogSurface, "show"):
+            CatalogSurface.show()
 
         # Каскадне розгортання кнопок каталогу (Stagger + Reveal)
         for Btn in FormButtons:

@@ -65,9 +65,11 @@ class Namespace(type):
 
         # Канонічний фолбек: останній сегмент ланцюга може бути шляховою
         # константою кореня LCARS (наприклад RectF -> "Base.Geometry.Rect")
-        CanonicalPath = LCARS.__dict__.get(AttributeName)
-        if isinstance(CanonicalPath, str) and CanonicalPath:
-            return LCARS.Retrieve(CanonicalPath)
+        DictRef = getattr(LCARS, "Dictionary", None)
+        if isinstance(DictRef, dict):
+            CanonicalPath = DictRef.get(AttributeName)
+            if isinstance(CanonicalPath, str) and CanonicalPath:
+                return LCARS.Retrieve(CanonicalPath)
 
         return None
     # автоматична реєстрація 
@@ -101,22 +103,19 @@ Annotation = Type
 # Замість typing використано замінники LCARS (Type.Any, Type.String).
 # Канонічний замінник прямих імпортів (вузол "System.Module.Import").
 # Ядро — вбудований завантажувач Python: жодної import-інструкції, Zero-Except.
-def Import(ModuleName: str):
+def Import(ModuleName: str, fromlist=None):
     CleanName = ModuleName.strip() if isinstance(ModuleName, str) else ""
     if not CleanName:
         return None
-    # Машинерія перевірки існування (канонічний вузол System.Module.Util)
-    UtilNode = __import__("importlib.util", fromlist=("util",))
-    # Відсутній корінь шляху -> тихо None
-    RootName = CleanName.split(".")[0]
-    if UtilNode.find_spec(RootName) is None:
-        return None
-    # Відсутній модуль -> тихо None
-    if UtilNode.find_spec(CleanName) is None:
-        return None
-    # Кешований завантажувач (канонічний вузол System.Module.Import)
-    ModuleNode = __import__("importlib")
-    return ModuleNode.import_module(CleanName)
+    BuiltinImport = getattr(LCARS.System, "__import__", None) or getattr(__builtins__, "__import__", None) or __import__
+    if fromlist:
+        return BuiltinImport(CleanName, fromlist=fromlist)
+    # Звичайний імпорт модуля
+    Mod = BuiltinImport(CleanName)
+    # Якщо це складений шлях (наприклад, importlib.util), отримуємо підмодуль
+    for Segment in CleanName.split(".")[1:]:
+        Mod = getattr(Mod, Segment, Mod)
+    return Mod
 # Базове розгортання кортежу реєстру в живий об'єкт (Expand)
 def Expand(Target: Type.Any):
     if not isinstance(Target, tuple):
@@ -208,9 +207,9 @@ class LCARS(metaclass=Namespace):
         self.Config = dict(getattr(self, "Config", {}))
         for Key, Value in kwargs.items():
             setattr(self, Key, Value)
+        return self
     # Канонічний замінник конструктора
     Init = Initialize
-    locals()["__init__"] = Initialize
     Registry = registry
     Keys = {k.lower(): k for k in registry.keys()} if isinstance(registry, dict) else {}
     # Канонічний синонім індексу (його читають Retrieve / Register)
@@ -266,31 +265,29 @@ class LCARS(metaclass=Namespace):
     ClassMethod = "System.Method.Class"
     MethodProperty = "System.Method.Property"
 
-    class Protocol:
-        Init = "System.Protocol.Init"
-        All = "System.Protocol.All"
-        Dictionary = "System.Protocol.Dictionary"
-        Directory = "System.Protocol.Directory"
-        Name = "System.Protocol.Name"
-        Doc = "System.Protocol.Doc"
-        File = "System.Protocol.File"
-        Annotations = "System.Protocol.Annotations"
-        Call = "System.Protocol.Call"
-        Enter = "System.Protocol.Enter"
-        Exit = "System.Protocol.Exit"
-        GetAttr = "System.Protocol.GetAttr"
-        SetAttr = "System.Protocol.SetAttr"
-        DelAttr = "System.Protocol.DelAttr"
+    Init = "System.Protocol.Init"
+    All = "System.Protocol.All"
+    Dictionary = "System.Protocol.Dictionary"
+    Directory = "System.Protocol.Directory"
+    Name = "System.Protocol.Name"
+    Doc = "System.Protocol.Doc"
+    File = "System.Protocol.File"
+    Annotations = "System.Protocol.Annotations"
+    Call = "System.Protocol.Call"
+    Enter = "System.Protocol.Enter"
+    Exit = "System.Protocol.Exit"
+    GetAttr = "System.Protocol.GetAttr"
+    SetAttr = "System.Protocol.SetAttr"
+    DelAttr = "System.Protocol.DelAttr"
 
-    class Operator:
-        Equal = "System.Operator.Equal"
-        NotEqual = "System.Operator.NotEqual"
-        LessThan = "System.Operator.LessThan"
-        GreaterThan = "System.Operator.GreaterThan"
-        Contains = "System.Operator.Contains"
-        GetItem = "System.Operator.GetItem"
-        SetItem = "System.Operator.SetItem"
-        DelItem = "System.Operator.DelItem"
+    Equal = "System.Operator.Equal"
+    NotEqual = "System.Operator.NotEqual"
+    LessThan = "System.Operator.LessThan"
+    GreaterThan = "System.Operator.GreaterThan"
+    Contains = "System.Operator.Contains"
+    GetItem = "System.Operator.GetItem"
+    SetItem = "System.Operator.SetItem"
+    DelItem = "System.Operator.DelItem"
 
     # === СИСТЕМНІ КОРЕНІ (ОПЕРАЦІЙНА СИСТЕМА) ===
     ABC = "System.ABC"

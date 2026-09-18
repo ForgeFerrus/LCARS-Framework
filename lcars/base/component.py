@@ -44,7 +44,7 @@ def NormalizeDirection(Direction):
 # =============================================================================
 # ГОЛОВНИЙ КЛАС COMPONENT (СЕНСОРНИЙ ОПТИЧНИЙ ВУЗОЛ LCARS)
 # Наслідує Visual (Graphic) -> SystemComponent -> LCARS.
-# НЕ є віджетом! Це логічний вузол системи, з'єднаний через шину ODN.
+# Це логічний вузол системи, з'єднаний через шину ODN.
 # =============================================================================
 class Component(Visual):
     TypeName = "LCARSComponent"
@@ -137,7 +137,11 @@ class Component(Visual):
         return self
     # Оновлення підключеної поверхні рендерингу (якщо вона існує)
     def Refresh(self):
-        Target = getattr(self, "Widget", None) or getattr(self, "Parent", None)
+        Target = getattr(self, "SurfaceHost", None)
+        if Target is None and hasattr(self, "GetSurface") and callable(self.GetSurface):
+            Target = self.GetSurface()
+        if Target is None:
+            Target = getattr(self, "Parent", None)
         if Target is not None and hasattr(Target, "update"):
             Target.update()
         return self
@@ -672,7 +676,6 @@ Label = LCARSLabel
 Elbow = LCARSElbow
 Button = LCARSButton
 Indicator = LCARSIndicator
-Normalize = Component.Normalize
-Take = Component.Take
-ValidateIndex = Component.ValidateIndex
+Normalize = NormalizeValue
+ValidateIndex = ValidateIndex
 
