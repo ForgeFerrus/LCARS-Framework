@@ -96,12 +96,23 @@ class Surface(Display):
             "Left" in str(ButtonValue) or
             ButtonValue == getattr(getattr(LCARS, "Protocol", None), "LeftButton", 1)
         )
+        HandledByOptics = False
         if IsLeftButton and self.Optics is not None:
+            IsTactile = getattr(self.Optics, "Tactile", False)
             TargetEngage = getattr(self.Optics, "Engage", getattr(self.Optics, "Trigger", None))
-            if callable(TargetEngage):
+            if IsTactile and callable(TargetEngage):
                 TargetEngage()
+                HandledByOptics = True
             if hasattr(self, "isVisible") and self.isVisible():
                 self.update()
+
+        if not HandledByOptics:
+            WindowHost = self.window()
+            PaddCtrl = getattr(WindowHost, "PaddController", None)
+            if PaddCtrl is not None and hasattr(PaddCtrl, "PaddPress"):
+                PaddCtrl.PaddPress(Event)
+                return
+
         ParentMousePress = getattr(super(), "TouchContact", None)
         if callable(ParentMousePress):
             ParentMousePress(Event)
@@ -113,9 +124,24 @@ class Surface(Display):
                 TargetDisengage()
             if hasattr(self, "isVisible") and self.isVisible():
                 self.update()
+
+        WindowHost = self.window()
+        PaddCtrl = getattr(WindowHost, "PaddController", None)
+        if PaddCtrl is not None and hasattr(PaddCtrl, "PaddRelease"):
+            PaddCtrl.PaddRelease(Event)
+
         ParentMouseRelease = getattr(super(), "TouchRelease", None)
         if callable(ParentMouseRelease):
             ParentMouseRelease(Event)
+    # Переміщення вказівника (сенсорний рух)
+    def TouchMovement(self, Event):
+        WindowHost = self.window()
+        PaddCtrl = getattr(WindowHost, "PaddController", None)
+        if PaddCtrl is not None and hasattr(PaddCtrl, "PaddMove"):
+            PaddCtrl.PaddMove(Event)
+        ParentMouseMove = getattr(super(), "mouseMoveEvent", None)
+        if callable(ParentMouseMove):
+            ParentMouseMove(Event)
     # Датчик наближення (фокус при наведенні курсора або руки)
     def FocusDetection(self, Event):
         if self.Optics is not None:
@@ -143,6 +169,7 @@ class Surface(Display):
     leaveEvent = Leave
     mousePressEvent = TouchContact
     mouseReleaseEvent = TouchRelease
+    mouseMoveEvent = TouchMovement
     sizeHint = PreferredSize
     minimumSizeHint = PreferredSize
 # =====================================================================
@@ -159,10 +186,13 @@ class Element(Component):
     Orientation = "horizontal"  # horizontal або vertical
     Title = ""
     SurfaceHost = None
+    Tactile = False
+    Interactive = False
 
     # Канонічна ініціалізація складеного елемента
     def Initialize(self, *args, **kwargs):
         self.Items = {}
+        self.Layout = None
         super().Initialize(*args, **kwargs)
         return self
 
@@ -858,6 +888,8 @@ class PADD(Element):
     # Все наслідується чисто і без помилок сигнатури!
     def ConfigurePadd(self):
         Host = self.GetSurface()
+        if Host is not None:
+            Host.PaddController = self
         if hasattr(Host, "setMinimumSize"):
             Host.setMinimumSize(self.MinWidth, self.MinHeight)
         if hasattr(Host, "resize"):
@@ -953,49 +985,37 @@ class PADD(Element):
 
     def PaddPress(self, *Args, **Kwargs):
         Event = None
-        LX = 0
-        LY = 0
-        if len(Args) >= 2 and isinstance(Args[0], (int, float)) and isinstance(Args[1], (int, float)):
-            LX = int(Args[0])
-            LY = int(Args[1])
-        elif len(Args) >= 1:
+        if len(Args) >= 1 and not isinstance(Args[0], (int, float)):
             Event = Args[0]
-            PosMethod = getattr(Event, "position", None) or getattr(Event, "pos", None)
-            Pos = PosMethod() if callable(PosMethod) else None
-            LX = int(Pos.x()) if Pos else 0
-            LY = int(Pos.y()) if Pos else 0
 
         Host = self.GetSurface()
-        if Host is not None and hasattr(Host, "childAt"):
-            PointClass = LCARS.Retrieve("Base.Geometry.Point.Int")
-            Pt = PointClass(LX, LY) if callable(PointClass) else None
-            Child = Host.childAt(Pt) if Pt else None
-            if Child is not None and Child is not Host:
-                ChildOptics = getattr(Child, "Optics", None)
-                if ChildOptics is not None and getattr(ChildOptics, "Interactive", False) and getattr(ChildOptics, "Tactile", False):
-                    # Пропускаємо сенсорний контакт прямо до кнопки
-                    TouchFn = getattr(Child, "TouchContact", None)
-                    if callable(TouchFn):
-                        TouchFn(Event)
-                    return None
+        if not Host:
+            return None
 
-        Margin = 12
+        GX, GY = (0, 0)
+        if Event is not None:
+            GX, GY = self.EventGlobal(Event)
+            self.PaddStartGlobal = (GX, GY)
+        if hasattr(Host, "geometry"):
+            Geom = Host.geometry()
+            self.PaddStartRect = (Geom.x(), Geom.y(), Geom.width(), Geom.height())
+
+        # Локальні координати всередині головного скла PADD
+        HX = GX - self.PaddStartRect[0]
+        HY = GY - self.PaddStartRect[1]
+
+        Margin = 16
         W = Host.width() if hasattr(Host, "width") else 0
         H = Host.height() if hasattr(Host, "height") else 0
         
         Action = ""
-        if LY < Margin: Action += "top"
-        elif LY > H - Margin: Action += "bottom"
+        if HY < Margin: Action += "top"
+        elif HY > H - Margin: Action += "bottom"
         
-        if LX < Margin: Action += "left"
-        elif LX > W - Margin: Action += "right"
+        if HX < Margin: Action += "left"
+        elif HX > W - Margin: Action += "right"
         self.PaddAction = Action or "move"
-        self.PaddOffset = (LX, LY)
-        if Event is not None:
-            self.PaddStartGlobal = self.EventGlobal(Event)
-        if hasattr(Host, "geometry"):
-            Geom = Host.geometry()
-            self.PaddStartRect = (Geom.x(), Geom.y(), Geom.width(), Geom.height())
+
         if Event is not None and hasattr(Event, "accept"):
             Event.accept()
         return None
@@ -1012,7 +1032,7 @@ class PADD(Element):
         DY = GY - self.PaddStartGlobal[1]
 
         if self.PaddAction == "move":
-            Host.move(GX - self.PaddOffset[0], GY - self.PaddOffset[1])
+            Host.move(X + DX, Y + DY)
             return
 
         NewX = X

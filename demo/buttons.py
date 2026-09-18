@@ -188,18 +188,34 @@ def ButtonsInterface():
     Col3.AddStretch(1)
     CatalogScreen.Add(Col3)
 
-    # Додаємо екрани до робочої області
-    WorkArea.Add(BootScreen, 1)
+    # Додаємо екрани до робочої області (за замовчуванням показуємо Каталог для повної готовності)
     WorkArea.Add(CatalogScreen, 1)
+    WorkArea.Add(BootScreen, 1)
 
+    BootSurface = BootScreen.GetSurface()
     CatalogSurface = CatalogScreen.GetSurface()
-    if hasattr(CatalogSurface, "hide"):
-        CatalogSurface.hide()
+
+    # Початковий стан: Каталог активний одразу для миттєвої перевірки всіх кнопок
+    if hasattr(BootSurface, "hide"):
+        BootSurface.hide()
+    if hasattr(CatalogSurface, "show"):
+        CatalogSurface.show()
 
     Padd.Add(WorkArea, 1)
 
-    # 3. Підвал планшета
-    BottomFoot = Footer(Title="PADD HARDWARE v4.7 // ISOLINEAR OPTICAL INTERFACE ACTIVE", Spectrum=Palette.Buttons[0])
+    # 3. Підвал планшета із швидкими перемикачами режиму
+    BottomFoot = Footer(Spectrum=Palette.Buttons[0])
+    BottomFoot.SetHorizontal(0, 0, 0, 0, Spacing=8)
+
+    FootLabel = LCARSLabel(Text="PADD v4.7 // ISOLINEAR OPTICAL INTERFACE ACTIVE", FontSize=12, Spectrum=Palette.Buttons[0])
+    BottomFoot.Add(FootLabel, 1)
+
+    BtnShowStandby = LCARSButton(Text="STANDBY MODE", Form=LCARSButton.PillHalf, Direction=180, Width=160, Height=28, FontSize=11, Spectrum=Palette.Buttons[3])
+    BtnShowCatalog = LCARSButton(Text="FULL CATALOG", Form=LCARSButton.PillHalf, Direction=0, Width=160, Height=28, FontSize=11, Spectrum=Palette.Buttons[2])
+
+    BottomFoot.Add(BtnShowStandby)
+    BottomFoot.Add(BtnShowCatalog)
+
     Padd.Add(BottomFoot)
 
     # =========================================================================
@@ -210,7 +226,6 @@ def ButtonsInterface():
     Cascade = Stagger()
 
     def OpenCatalog():
-        BootSurface = BootScreen.GetSurface()
         if hasattr(BootSurface, "hide"):
             BootSurface.hide()
         if hasattr(CatalogSurface, "show"):
@@ -223,6 +238,17 @@ def ButtonsInterface():
             Cascade.Add(Revealer)
 
         Cascade.Play(DelayMs=45)
+
+    def OpenStandby():
+        if hasattr(CatalogSurface, "hide"):
+            CatalogSurface.hide()
+        if hasattr(BootSurface, "show"):
+            BootSurface.show()
+        StartButton.Tactile = True
+        StartButton.Refresh()
+
+    BtnShowStandby.Clicked.Connect(OpenStandby)
+    BtnShowCatalog.Clicked.Connect(OpenCatalog)
 
     def PrintReadyPrompt():
         Writer.Write(
