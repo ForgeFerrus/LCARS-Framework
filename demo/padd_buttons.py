@@ -1,15 +1,15 @@
 # ◤ LCARS PADD — SECURITY ACCESS PANEL
 # Функціональний планшет офіцера з клавіатурою, анімаціями та системою авторизації.
-# Побудовано виключно з компонентів LCARS: Segment, LCARSButton, LCARSLabel,
-# LCARSBar, LCARSElbow, LCARSIndicator, ScanningBar, TextDecode, Typewriter,
-# Reveal, Stagger.
+# Побудовано виключно з компонентів LCARS Framework.
 # ─────────────────────────────────────────────────────────────────────────────
+import sys
 from lcars.base.type import LCARS
 from lcars.base.interface import Segment, Panel
 from lcars.base.component import LCARSButton, LCARSLabel, LCARSElbow, LCARSBar, LCARSIndicator
 from lcars.base.animation import TextDecode, Typewriter, Reveal, Stagger
 from lcars.base.default import Palette, SystemTheme
 from lcars.modules.sound import ActiveAudio
+from lcars.modules.process import CreateApplication
 
 # ============================================================================
 # КОНСТАНТИ
@@ -358,11 +358,16 @@ class PaddAccessPanel(Segment):
             )
 
 
-def Run():
-    panel = PaddAccessPanel()
-    panel.widget.setGeometry(100, 100, 1100, 720)
-    panel.widget.show()
-    panel.PlayStartupAnimation()
-
-
-LCARS.Launch(Run)
+# ============================================================================
+# ЗАПУСК (як в access.py)
+# ============================================================================
+if __name__ == "__main__":
+    app = CreateApplication(sys.argv)
+    if app:
+        panel = PaddAccessPanel()
+        Host = LCARS.Segment()
+        Host.widget.setGeometry(100, 100, 1100, 720)
+        Host.Add(Host.Vertical(), panel)
+        Host.widget.show()
+        panel.PlayStartupAnimation()
+        sys.exit(app.exec())
