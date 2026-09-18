@@ -1,6 +1,13 @@
 # LCARS FRAMEWORK — PADD BUTTONS CATALOG 🖖
 # Демонстрація всіх канонічних форм і станів кнопок через інтерфейс PADD.
 import sys
+import os
+
+# Канонічний бутстрап шляху: корінь проєкту — для запуску з будь-якої теки
+Root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if Root not in sys.path:
+    sys.path.insert(0, Root)
+
 from lcars.base.type import LCARS
 from lcars.base.default import Palette, SystemTheme
 from lcars.base.component import LCARSButton, LCARSElbow, LCARSLabel, LCARSIndicator

@@ -5,6 +5,14 @@
 # 2. Натискання кнопки активує квантове декодування (TextDecode) та потік телеметрії (DataStream).
 # 3. Термінальний посимвольний друк (Typewriter) підтверджує готовність матриці.
 # 4. Каскадне розгортання (Stagger + Reveal) розгортає повний каталог кнопок LCARS.
+# Канонічний бутстрап шляху: корінь проєкту — для запуску з будь-якої теки
+import os
+import sys
+
+Root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if Root not in sys.path:
+    sys.path.insert(0, Root)
+
 from lcars.base.type import LCARS
 from lcars.base.interface import PADD, Panel
 from lcars.base.component import LCARSButton, LCARSElbow, LCARSLabel
