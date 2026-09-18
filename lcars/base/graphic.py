@@ -665,10 +665,13 @@ class Emitter(Graphic):
         else:
             # 4. Прояв власної топології Окуди: шлях компонента → заливка світлом.
             #    Синтез будує Path/Wavefront/Trajectory — читаємо весь ланцюг.
-            Wavefront = getattr(GraphicObj, "Wavefront", None) or getattr(GraphicObj, "Path", None) or getattr(GraphicObj, "Trajectory", None)
+            #    Векторним рахується лише об'єкт із boundingRect (справжній контур).
+            RawPath = getattr(GraphicObj, "Wavefront", None) or getattr(GraphicObj, "Path", None) or getattr(GraphicObj, "Trajectory", None)
+            Wavefront = RawPath if RawPath is not None and hasattr(RawPath, "boundingRect") else None
             if Wavefront is None and hasattr(GraphicObj, "Synthesize") and callable(GraphicObj.Synthesize):
                 GraphicObj.Synthesize()
-                Wavefront = getattr(GraphicObj, "Wavefront", None) or getattr(GraphicObj, "Path", None) or getattr(GraphicObj, "Trajectory", None)
+                RawPath = getattr(GraphicObj, "Wavefront", None) or getattr(GraphicObj, "Path", None) or getattr(GraphicObj, "Trajectory", None)
+                Wavefront = RawPath if RawPath is not None and hasattr(RawPath, "boundingRect") else None
             # Плоскі текстові вузли (Label) не заливаються — тільки символка
             IsFlatNode = str(getattr(GraphicObj, "Type", "")).lower() == "label"
             if Wavefront is not None and not IsFlatNode:
@@ -680,10 +683,10 @@ class Emitter(Graphic):
         if Label:
             ColorFn = getattr(GraphicObj, "GetColor", None)
             InkVal = ColorFn() if callable(ColorFn) else getattr(GraphicObj, "Spectrum", "#FFFFFF")
-            TopologyPath = getattr(GraphicObj, "Wavefront", None) or getattr(GraphicObj, "Path", None) or getattr(GraphicObj, "Trajectory", None)
-            if TopologyPath is not None:
+            RawPath = getattr(GraphicObj, "Wavefront", None) or getattr(GraphicObj, "Path", None) or getattr(GraphicObj, "Trajectory", None)
+            if RawPath is not None and hasattr(RawPath, "boundingRect"):
                 # Залита форма (кнопка/бар): текст чорний за каноном Окуди
-                Field = TopologyPath.boundingRect()
+                Field = RawPath.boundingRect()
                 if str(getattr(GraphicObj, "Type", "")).lower() != "label":
                     InkVal = "#000000"
             else:
@@ -719,7 +722,7 @@ class Emitter(Graphic):
     # Чиста векторна заливка світлом
     def Fill(self, Wavefront, Spectrum, Luminance: float = 1.0):
         Context = getattr(self, "Context", None)
-        if Context is None or Wavefront is None:
+        if Context is None or Wavefront is None or not hasattr(Wavefront, "boundingRect"):
             return False
         Color = LCARS.Visual.Color(Spectrum)
         Color.setAlphaF(Clamp(float(Luminance), 0.0, 1.0))

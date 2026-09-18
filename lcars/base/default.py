@@ -123,11 +123,12 @@ def DynamicColor(Group: String = "buttons", Dynamic: Boolean = True, Key: String
         Cycle = CycleNormal
     if not Dynamic:
         return ColorList[0]
-    Time = LCARS.System.Time
     Random = getattr(LCARS.System, "Random", None)
-    if not Time or not Random:
+    if not Random:
         return ColorList[0]
-    Now = Time.time() if hasattr(Time, "time") else 0.0
+    # Канонічний хронометр: вузол System.Time.Now (epoch-секунди, float)
+    NowNode = LCARS.Retrieve("System.Time.Now")
+    Now = NowNode() if callable(NowNode) else 0.0
     StateData = SystemTheme.DynamicColors
     EntryKey = (GroupKey + "." + Key) if Key else GroupKey
     GroupState = StateData.get(EntryKey)
