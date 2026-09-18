@@ -19,44 +19,47 @@ def ButtonsInterface():
     Padd.SetVertical(24, 24, 24, 24, Spacing=14)
 
     BootScreen = Panel(Spectrum=Palette.Background)
-    BootScreen.SetVertical(0, 0, 0, 0, Spacing=14)
-    BootScreen.AddStretch(1)
+    BootScreen.SetVertical(40, 40, 40, 40, Spacing=16)
+
     # Статусний заголовок
     StatusLabel = LCARSLabel(
         Text="STANDBY MODE // PADD OFFLINE",
-        FontSize=18,
+        FontSize=20,
         Align="center",
-        Width=600,
-        Height=36,
+        Width=800,
+        Height=40,
         Spectrum=Palette.Buttons[1]
     )
     BootScreen.Add(StatusLabel)
+
     # Підказка для офіцера
     PromptLabel = LCARSLabel(
         Text="PRESS INITIALIZE TO ENGAGE LCARS INTERFACE",
-        FontSize=12,
+        FontSize=13,
         Align="center",
-        Width=600,
-        Height=24,
+        Width=800,
+        Height=28,
         Spectrum=Palette.Disabled[1]
     )
     BootScreen.Add(PromptLabel)
+
     # Кнопка запуску ініціалізації
     StartButton = LCARSButton(
         Text="INITIALIZE SYSTEM",
         Form=LCARSButton.Pill,
-        Width=280,
-        Height=46,
-        FontSize=15,
+        Width=340,
+        Height=50,
+        FontSize=16,
         Sound="acknowledge"
     )
     BootScreen.Add(StartButton)
+
     # Потік діагностики та телеметрії ODN
     TelemetryStream = DataStream(
-        Width=600,
-        Height=110,
-        Rows=5,
-        FontSize=11,
+        Width=800,
+        Height=180,
+        Rows=6,
+        FontSize=12,
         Spectrum=Palette.Buttons[2],
         Accent=Palette.Buttons[0]
     )
@@ -65,9 +68,9 @@ def ButtonsInterface():
         "EPS POWER COUPLING // SYNCHRONIZING",
         "ODN SUBSURFACE CARRIER // INITIALIZING",
         "LCARS 47-ALPHA CORE // HANDSHAKE READY",
+        "TACTICAL INTERFACE MATRIX // STANDBY",
     ]
     BootScreen.Add(TelemetryStream)
-    BootScreen.AddStretch(1)
     # =========================================================================
     # 2. ГОЛОВНА РОБОЧА ПАНЕЛЬ КАТАЛОГУ КНОПОК
     # =========================================================================

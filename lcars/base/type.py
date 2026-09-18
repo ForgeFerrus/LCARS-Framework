@@ -32,10 +32,21 @@ class Namespace(type):
             "Graphics": "Base.Graphics",
         }
 
+        # Канонічні аліаси сегментів
+        SegmentAliases = {
+            "RectF": "Rect",
+            "PointF": "Point",
+            "SizeF": "Size",
+            "LineF": "Line",
+            "MarginsF": "Margins",
+        }
+
+        CleanAttrName = SegmentAliases.get(AttributeName, AttributeName)
+
         if not ParentPath:
             CurrentPath = RootMap.get(AttributeName, AttributeName)
         else:
-            CurrentPath = f"{ParentPath}.{AttributeName}"
+            CurrentPath = f"{ParentPath}.{CleanAttrName}"
 
         # 1. Шукаємо запис у Реєстрі LCARS
         Resolved = LCARS.Retrieve(CurrentPath)

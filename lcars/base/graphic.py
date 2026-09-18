@@ -399,6 +399,21 @@ class Topology(Graphic):
     PolygonType = "Polygon"
     TextType = "Text"
     ImageType = "Image"
+
+    # Канонічні аліаси типів сегментів для Synthesize
+    Elbow = ElbowType
+    Bar = BarType
+    Cap = CapType
+    Column = ColumnType
+    Rect = RectType
+    Rounded = RoundedType
+    Circle = CircleType
+    Arc = ArcType
+    Line = LineType
+    Point = PointType
+    Polygon = PolygonType
+    Text = TextType
+    Image = ImageType
     # -------------------------------------------------------------------------
     # Прокладання оптичних траєкторій світла прямо у self.Trajectory
     # -------------------------------------------------------------------------
