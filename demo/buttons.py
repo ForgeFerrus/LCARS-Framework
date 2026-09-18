@@ -5,14 +5,6 @@
 # 2. Натискання кнопки активує квантове декодування (TextDecode) та потік телеметрії (DataStream).
 # 3. Термінальний посимвольний друк (Typewriter) підтверджує готовність матриці.
 # 4. Каскадне розгортання (Stagger + Reveal) розгортає повний каталог кнопок LCARS.
-# Канонічний бутстрап шляху: корінь проєкту — для запуску з будь-якої теки
-import os
-import sys
-
-Root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if Root not in sys.path:
-    sys.path.insert(0, Root)
-
 from lcars.base.type import LCARS
 from lcars.base.interface import PADD, Panel
 from lcars.base.component import LCARSButton, LCARSElbow, LCARSLabel
@@ -27,13 +19,18 @@ def ButtonsInterface():
     Padd.SetVertical(24, 24, 24, 24, Spacing=14)
 
     BootScreen = Panel(Spectrum=Palette.Background)
+    BootScreen.SetVertical(0, 0, 0, 0, Spacing=14)
+    BootScreen.AddStretch(1)
     BootScreen.SetVertical(40, 40, 40, 40, Spacing=16)
 
     # Статусний заголовок
     StatusLabel = LCARSLabel(
         Text="STANDBY MODE // PADD OFFLINE",
+        FontSize=18,
         FontSize=20,
         Align="center",
+        Width=600,
+        Height=36,
         Width=800,
         Height=40,
         Spectrum=Palette.Buttons[1]
@@ -43,8 +40,11 @@ def ButtonsInterface():
     # Підказка для офіцера
     PromptLabel = LCARSLabel(
         Text="PRESS INITIALIZE TO ENGAGE LCARS INTERFACE",
+        FontSize=12,
         FontSize=13,
         Align="center",
+        Width=600,
+        Height=24,
         Width=800,
         Height=28,
         Spectrum=Palette.Disabled[1]
@@ -55,6 +55,9 @@ def ButtonsInterface():
     StartButton = LCARSButton(
         Text="INITIALIZE SYSTEM",
         Form=LCARSButton.Pill,
+        Width=280,
+        Height=46,
+        FontSize=15,
         Width=340,
         Height=50,
         FontSize=16,
@@ -64,6 +67,10 @@ def ButtonsInterface():
 
     # Потік діагностики та телеметрії ODN
     TelemetryStream = DataStream(
+        Width=600,
+        Height=110,
+        Rows=5,
+        FontSize=11,
         Width=800,
         Height=180,
         Rows=6,
@@ -79,6 +86,7 @@ def ButtonsInterface():
         "TACTICAL INTERFACE MATRIX // STANDBY",
     ]
     BootScreen.Add(TelemetryStream)
+    BootScreen.AddStretch(1)
     # =========================================================================
     # 2. ГОЛОВНА РОБОЧА ПАНЕЛЬ КАТАЛОГУ КНОПОК
     # =========================================================================
