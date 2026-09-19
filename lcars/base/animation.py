@@ -7,8 +7,72 @@ import math
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from lcars.base.component import Component, Normalize, Take
 from lcars.base.default import Palette
-from lcars.base.graphic import Modulation, Graphic, Primitive, Renderer
-from lcars.base.type import LCARS, SystemComponent
+# =============================================================================
+# МАТЕМАТИЧНІ КРИВІ МОДУЛЯЦІЇ ТА ХВИЛЬОВІ ФУНКЦІЇ (MODULATION / EASING)
+# =============================================================================
+class Modulation(SystemComponent):
+    TypeName = "LCARSModulation"
+
+    def Phase(self, Period: float = 1.0) -> float:
+        TimeMod = LCARS.System.Time
+        TimeFunc = getattr(TimeMod, "time", None) if TimeMod else None
+        CurrentTime = TimeFunc() if callable(TimeFunc) else 0.0
+        return (CurrentTime % max(0.001, Period)) / max(0.001, Period)
+
+    def Linear(self, Phase: float) -> float:
+        return Phase
+
+    def Accelerate(self, Phase: float) -> float:
+        return Phase * Phase
+
+    def Decelerate(self, Phase: float) -> float:
+        return Phase * (2.0 - Phase)
+
+    def Transition(self, Phase: float) -> float:
+        return 2.0 * Phase * Phase if Phase < 0.5 else -1.0 + (4.0 - 2.0 * Phase) * Phase
+
+    def Sine(self, Phase: float) -> float:
+        Math = LCARS.System.Math
+        SinFunc = getattr(Math, "sin", None) if Math else None
+        PiVal = getattr(Math, "pi", 3.141592653589793) if Math else 3.141592653589793
+        if callable(SinFunc):
+            return (SinFunc(Phase * 2.0 * PiVal - PiVal / 2.0) + 1.0) / 2.0
+        return Phase
+
+    def Triangle(self, Phase: float) -> float:
+        P = Phase % 1.0
+        return 2.0 * P if P < 0.5 else 2.0 * (1.0 - P)
+
+    def Sawtooth(self, Phase: float) -> float:
+        return Phase % 1.0
+
+    def Pulse(self, Phase: float) -> float:
+        return 1.0 if (Phase % 1.0) < 0.5 else 0.0
+
+    def Luminance(self, MinLuminance: float = 0.2, MaxLuminance: float = 1.0, Period: float = 1.5, WaveFunc=None) -> float:
+        CurrentPhase = self.Phase(Period)
+        Factor = WaveFunc(CurrentPhase) if callable(WaveFunc) else self.Sine(CurrentPhase)
+        return MinLuminance + (MaxLuminance - MinLuminance) * Factor
+
+    def ModulateSpectrum(self, SpectrumA: str, SpectrumB: str, Period: float = 2.0, WaveFunc=None) -> str:
+        CurrentPhase = self.Phase(Period)
+        Factor = WaveFunc(CurrentPhase) if callable(WaveFunc) else self.Sine(CurrentPhase)
+        GraphicClass = LCARS.Retrieve("Base.Visual") or Graphic
+        LerpFunc = getattr(GraphicClass, "LerpSpectrum", None)
+        if callable(LerpFunc):
+            return LerpFunc(SpectrumA, SpectrumB, Factor)
+        return SpectrumA
+
+    ModulateColor = ModulateSpectrum
+
+    def ModulateVector(self, Vector: tuple, Period: float = 1.0, WaveFunc=None) -> tuple:
+        CurrentPhase = self.Phase(Period)
+        Factor = WaveFunc(CurrentPhase) if callable(WaveFunc) else self.Sine(CurrentPhase)
+        return tuple(v * Factor for v in Vector)
+
+Waveform = Modulation
+Easing = Modulation
+
 # =============================================================================
 # УНІВЕРСАЛЬНИЙ РУШІЙ АНІМАЦІЙ ТА ЧАСОВОЇ МОДУЛЯЦІЇ LCARS
 # Поєднує системний квантовий таймер із математичною модуляцією Graphic

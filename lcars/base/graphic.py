@@ -4,174 +4,11 @@
 #         які рендерить системний клас Renderer без зайвого CSS та піксельних розривів.
 # ─────────────────────────────────────────────────────────────────────────────
 from lcars.base.type import LCARS, SystemComponent
-from lcars.base.default import Palette, DefaultBackground, FrameThick, FrameThin, FrameRadius
+from lcars.base.default import Palette, DefaultBackground, FrameThick, FrameRadius
 from lcars.core.signal import ODN
-# =============================================================================
-# МАТЕМАТИЧНІ КРИВІ МОДУЛЯЦІЇ (EASING)
-# 1. СИСТЕМНА МОДУЛЯЦІЯ ТА ФОРМИ ХВИЛЬ LCARS (MODULATION / WAVEFORM)
-# =============================================================================
-class Modulation(SystemComponent):
-    TypeName = "LCARSModulation"
-    # Обчислює поточну фазу (від 0.0 до 1.0) за системним часом
-    def Phase(self, Period: float = 1.0) -> float:
-        TimeMod = LCARS.System.Time
-        TimeFunc = getattr(TimeMod, "time", None) if TimeMod else None
-        CurrentTime = TimeFunc() if callable(TimeFunc) else 0.0
-        return (CurrentTime % max(0.001, Period)) / max(0.001, Period)
-
-    # Лінійна модуляція фази
-    def Linear(self, Phase: float) -> float:
-        return Phase
-
-    # Наростання сигнального імпульсу (прискорення)
-    def Accelerate(self, Phase: float) -> float:
-        return Phase * Phase
-
-    # Згасання сигнального імпульсу (уповільнення)
-    def Decelerate(self, Phase: float) -> float:
-        return Phase * (2.0 - Phase)
-
-    # Симетричний плавність переходу
-    def Transition(self, Phase: float) -> float:
-        return 2.0 * Phase * Phase if Phase < 0.5 else -1.0 + (4.0 - 2.0 * Phase) * Phase
-
-    # Синусоїдальна хвиля пульсації LCARS
-    def Sine(self, Phase: float) -> float:
-        Math = LCARS.System.Math
-        SinFunc = getattr(Math, "sin", None) if Math else None
-        PiVal = getattr(Math, "pi", 3.141592653589793) if Math else 3.141592653589793
-        if callable(SinFunc):
-            return (SinFunc(Phase * 2.0 * PiVal - PiVal / 2.0) + 1.0) / 2.0
-        return Phase
-
-    # Трикутна симетрична хвиля
-    def Triangle(self, Phase: float) -> float:
-        P = Phase % 1.0
-        return 2.0 * P if P < 0.5 else 2.0 * (1.0 - P)
-
-    # Пилоподібна хвиля сканування та бегучих вогнів
-    def Sawtooth(self, Phase: float) -> float:
-        return Phase % 1.0
-
-    # Прямокутна імпульсна хвиля перемикання
-    def Pulse(self, Phase: float) -> float:
-        return 1.0 if (Phase % 1.0) < 0.5 else 0.0
-
-    # Модуляція інтенсивності фотонного світіння (Luminance)
-    def Luminance(self, MinLuminance: float = 0.2, MaxLuminance: float = 1.0, Period: float = 1.5, WaveFunc=None) -> float:
-        CurrentPhase = self.Phase(Period)
-        Factor = WaveFunc(CurrentPhase) if callable(WaveFunc) else self.Sine(CurrentPhase)
-        return MinLuminance + (MaxLuminance - MinLuminance) * Factor
-    # Модуляція спектрального випромінювання (кольору) через хвильовий алгоритм
-    def ModulateSpectrum(self, SpectrumA: str, SpectrumB: str, Period: float = 2.0, WaveFunc=None) -> str:
-        CurrentPhase = self.Phase(Period)
-        Factor = WaveFunc(CurrentPhase) if callable(WaveFunc) else self.Sine(CurrentPhase)
-        return Visual.LerpSpectrum(SpectrumA, SpectrumB, Factor)
-    # Аліас модуляції кольору
-    ModulateColor = ModulateSpectrum
-    # Модуляція векторної амплітуди
-    def ModulateVector(self, Vector: tuple, Period: float = 1.0, WaveFunc=None) -> tuple:
-        CurrentPhase = self.Phase(Period)
-        Factor = WaveFunc(CurrentPhase) if callable(WaveFunc) else self.Sine(CurrentPhase)
-        return tuple(v * Factor for v in Vector)
-    # Модуляція кривизни просторового полігону
-    def ModulateCurve(self,
-        StartPoint: tuple,
-        EndPoint: tuple,
-        ControlPoint: tuple,
-        Period: float = 1.0,
-        WaveFunc=None,) -> tuple:
-        Phase = self.Phase(Period)
-        Factor = WaveFunc(Phase) if callable(WaveFunc) else self.Sine(Phase)
-        T = Clamp(float(Factor), 0.0, 1.0)
-        U = 1.0 - T
-        X = (
-            U * U * StartPoint[0]
-            + 2.0 * U * T * ControlPoint[0]
-            + T * T * EndPoint[0]
-        )
-        Y = (
-            U * U * StartPoint[1]
-            + 2.0 * U * T * ControlPoint[1]
-            + T * T * EndPoint[1]
-        )
-        return X, Y
-    # Модуляція просторової кривизни (викривлення) полігону
-    # Модулює кривизну полігону між двома точками з контрольною точкою. Використовується для створення складних форм та кривих.
-    def ModulateCurvature(
-        self,
-        StartPoint: tuple,
-        EndPoint: tuple,
-        ControlA: tuple,
-        ControlB: tuple,
-        Period: float = 1.0,
-        WaveFunc=None,) -> tuple:
-        Phase = self.Phase(Period)
-        Factor = WaveFunc(Phase) if callable(WaveFunc) else self.Sine(Phase)
-        T = Clamp(float(Factor), 0.0, 1.0)
-        Control = (
-            Lerp(ControlA[0], ControlB[0], T),
-            Lerp(ControlA[1], ControlB[1], T),
-        )
-        return StartPoint, Control, EndPoint
-    # Модуляція просторового розташування елементів
-    def ModulatePosition(self, PositionA: tuple, PositionB: tuple, Period: float = 1.0, WaveFunc=None) -> tuple:
-        CurrentPhase = self.Phase(Period)
-        Factor = WaveFunc(CurrentPhase) if callable(WaveFunc) else self.Sine(CurrentPhase)
-        return tuple(
-            a + (b - a) * Factor
-            for a, b in zip(PositionA, PositionB)
-        )
-    # Модуляція геометричного розміру
-    def ModulateSize(self,
-        SizeA: tuple,
-        SizeB: tuple,
-        Period: float = 1.0,
-        WaveFunc=None,) -> tuple:
-        return self.ModulatePosition(SizeA, SizeB, Period=Period, WaveFunc=WaveFunc)
-    # Модуляція тривимірної глибини (Z-координати)
-    # Модулює глибину просторового об'єкта. Використовується для створення 3D-ефектів та паралаксу.
-    def ModulateDepth(self, DepthA: float, DepthB: float, Period: float = 1.0, WaveFunc=None) -> float:
-        CurrentPhase = self.Phase(Period)
-        Factor = WaveFunc(CurrentPhase) if callable(WaveFunc) else self.Sine(CurrentPhase)
-        return DepthA + (DepthB - DepthA) * Factor
-    # Модуляція прозорості елемента
-    # Модулює прозорість елемента між двома станами. Використовується для створення ефектів згасання та появи.
-    def ModulateTransparency(self, TransparentA: bool, TransparentB: bool, Period: float = 1.0, WaveFunc=None) -> bool:
-        CurrentPhase = self.Phase(Period)
-        Factor = WaveFunc(CurrentPhase) if callable(WaveFunc) else self.Sine(CurrentPhase)
-        return TransparentA if Factor < 0.5 else TransparentB
-    # Модуляція просторової перспективи для створення 3D-ефекту
-    # Модулює просторову перспективу для створення 3D-ефекту. Використовується для складних просторових трансформацій.
-    def ProjectPerspective(
-        self,
-        Point: tuple,
-        Center: tuple = (0.0, 0.0),
-        FocalLength: float = 500.0,
-        Near: float = 0.1,) -> tuple | None:
-        # X, Y, Z задані відносно камери.
-        X, Y, Z = Point
-        if FocalLength <= 0.0 or Near <= 0.0:
-            raise ValueError("FocalLength and Near must be positive")
-        if Z < Near:
-            return None
-        Scale = FocalLength / Z
-        return (
-            Center[0] + X * Scale,
-            Center[1] + Y * Scale,
-        )
-    # Модуляція векторної траєкторії елемента
-    # Модулює векторну траєкторію елемента. Використовується для створення складних просторових рухів.
-    def ModulateTrajectory(self, Trajectory: list, Period: float = 1.0, WaveFunc=None) -> list:
-        CurrentPhase = self.Phase(Period)
-        Factor = WaveFunc(CurrentPhase) if callable(WaveFunc) else self.Sine(CurrentPhase)
-        return [tuple(v * Factor for v in Point) for Point in Trajectory]
-Waveform = Modulation
-# Канонічний аліас кривих модуляції (сумісність з animation.py)
-Easing = Modulation
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 # Квантовий математичний інструментарій LCARS (чисті формули)
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 # Обмеження значення
 def Clamp(Value: float, Minimum: float, Maximum: float) -> float:
     return max(Minimum, min(Maximum, Value))
@@ -218,7 +55,6 @@ def RGBToHex(RGB: tuple) -> str:
         for Channel in RGB
     )
     return f"#{R:02x}{G:02x}{B:02x}"
-    
 # =============================================================================
 # 2. ГОЛОВНЕ ВІЗУАЛЬНЕ ЯДРО LCARS (GRAPHIC)
 # Базовий системний клас векторного графічного компонента
@@ -879,7 +715,7 @@ class MagneticGrid(SystemComponent):
         return (SnapX, SnapY, SnapW, SnapH)
 
 
-class LCARSVectorItem(Graphic):
+class LCARSVectorItem(Topology):
     TypeName = "LCARSVectorItem"
 
     def Initialize(self, ElementType="Elbow", Spectrum="#FF9900", **kwargs):
@@ -908,6 +744,94 @@ class LCARSVectorItem(Graphic):
         return self.Wavefront
 
 
+class VectorLayout(SystemComponent):
+    TypeName = "LCARSVectorLayout"
+
+    def __init__(self, CanvasRef=None, Orientation="vertical", Spacing=8):
+        self.Canvas = CanvasRef
+        self.Orientation = Orientation
+        self.Spacing = Spacing
+
+    def Arrange(self, Items: list):
+        if not Items:
+            return
+        Grid = getattr(self.Canvas, "Grid", None)
+        CurX = 0
+        CurY = 0
+        for Item in Items:
+            if Grid:
+                Item.X, Item.Y, Item.Width, Item.Height = Grid.SnapRect(CurX, CurY, Item.Width, Item.Height)
+            else:
+                Item.X = CurX
+                Item.Y = CurY
+            Item.Synthesize()
+            if self.Orientation == "horizontal":
+                CurX += Item.Width + self.Spacing
+            else:
+                CurY += Item.Height + self.Spacing
+
+
+class VectorTypography(SystemComponent):
+    TypeName = "LCARSVectorTypography"
+
+    def FitFontSize(self, TextStr: str, ContainerWidth: float, MinSize: int = 16, MaxSize: int = 36) -> int:
+        if not TextStr:
+            return MinSize
+        CharCount = len(TextStr)
+        EstimatedWidth = CharCount * (MaxSize * 0.55)
+        if EstimatedWidth <= ContainerWidth:
+            return MaxSize
+        Calculated = int(ContainerWidth / (CharCount * 0.55))
+        return max(MinSize, min(MaxSize, Calculated))
+
+
+class Serializer(SystemComponent):
+    TypeName = "LCARSSerializer"
+
+    def ToDict(self, CanvasObj: LCARSCanvas) -> dict:
+        Data = {
+            "Type": "LCARSCanvas",
+            "GridSize": getattr(CanvasObj.Grid, "GridSize", 8),
+            "Items": []
+        }
+        for Item in getattr(CanvasObj, "VectorItems", []):
+            Data["Items"].append({
+                "ElementType": getattr(Item, "ElementType", "Rect"),
+                "X": getattr(Item, "X", 0),
+                "Y": getattr(Item, "Y", 0),
+                "Width": getattr(Item, "Width", 100),
+                "Height": getattr(Item, "Height", 40),
+                "Thickness": getattr(Item, "Thickness", 28),
+                "Corner": getattr(Item, "Corner", "top-left"),
+                "Spectrum": getattr(Item, "Spectrum", "#FF9900"),
+            })
+        return Data
+
+    def GenerateCode(self, CanvasObj: LCARSCanvas, FunctionName: str = "BuildLCARSInterface") -> str:
+        DictData = self.ToDict(CanvasObj)
+        Lines = [
+            f"# LCARS AUTOGENERATED INTERFACE — {FunctionName}",
+            "# СТАНДАРТ: Titanium",
+            "",
+            "from lcars.base.type import LCARS",
+            "from lcars.base.graphic import LCARSCanvas, LCARSVectorItem",
+            "",
+            f"def {FunctionName}():",
+            f"    Canvas = LCARSCanvas(GridSize={DictData['GridSize']})",
+        ]
+        for Index, ItemData in enumerate(DictData["Items"]):
+            VarName = f"Item{Index + 1}"
+            Lines.append(f"    {VarName} = LCARSVectorItem(")
+            Lines.append(f"        ElementType=\"{ItemData['ElementType']}\",")
+            Lines.append(f"        X={ItemData['X']}, Y={ItemData['Y']},")
+            Lines.append(f"        Width={ItemData['Width']}, Height={ItemData['Height']},")
+            Lines.append(f"        Corner=\"{ItemData['Corner']}\"")
+            Lines.append("    )")
+            Lines.append(f"    Canvas.AddItem({VarName})")
+        Lines.append("    return Canvas")
+        return "\n".join(Lines)
+
+
 class LCARSCanvas(Graphic):
     TypeName = "LCARSCanvas"
 
@@ -925,6 +849,10 @@ class LCARSCanvas(Graphic):
         self.VectorItems.append(Item)
         return Item
 
+    def Arrange(self, Orientation="vertical", Spacing=8):
+        LayoutObj = VectorLayout(CanvasRef=self, Orientation=Orientation, Spacing=Spacing)
+        LayoutObj.Arrange(self.VectorItems)
+
 
 # Канонічні аліаси для зворотної сумісності
 Builder = Architect
@@ -937,7 +865,6 @@ def SetStyle(TargetWidget, Style):
         Setter(str(Style))
 
 LCARS.Types = (
-    "Modulation",
     "Geometry",
     "Visual",
     "Renderer",
@@ -948,6 +875,9 @@ LCARS.Types = (
     "MagneticGrid",
     "LCARSVectorItem",
     "LCARSCanvas",
+    "VectorLayout",
+    "VectorTypography",
+    "Serializer",
 )
 # Аліас експорту модуля для Python імпортів (from lcars.base.type import *)
 All = list(LCARS.Types)
