@@ -7,12 +7,12 @@ from typing import Any, Optional, Dict, List, Union, Tuple
 from lcars.base.component import Component
 from lcars.base.graphic import Visual, Emitter
 from lcars.base.default import DefaultBackground, Palette
-from lcars.base.type import LCARS
+from lcars.base.type import LCARS, SystemComponent
 # =============================================================================
 # СЕНСОРНА ОПТИЧНА ПОВЕРХНЯ LCARS (SURFACE / PANEL)
-Display: type = LCARS.Retrieve("Base.Interface.Widget") or object
+# Чистий векторний вузол LCARS без наслідування від застарілих прямокутників QWidget
 # =============================================================================
-class Surface(Display):
+class Surface(SystemComponent):
     TypeName = "LCARSSurface"
     Optics = None
     Layers = []
@@ -31,14 +31,50 @@ class Surface(Display):
             OpticsWidth = getattr(self.Optics, "Width", None)
             OpticsType = str(getattr(self.Optics, "Type", "")).lower()
             IsRigid = not getattr(self.Optics, "Flexible", False) or OpticsType in ("button", "indicator", "elbow", "label", "bar", "text")
-            if OpticsHeight is not None and IsRigid and hasattr(self, "setFixedHeight"):
+            if OpticsHeight is not None and IsRigid:
                 self.setFixedHeight(int(OpticsHeight))
-            if OpticsWidth is not None and OpticsType in ("button", "indicator", "elbow") and hasattr(self, "setFixedWidth"):
+            if OpticsWidth is not None and OpticsType in ("button", "indicator", "elbow"):
                 self.setFixedWidth(int(OpticsWidth))
-        if hasattr(self, "startTimer"):
-            self.PulseTimer = self.startTimer(120)
 
     Init = Initialize
+
+    def setFixedWidth(self, Width):
+        if self.Optics:
+            self.Optics.Width = Width
+        self.Width = Width
+        return self
+
+    def setFixedHeight(self, Height):
+        if self.Optics:
+            self.Optics.Height = Height
+        self.Height = Height
+        return self
+
+    def setMinimumSize(self, *Args):
+        return self
+
+    def setMaximumSize(self, *Args):
+        return self
+
+    def setSizePolicy(self, *Args):
+        return self
+
+    def setLayout(self, Layout):
+        self.Layout = Layout
+        return self
+
+    def update(self):
+        return self
+
+    def show(self):
+        return self
+
+    def hide(self):
+        return self
+
+    def isVisible(self):
+        return True
+
     def SetOptics(self, Value):
         self.Optics = Value
         return self
@@ -49,7 +85,7 @@ class Surface(Display):
     def Pulse(self, Event=None):
         if not self.Optics:
             return
-        if hasattr(self, "isVisible") and not self.isVisible():
+        if not self.isVisible():
             return
         self.update()
 
@@ -197,10 +233,25 @@ class Element(Component):
     Items: Dict[str, Component] = {}
     Spacing = 6.0       # Фірмовий зазор Окуди між компонентами
     Orientation = "horizontal"  # horizontal або vertical
-    Title = ""
+    Visible = True
     SurfaceHost = None
     Tactile = False
     Interactive = False
+
+    def show(self):
+        self.Visible = True
+        if self.SurfaceHost and hasattr(self.SurfaceHost, "show"):
+            self.SurfaceHost.show()
+        return self
+
+    def hide(self):
+        self.Visible = False
+        if self.SurfaceHost and hasattr(self.SurfaceHost, "hide"):
+            self.SurfaceHost.hide()
+        return self
+
+    def isVisible(self):
+        return bool(self.Visible)
 
     def GetSurface(self):
         if self.SurfaceHost is None:
@@ -377,10 +428,13 @@ class Element(Component):
                     TargetSurface = Item
 
         if hasattr(TargetLayout, "addWidget") and (not hasattr(Item, "addWidget") or TargetSurface is not Item):
-            if Stretch is None:
-                TargetLayout.addWidget(TargetSurface)
-            else:
-                TargetLayout.addWidget(TargetSurface, int(Stretch))
+            IsQtLayout = hasattr(TargetLayout, "count") and hasattr(TargetLayout, "indexOf")
+            IsQtWidget = hasattr(TargetSurface, "inherits") or type(TargetSurface).__name__ in ("QWidget", "Display")
+            if not IsQtLayout or IsQtWidget:
+                if Stretch is None:
+                    TargetLayout.addWidget(TargetSurface)
+                else:
+                    TargetLayout.addWidget(TargetSurface, int(Stretch))
             if hasattr(TargetSurface, "show"):
                 TargetSurface.show()
         elif hasattr(TargetLayout, "addLayout"):
@@ -392,7 +446,9 @@ class Element(Component):
         LayoutClass = LCARS.Retrieve("Base.Interface.Layout.Vertical")
         if LayoutClass and callable(LayoutClass):
             Host = self.GetSurface()
-            self.Layout = LayoutClass(Host)
+            self.Layout = LayoutClass()
+            if hasattr(Host, "setLayout"):
+                Host.setLayout(self.Layout)
             if hasattr(self.Layout, "setContentsMargins"):
                 self.Layout.setContentsMargins(Left, Top, Right, Bottom)
             if hasattr(self.Layout, "setSpacing"):
@@ -403,7 +459,9 @@ class Element(Component):
         LayoutClass = LCARS.Retrieve("Base.Interface.Layout.Horizontal")
         if LayoutClass and callable(LayoutClass):
             Host = self.GetSurface()
-            self.Layout = LayoutClass(Host)
+            self.Layout = LayoutClass()
+            if hasattr(Host, "setLayout"):
+                Host.setLayout(self.Layout)
             if hasattr(self.Layout, "setContentsMargins"):
                 self.Layout.setContentsMargins(Left, Top, Right, Bottom)
             if hasattr(self.Layout, "setSpacing"):

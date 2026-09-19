@@ -577,20 +577,40 @@ class Emitter(Graphic):
             return self.RadiateTrace(Wavefront, Segment.Spectrum, getattr(Segment, "LineWidth", 1.0))
         # Замкнений квантовий блок
         return self.Fill(Wavefront, Segment.Spectrum, Segment.Luminance)
+    # Фотонне випромінювання (оріол / світіння Emitter)
+    def EmitGlow(self, Wavefront, Spectrum, Intensity: float = 1.0):
+        Context = getattr(self, "Context", None)
+        if Context is None or Wavefront is None:
+            return False
+        BaseColor = LCARS.Visual.Color(Spectrum)
+        # 3 квантові шарa об'ємного світіння оптики
+        for Step in (6, 4, 2):
+            PenColor = LCARS.Visual.Color(BaseColor)
+            AlphaVal = min(0.35, 0.08 * Intensity * (8 - Step))
+            PenColor.setAlphaF(AlphaVal)
+            GlowPen = LCARS.Visual.Pen(PenColor, float(Step))
+            Context.setBrush(LCARS.Visual.Brush(LCARS.Visual.Color("transparent")))
+            Context.setPen(GlowPen)
+            Context.drawPath(Wavefront)
+        return True
+
     # Чиста векторна заливка світлом
     def Fill(self, Wavefront, Spectrum, Luminance: float = 1.0):
         Context = getattr(self, "Context", None)
         if Context is None or Wavefront is None or not hasattr(Wavefront, "boundingRect"):
             return False
+        self.EmitGlow(Wavefront, Spectrum, Luminance)
         Color = LCARS.Visual.Color(Spectrum)
         Color.setAlphaF(Clamp(float(Luminance), 0.0, 1.0))
         Context.fillPath(Wavefront, LCARS.Visual.Brush(Color))
         return True
+
     # Чистий контурний промінь заданої товщини
     def RadiateTrace(self, Wavefront, Spectrum, LineWidth: float = 1.0):
         Context = getattr(self, "Context", None)
         if Context is None or Wavefront is None:
             return False
+        self.EmitGlow(Wavefront, Spectrum, 0.8)
         ColorObj = LCARS.Visual.Color(Spectrum)
         PenObj = LCARS.Visual.Pen(ColorObj, float(LineWidth))
         self.Context.setBrush(LCARS.Visual.Brush(LCARS.Visual.Color("transparent")))
