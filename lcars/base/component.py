@@ -3,8 +3,8 @@
 # СТАНДАРТ: Titanium (Zero-Except, Pure PascalCase, Vector Surface Rendering).
 
 from lcars.base.type import LCARS, Type
-from lcars.base.graphic import Visual, Topology, Graphic, Primitive, SetStyle
-from lcars.base.default import SystemTheme, Palette, DefaultBackground, DefaultFontFamily
+from lcars.base.graphic import Visual, Topology, Graphic, Primitive
+from lcars.base.default import SystemTheme, Palette, DefaultBackground, DefaultFontFamily, SetStyle
 from lcars.core.signal import ODN
 
 Mapping = Type.Mapping

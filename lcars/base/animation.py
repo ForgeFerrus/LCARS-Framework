@@ -7,6 +7,8 @@ import math
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from lcars.base.component import Component, Normalize, Take
 from lcars.base.default import Palette
+from lcars.base.type import LCARS, SystemComponent
+from lcars.base.graphic import Graphic, Primitive, Renderer
 # =============================================================================
 # МАТЕМАТИЧНІ КРИВІ МОДУЛЯЦІЇ ТА ХВИЛЬОВІ ФУНКЦІЇ (MODULATION / EASING)
 # =============================================================================
