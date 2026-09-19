@@ -6,8 +6,7 @@
 # animation.py  -> Warp, DataStream, DiagnosticGrid
 # Workbench / Nova тут не імпортуються. Вони мають запускатися окремим модулем,
 # коли будуть приведені до актуального LCARS API.
-from __future__ import annotations
-import sys
+
 from datetime import datetime
 
 from lcars.base.type import LCARS

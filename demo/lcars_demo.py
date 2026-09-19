@@ -1,124 +1,81 @@
-"""
-Автентична LCARS-система — демонстрація в стилі Star Trek
+# Демонстраційний файл LCARS - автентична система в стилі Star Trek
+# Призначення: Демонстрація палітр проекту через базові компоненти фреймворку
 
-Файл містить демонстрацію використання базових компонентів LCARS Framework.
-Коментарі й docstring'и тут виконані українською для зручності розробника.
-"""
 import sys
 from pathlib import Path
 
-# Add project root to Python path
-project_root = Path(__file__).parent.absolute()
-# Ensure repository root is on sys.path so the `lcars` package can be imported
-repo_root = project_root.parent
-sys.path.insert(0, str(repo_root))
+# Додаємо корінь проекту в шлях Python для імпорту модулів lcars
+projectRoot = Path(__file__).parent.absolute()
+repoRoot = projectRoot.parent
+sys.path.insert(0, str(repoRoot))
 
-from PyQt6.QtWidgets import QApplication
+# Імпортуємо через реєстр LCARS базові компоненти
+from lcars.base.type import LCARS
 
-# Import base framework components
-from lcars.base.component import LCARSButton, LCARSElbow, LCARSLabel, LCARSIndicator, LCARSBar
-from lcars.base.interface import Screen, Segment, Header, DataBlock
-from lcars.base.default import Palette, RandomButtonColor, FontStyle
-from lcars.base.desktop import LCARSDesktop
-from lcars.themes.lcars_palette import LCARSEra, get_theme, setup_lcars_font
-from lcars.themes.theme import FactionEra
+ComponentModule = LCARS.Import("lcars.base.component")
+LCARSButton = ComponentModule.LCARSButton
+LCARSElbow = ComponentModule.LCARSElbow
+LCARSLabel = ComponentModule.LCARSLabel
+LCARSIndicator = ComponentModule.LCARSIndicator
+LCARSBar = ComponentModule.LCARSBar
 
-# Register LCARS fonts (best-effort)
-try:
-    setup_lcars_font()
-except (ImportError, OSError, FileNotFoundError):
-    # Fonts are optional for the demo; ignore common filesystem/import errors
-    pass
+InterfaceModule = LCARS.Import("lcars.base.interface")
+Screen = InterfaceModule.Screen
+Segment = InterfaceModule.Segment
+Header = InterfaceModule.Header
+DataBlock = InterfaceModule.DataBlock
 
-class DemoLCARSDesktop(LCARSDesktop):
-    """Демонстраційний десктоп LCARS на базі фреймворку.
+DefaultModule = LCARS.Import("lcars.base.default")
+Palette = DefaultModule.Palette
+RandomButtonColor = DefaultModule.RandomButtonColor
+FontStyle = DefaultModule.FontStyle
 
-    Розширює базовий LCARSDesktop для створення демонстраційного інтерфейсу
-    з використанням канонічних компонентів фреймворку.
-    """
-    def __init__(self, faction="FEDERATION", era="25th"):
-        super().__init__()
-        self.faction = faction
-        self.era = era
-        
-        # Convert era string to enum if possible
-        era_map = {
-            "22nd": LCARSEra.COMS_22ND,
-            "23rd": LCARSEra.PCARS_23RD,
-            "24th": LCARSEra.LCARS_24TH,
-            "25th": LCARSEra.LCARS_25TH,
-            "29th": LCARSEra.TCARS_29TH,
-        }
-        self.era_enum = era_map.get(era, LCARSEra.LCARS_25TH)
-        
-        self.setWindowTitle(f"LCARS Desktop - {faction} {era}")
-        self.setGeometry(50, 50, 1600, 1000)
-        
-        # Apply theme styling
-        self.apply_theme_styling()
-        
-    def apply_theme_styling(self):
-        """Застосувати стилі теми до десктопу."""
-        try:
-            theme = get_theme(self.era_enum)
-            bg_color = theme.get('background', '#000000')
-            self.widget.setStyleSheet(f"background-color: {bg_color}; border: none;")
-        except Exception:
-            # Fallback to default black background
-            self.widget.setStyleSheet("background-color: #000000; border: none;")
-    
-    def BuildLeftNavigation(self):
-        """Перевизначення навігації з використанням базових компонентів."""
-        # Викликаємо батьківський метод для базової структури
-        super().BuildLeftNavigation()
-        
-        # Додаємо специфічні для демо кнопки
-        demo_buttons = [
-            ("TACTICAL", self.show_tactical),
-            ("SCIENCE", self.show_science),
-            ("ENGINEERING", self.show_engineering),
-        ]
-        
-        for name, callback in demo_buttons:
-            btn = LCARSButton(
-                Text=name,
-                Type="soft-left",
-                Color=RandomButtonColor("accent", f"Demo{name}"),
-                Parent=self.LeftColumn.widget
-            )
-            btn.Clicked.Connect(callback)
-            self.LeftLayout.addWidget(btn.widget)
-    
-    def BuildRightShell(self):
-        """Перевизначення правої панелі з демонстраційним контентом."""
-        super().BuildRightShell()
-        
-        # Оновлюємо заголовок для демонстрації
-        if hasattr(self, 'TopStatus'):
-            self.TopStatus.SetText(f"LCARS DEMO - {self.faction} {self.era}")
-    
-    def show_tactical(self):
-        """Показати тактичну панель."""
-        self.ModeStatus.SetText("MODE // TACTICAL")
-        self.Select("TACTICAL")
-    
-    def show_science(self):
-        """Показати наукову панель."""
-        self.ModeStatus.SetText("MODE // SCIENCE")
-        self.Select("SCIENCE")
-    
-    def show_engineering(self):
-        """Показати інженерну панель."""
-        self.ModeStatus.SetText("MODE // ENGINEERING")
-        self.Select("ENGINEERING")
+DesktopModule = LCARS.Import("lcars.base.desktop")
+LCARSDesktop = DesktopModule.LCARSDesktop
+
+PaletteModule = LCARS.Import("lcars.themes.lcars_palette")
+LCARSEra = PaletteModule.LCARSEra
+getTheme = PaletteModule.get_theme
+setupLcarsFont = PaletteModule.setup_lcars_font
+
+ThemeModule = LCARS.Import("lcars.themes.theme")
+FactionEra = ThemeModule.FactionEra
+
+# Налаштування шрифтів LCARS
+setup_lcars_font()
+
+# Побудова словника кольорів з теми для сумісності UI коду
+defaultTheme = get_theme(LCARSEra.LCARS_25TH)
+palette = defaultTheme.get('palette', ['#4BBEBF'])
+LCARSColors = {
+    'primary_orange': palette[4] if len(palette) > 4 else palette[0],
+    'primary_cyan': palette[0],
+    'primary_blue': palette[1] if len(palette) > 1 else palette[0],
+    'secondary_cyan': palette[2] if len(palette) > 2 else palette[0],
+    'secondary_orange': palette[3] if len(palette) > 3 else palette[0],
+    'secondary_blue': palette[1] if len(palette) > 1 else palette[0],
+    'alert_red': defaultTheme.get('alerts', ['#D80000'])[0],
+    'alert_yellow': defaultTheme.get('alerts', ['#FFBB00'])[1] if len(defaultTheme.get('alerts', [])) > 1 else defaultTheme.get('alerts', ['#FFBB00'])[0],
+    'text_black': defaultTheme.get('text', '#000000'),
+    'text_white': defaultTheme.get('text', '#FFFFFF'),
+    'background_black': defaultTheme.get('bg', '#000000'),
+    'panel_gray': palette[0]
+}
+
+# Відображення назв епох на enum LCARSEra
+ERANameToEnum = {
+    "22nd": LCARSEra.COMS_22ND,
+    "23rd": LCARSEra.PCARS_23RD,
+    "23st": LCARSEra.PCARS_23ST,
+    "24th": LCARSEra.LCARS_24TH,
+    "24st": LCARSEra.LCARS_24ST,
+    "25th": LCARSEra.LCARS_25TH,
+    "29th": LCARSEra.TCARS_29TH,
+}
 
 def main():
-    # Delegate to the unified demo launcher which implements
-    # the full sequential initialization path. This keeps the
-    # demo UI centralized and ensures palette/font algorithms
-    # are used consistently.
+    # Делегуємо до уніфікованого лаунчера демо
     from demo import demo_launcher
-    # Preserve any CLI args (support `--auto` for automatic demo)
     demo_launcher.main()
 
 if __name__ == "__main__":

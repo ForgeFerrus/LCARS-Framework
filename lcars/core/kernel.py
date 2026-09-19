@@ -11,8 +11,7 @@
 #          який розгортає MasterSystem.
 # СТАНДАРТ: Titanium LCARS (Zero-Except, Zero-Underscores, Strict PascalCase, Pure Classes).
 # =============================================================================
-
-from __future__ import annotations
+from lcars.base.info import getVersion
 from lcars.base.type import LCARS, SystemComponent
 from lcars.base.register import registry
 from lcars.core.signal import ODN, Transmission
