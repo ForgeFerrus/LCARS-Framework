@@ -984,8 +984,6 @@ class PADD(Element):
             Host.setStyleSheet("background-color: #000000;")
         if hasattr(Host, "setSizePolicy"):
             Policy = getattr(LCARS, "Policy", None)
-            if Policy and hasattr(Policy, "Expanding"):
-                Host.setSizePolicy(Policy.Expanding, Policy.Expanding)
             if Policy and hasattr(Policy, "Preferred"):
                 Host.setSizePolicy(Policy.Preferred, Policy.Preferred)
 
