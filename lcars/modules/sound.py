@@ -33,12 +33,12 @@ class SoundManager(SystemComponent):
             "click": ["sfx/Click01.wav", "sfx/Beep01.wav", "TOS KEY 08.mp3", "TNG KEY 12.mp3"],
             "beep": ["sfx/Beep01.wav", "sfx/Click01.wav", "TNG KEY 12.mp3"],
             "button": ["sfx/Click01.wav", "TOS KEY 08.mp3"],
-            "alert_red": ["TNG ALERT 08.mp3", "TNG ALERT 09.mp3", "ALT ALERT 01.mp3", "TOS ALERT.mp3"],
-            "alert_yellow": ["TNG NOTICE 18.mp3", "TNG NOTICE 19.mp3", "ENT ALERT 02.mp3"],
-            "alert_green": ["TNG BELL 04.mp3", "voice/LCARS acknowledged.wav", "voice/LCARS systems online.mp3"],
-            "alert_clear": ["TNG BELL 04.mp3", "voice/LCARS acknowledged.wav", "voice/LCARS ready.wav"],
-            "klaxon_red": ["TOS KLAXON.mp3", "TNG ALERT 10.mp3", "ALT ALERT 01.mp3"],
-            "klaxon_yellow": ["TNG NOTICE 20.mp3", "TNG NOTICE 21.mp3", "ENT ALERT 03.mp3"],
+            "alertred": ["ALERT 01.mp3", "TNG ALERT 08.mp3", "ALT ALERT.mp3"],
+            "alertyellow": ["TNG ALERT 08.mp3", "ENT ALERT 02.mp3"],
+            "alertgreen": ["TNG BELL 04.mp3", "voice/LCARS acknowledged.wav"],
+            "alertclear": ["TNG BELL 04.mp3", "voice/LCARS acknowledged.wav"],
+            "klaxonred": ["ALERT 01.mp3", "TNG ALERT 10.mp3"],
+            "klaxonyellow": ["TNG ALERT 08.mp3", "ENT ALERT 03.mp3"],
             "ack": ["voice/LCARS acknowledged.wav", "voice/LCARS systems online.mp3", "sfx/Click01.wav"],
             "denied": ["ALT DENIED.mp3", "voice/LCARS access denied logs.wav", "voice/LCARS unable to comply.wav"],
             "warp": ["TNG WARP 02.mp3", "ALT WARP 05.mp3"],
@@ -51,7 +51,7 @@ class SoundManager(SystemComponent):
             "failure": ["ALT FAIL.mp3"],
         }
 
-    def PlayAudioClip(self, SoundIdentifier: str) -> bool:
+    def PlayAudioClip(self, SoundIdentifier: str, Loop: bool = False) -> bool:
         if self.SoundRootPath and self.SoundRootPath.exists():
             LookupKey = SoundIdentifier.lower()
             AltKey = LookupKey.replace(chr(95), "")
@@ -72,7 +72,7 @@ class SoundManager(SystemComponent):
                     break
 
             if ClipPath and ClipPath.exists():
-                return self.ExecutePlaybackProtocol(ClipPath)
+                return self.ExecutePlaybackProtocol(ClipPath, Loop=Loop)
 
         return self.PlaySystemBeep(SoundIdentifier)
 
@@ -93,41 +93,36 @@ class SoundManager(SystemComponent):
 
     def StartAlertLoop(self, SeverityStr: str = "red") -> None:
         self.StopAlertLoop()
-        SoundKey = f"klaxon_{SeverityStr}" if f"klaxon_{SeverityStr}" in self.SoundLibraryMap else f"alert_{SeverityStr}"
-        self.AlertLoopSound = SoundKey
+        Lookup = SeverityStr.lower()
+        SoundKey = "alertred" if Lookup in ("red", "alert", "critical") else "alertyellow"
         self.AlertLoopActive = True
-        self.AlertLoopTimer = LCARS.Timer()
-        self.AlertLoopTimer.timeout.connect(self._AlertLoopTick)
-        Interval = 1500 if SeverityStr == "red" else 2500
-        self.AlertLoopTimer.setInterval(Interval)
-        self.AlertLoopTimer.start()
-        self.PlayAudioClip(SoundKey)
+        self.PlayAudioClip(SoundKey, Loop=True)
 
     def StopAlertLoop(self) -> None:
         self.AlertLoopActive = False
-        if self.AlertLoopTimer is not None:
-            self.AlertLoopTimer.stop()
-            self.AlertLoopTimer = None
-        self.AlertLoopSound = None
+        import ctypes
+        try:
+            ctypes.windll.winmm.mciSendStringW("stop lcarsaudio", None, 0, None)
+            ctypes.windll.winmm.mciSendStringW("close lcarsaudio", None, 0, None)
+        except Exception:
+            pass
 
-    def _AlertLoopTick(self) -> None:
-        if self.AlertLoopActive and self.AlertLoopSound:
-            self.PlayAudioClip(self.AlertLoopSound)
-
-    def ExecutePlaybackProtocol(self, TargetPath: any) -> bool:
+    def ExecutePlaybackProtocol(self, TargetPath: any, Loop: bool = False) -> bool:
         PathStr = str(TargetPath)
         if PathStr.lower().endswith(".mp3"):
             import ctypes
             try:
-                ctypes.windll.winmm.mciSendStringW(f'open "{PathStr}" type mpegvideo alias lcars_audio', None, 0, None)
-                ctypes.windll.winmm.mciSendStringW('play lcars_audio from 0', None, 0, None)
-                return True
+                ctypes.windll.winmm.mciSendStringW("close lcarsaudio", None, 0, None)
+                ResOpen = ctypes.windll.winmm.mciSendStringW(f'open "{PathStr}" type mpegvideo alias lcarsaudio', None, 0, None)
+                PlayCmd = "play lcarsaudio repeat" if Loop else "play lcarsaudio from 0"
+                ResPlay = ctypes.windll.winmm.mciSendStringW(PlayCmd, None, 0, None)
+                return ResOpen == 0 or ResPlay == 0
             except Exception:
                 return False
         else:
             import winsound
             try:
-                Flags = winsound.SND_FILENAME | winsound.SND_ASYNC
+                Flags = winsound.SND_FILENAME | (winsound.SND_LOOP if Loop else winsound.SND_ASYNC)
                 winsound.PlaySound(PathStr, Flags)
                 return True
             except Exception:

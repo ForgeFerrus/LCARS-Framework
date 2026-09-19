@@ -305,24 +305,17 @@ def ButtonsInterface():
         Height=40
     )
     def TogglePowerGrid():
-        if PowerControl.State != 0:
-            PowerControl.PowerOff()
         if PowerActive["Online"]:
             PowerActive["Online"] = False
             MainScreen.SetPower(False)
             BtnPower.Power = True
             BtnPower.Tactile = True
             BtnPower.Refresh()
-            SysStateLabel.SetText("POWER OFFLINE // EPS GRID DE-ENERGIZED")
-            SelectReport("GRID POWER", "EPS-000", "PRIMARY EPS BUSES SHUT DOWN // MATRIX DARK")
             SysStateLabel.SetText("INTERFACE OFFLINE // DISPLAY MUTED")
             SelectReport("INTERFACE OFF", "PWR-OFF", "INTERFACE BLANKED // TOUCH AGAIN TO RESTORE")
         else:
-            PowerControl.PowerOn()
             PowerActive["Online"] = True
             MainScreen.SetPower(True)
-            SysStateLabel.SetText("POWER ONLINE // ALL CIRCUITS ENERGIZED")
-            SelectReport("GRID POWER", "EPS-100", "PRIMARY EPS COUPLINGS SYNCHRONIZED")
             BtnPower.Power = True
             BtnPower.Tactile = True
             MainScreen.Refresh()
@@ -338,8 +331,6 @@ def ButtonsInterface():
         Form=LCARSButton.PillHalf,
         Direction=0,
         Sound="ack",
-        IsWakeupTrigger=True,
-        DarkCycle=True,
         Width=260,
         Height=40
     )
@@ -370,7 +361,6 @@ def ButtonsInterface():
         Number="SEC-01",
         Form=LCARSButton.SoftType,
         DarkCycle=True,
-        IsWakeupTrigger=True,
         Width=260,
         Height=40,
         Sound="click"
@@ -398,9 +388,6 @@ def ButtonsInterface():
     def ResetConsole():
         SystemTheme.SetSystemState("Normal")
         MainScreen.SetState("Normal")
-        if PowerControl.State == 0:
-            PowerControl.PowerOn()
-            MainScreen.SetPower(True)
         PowerActive["Online"] = True
         MainScreen.SetPower(True)
         BtnPower.Power = True

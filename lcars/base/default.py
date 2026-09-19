@@ -160,11 +160,14 @@ def SetSystemState(State: String) -> None:
         from lcars.modules.sound import ActiveAudio
         LowState = SystemState.lower()
         if LowState in ("red", "alert", "critical"):
-            ActiveAudio.PlayAudioClip("alertred")
+            ActiveAudio.StartAlertLoop("red")
         elif LowState in ("yellow", "warning", "caution"):
-            ActiveAudio.PlayAudioClip("alertyellow")
+            ActiveAudio.StartAlertLoop("yellow")
         elif LowState in ("normal", "green"):
+            ActiveAudio.StopAlertLoop()
             ActiveAudio.PlayAudioClip("ack")
+        else:
+            ActiveAudio.StopAlertLoop()
     except Exception:
         pass
 # Отримання контрасту
