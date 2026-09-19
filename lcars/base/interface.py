@@ -25,12 +25,15 @@ class Surface(Display):
         Policy = getattr(LCARS, "Policy", None)
         if hasattr(self, "setSizePolicy") and Policy is not None and hasattr(Policy, "Preferred"):
             self.setSizePolicy(Policy.Preferred, Policy.Preferred)
-        if self.Optics is not None and hasattr(self, "setFixedHeight"):
+        if self.Optics is not None:
             OpticsHeight = getattr(self.Optics, "Height", None)
+            OpticsWidth = getattr(self.Optics, "Width", None)
             OpticsType = str(getattr(self.Optics, "Type", "")).lower()
             IsRigid = not getattr(self.Optics, "Flexible", False) or OpticsType in ("button", "indicator", "elbow", "label", "bar", "text")
-            if OpticsHeight is not None and IsRigid:
+            if OpticsHeight is not None and IsRigid and hasattr(self, "setFixedHeight"):
                 self.setFixedHeight(int(OpticsHeight))
+            if OpticsWidth is not None and OpticsType in ("button", "indicator", "elbow") and hasattr(self, "setFixedWidth"):
+                self.setFixedWidth(int(OpticsWidth))
         if hasattr(self, "startTimer"):
             self.PulseTimer = self.startTimer(120)
 

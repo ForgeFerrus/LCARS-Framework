@@ -459,14 +459,15 @@ class LCARSButton(Component):
         if not self.Tactile and not self.IsWakeupTrigger:
             return self
         self.IsHovered = bool(Active)
-        if self.SwapMode and self.Number and self.Text:
-            self.Designation = self.Number if Active else self.Text
+        if self.SwapMode and self.Number:
+            self.Designation = self.Text if Active else self.Number
         self.Refresh()
         return self
 
     def Initialize(self, *args, **kwargs):
         super().Initialize(*args, **kwargs)
-        self.Designation = self.Text if self.Text else self.Number
+        if self.SwapMode and self.Number:
+            self.Designation = self.Number
         return self
 
     Init = Initialize

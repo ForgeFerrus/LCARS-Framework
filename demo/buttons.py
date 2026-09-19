@@ -10,53 +10,28 @@ from lcars.system.power import PowerControl
 
 def ButtonsInterface():
     MainScreen = Screen(Title="LCARS FULLSCREEN TACTICAL TERMINAL")
-    MainScreen.SetVertical(10, 14, 10, 14, Spacing=8)
+    MainScreen.SetHorizontal(14, 14, 14, 14, Spacing=14)
 
-    # 1. ВЕРХНІЙ ГОРИЗОНТ: ШАПКА З НАВІГАЦІЄЮ ТА СТАТУСОМ
-    TopBar = Panel()
-    TopBar.SetHorizontal(0, 0, 0, 0, Spacing=8)
+    # =========================================================================
+    # ЛІВА КОЛОНА: РАМКА ОКУДИ ТА КАНОНІЧНІ ФОРМИ КНОПОК (260 px)
+    # =========================================================================
+    LeftCol = Panel()
+    LeftCol.SetVertical(0, 0, 0, 0, Spacing=6)
+    LeftCol.GetSurface().setFixedWidth(260)
 
-    TopElbow = LCARSElbow(
+    TopLeftElbow = LCARSElbow(
         Corner="top-left",
         Text="LCARS 47",
         Number="SEC-TAC",
-        Width=240,
-        Height=54,
-        Thickness=22,
+        Width=260,
+        Height=64,
+        Thickness=24,
         Radius=18
     )
-    TopBar.Add(TopElbow)
-
-    TopTitle = LCARSLabel(
-        Text="STARFLEET TACTICAL INTERFACE // CANONICAL BUTTON MATRIX",
-        FontSize=20,
-        Align="left",
-        Height=36
-    )
-    TopBar.Add(TopTitle, 1)
-
-    BtnExit = LCARSButton(
-        Text="EXIT FULLSCREEN",
-        Form=LCARSButton.PillHalf,
-        Direction=0,
-        Width=190,
-        Height=36,
-        Sound="click"
-    )
-    TopBar.Add(BtnExit)
-
-    MainScreen.Add(TopBar)
-
-    # 2. ГОЛОВНА ТРИКОЛОНКОВА РОБОЧА СЦЕНА
-    WorkArea = Panel()
-    WorkArea.SetHorizontal(0, 0, 0, 0, Spacing=14)
-
-    # ─── КОЛОНКА 1: КАНОНІЧНІ ФОРМИ КНОПОК ───
-    Col1 = Panel()
-    Col1.SetVertical(0, 0, 0, 0, Spacing=6)
+    LeftCol.Add(TopLeftElbow)
 
     LblForms = LCARSLabel(Text="CANONICAL FORMS", Height=24)
-    Col1.Add(LblForms)
+    LeftCol.Add(LblForms)
 
     FormButtons = []
     FormData = [
@@ -76,34 +51,70 @@ def ButtonsInterface():
             SwapMode=True,
             Form=FormVal,
             Direction=DirVal,
-            Width=240,
-            Height=40,
+            Width=260,
+            Height=38,
             Sound="click"
         )
         FormButtons.append(B)
-        Col1.Add(B)
+        LeftCol.Add(B)
 
-    Col1.Add(LCARSBar(Height=3))
+    LeftCol.Add(LCARSBar(Height=3))
 
-    Col1Ind = Panel()
-    Col1Ind.SetHorizontal(0, 0, 0, 0, Spacing=6)
-    Col1Ind.Add(LCARSIndicator(Form=LCARSIndicator.RectType, Width=76, Height=26))
-    Col1Ind.Add(LCARSIndicator(Form=LCARSIndicator.SoftType, Width=76, Height=26))
-    Col1Ind.Add(LCARSIndicator(Form=LCARSIndicator.PillHalf, Width=76, Height=26))
-    Col1.Add(Col1Ind)
+    LeftIndRow = Panel()
+    LeftIndRow.SetHorizontal(0, 0, 0, 0, Spacing=6)
+    LeftIndRow.Add(LCARSIndicator(Form=LCARSIndicator.RectType, Width=82, Height=26))
+    LeftIndRow.Add(LCARSIndicator(Form=LCARSIndicator.SoftType, Width=82, Height=26))
+    LeftIndRow.Add(LCARSIndicator(Form=LCARSIndicator.PillHalf, Width=82, Height=26))
+    LeftCol.Add(LeftIndRow)
 
-    Col1.AddStretch(1)
-    WorkArea.Add(Col1)
+    BotLeftElbow = LCARSElbow(
+        Corner="bottom-left",
+        Text="STARFLEET",
+        Number="DECK-47",
+        Width=260,
+        Height=52,
+        Thickness=22,
+        Radius=18
+    )
+    LeftCol.Add(BotLeftElbow)
+    LeftCol.AddStretch(1)
 
-    # ─── КОЛОНКА 2: ЦЕНТРАЛЬНА ТЕЛЕМЕТРІЯ ТА СТАТУС ───
-    Col2 = Panel()
-    Col2.SetVertical(0, 0, 0, 0, Spacing=6)
+    MainScreen.Add(LeftCol)
 
-    LblReadout = LCARSLabel(Text="SYSTEM READOUT & TELEMETRY", Height=24)
-    Col2.Add(LblReadout)
+    # =========================================================================
+    # ЦЕНТРАЛЬНИЙ ТАКТИЧНИЙ ДЕК: МОНІТОРИНГ, ТЕЛЕМЕТРІЯ ТА ПОТІК ДАНИХ (СТРЕТЧ)
+    # =========================================================================
+    CenterCol = Panel()
+    CenterCol.SetVertical(0, 0, 0, 0, Spacing=8)
 
+    # Верхня інформаційна лінія центру
+    CenterTop = Panel()
+    CenterTop.SetHorizontal(0, 0, 0, 0, Spacing=8)
+
+    TopTitle = LCARSLabel(
+        Text="STARFLEET TACTICAL INTERFACE // PRIMARY SENSOR MATRIX",
+        FontSize=20,
+        Align="left",
+        Height=36
+    )
+    CenterTop.Add(TopTitle, 1)
+
+    BtnExit = LCARSButton(
+        Text="EXIT FULLSCREEN",
+        Form=LCARSButton.PillHalf,
+        Direction=0,
+        Width=180,
+        Height=36,
+        Sound="click"
+    )
+    CenterTop.Add(BtnExit)
+
+    CenterCol.Add(CenterTop)
+    CenterCol.Add(LCARSBar(Height=4))
+
+    # Центральна картка оперативного стану
     MonitorCard = Panel()
-    MonitorCard.SetVertical(8, 10, 8, 10, Spacing=4)
+    MonitorCard.SetVertical(10, 14, 10, 14, Spacing=4)
 
     SysStateLabel = LCARSLabel(
         Text="CONDITION GREEN // ALL SUBSYSTEMS NOMINAL",
@@ -114,26 +125,27 @@ def ButtonsInterface():
     MonitorCard.Add(SysStateLabel)
 
     SelectionLabel = LCARSLabel(
-        Text="TOUCH ANY BUTTON TO ENGAGE ODN TELEMETRY",
+        Text="TOUCH ANY SENSOR NODE TO ENGAGE TELEMETRY",
         Align="left",
         Height=24
     )
     MonitorCard.Add(SelectionLabel)
 
     TelemetryLine = LCARSLabel(
-        Text="ODN OPTICAL CARRIER ONLINE // EPS MATRIX SYNCHRONIZED",
+        Text="ODN OPTICAL DATA BUS ONLINE // WAVELENGTH: 1550 NM // EPS MATRIX SYNCHRONIZED",
         Align="left",
         Height=24
     )
     MonitorCard.Add(TelemetryLine)
 
-    Col2.Add(MonitorCard)
+    CenterCol.Add(MonitorCard)
 
-    StreamTitle = LCARSLabel(Text="TACTICAL DATASTREAM", Height=22)
-    Col2.Add(StreamTitle)
+    # Потік тактичної діагностики
+    StreamHeader = LCARSLabel(Text="TACTICAL DATASTREAM // REALTIME ODN LOG", Height=24)
+    CenterCol.Add(StreamHeader)
 
     TelemetryStream = DataStream(
-        Width=460,
+        Width=600,
         Height=140,
         Rows=5
     )
@@ -144,41 +156,85 @@ def ButtonsInterface():
         "LCARS 47-ALPHA CORE // HANDSHAKE READY",
         "TACTICAL INTERFACE MATRIX // ONLINE",
     ]
-    Col2.Add(TelemetryStream)
+    CenterCol.Add(TelemetryStream)
 
-    LblIndicators = LCARSLabel(Text="OPTICAL PULSE INDICATORS", Height=22)
-    Col2.Add(LblIndicators)
+    # Індикатори оптичних магістралей
+    LblConduits = LCARSLabel(Text="PRIMARY OPTICAL CONDUITS", Height=24)
+    CenterCol.Add(LblConduits)
 
-    CenterInd = Panel()
-    CenterInd.SetHorizontal(0, 0, 0, 0, Spacing=6)
-    CenterInd.Add(LCARSIndicator(Form=LCARSIndicator.RectType, Width=146, Height=30))
-    CenterInd.Add(LCARSIndicator(Form=LCARSIndicator.SoftType, Width=146, Height=30))
-    CenterInd.Add(LCARSIndicator(Form=LCARSIndicator.PillHalf, Width=146, Height=30))
-    Col2.Add(CenterInd)
+    ConduitRow = Panel()
+    ConduitRow.SetHorizontal(0, 0, 0, 0, Spacing=8)
+    ConduitRow.Add(LCARSIndicator(Form=LCARSIndicator.RectType, Width=120, Height=28))
+    ConduitRow.Add(LCARSIndicator(Form=LCARSIndicator.SoftType, Width=120, Height=28))
+    ConduitRow.Add(LCARSIndicator(Form=LCARSIndicator.PillHalf, Width=120, Height=28))
+    ConduitRow.Add(LCARSIndicator(Form=LCARSIndicator.RectType, Width=120, Height=28))
+    CenterCol.Add(ConduitRow)
 
-    Col2.AddStretch(1)
-    WorkArea.Add(Col2, 1)
+    CenterCol.AddStretch(1)
 
-    # ─── КОЛОНКА 3: ОПЕРАЦІЙНІ ДИРЕКТИВИ ТА КЕРУВАННЯ ───
-    Col3 = Panel()
-    Col3.SetVertical(0, 0, 0, 0, Spacing=6)
+    # Підвал центральної сцени
+    CenterBottom = Panel()
+    CenterBottom.SetHorizontal(0, 0, 0, 0, Spacing=8)
+
+    FootLabel = LCARSLabel(
+        Text="LCARS TACTICAL INTERFACE v4.7 // EPS GRID NOMINAL // SYSTEM ACTIVE",
+        Height=34
+    )
+    CenterBottom.Add(FootLabel, 1)
+
+    BtnResetAll = LCARSButton(
+        Text="RESET CONSOLE",
+        Form=LCARSButton.PillHalf,
+        Direction=180,
+        Width=160,
+        Height=34,
+        Sound="click"
+    )
+    CenterBottom.Add(BtnResetAll)
+
+    BtnRunStream = LCARSButton(
+        Text="CYCLE STREAM",
+        Form=LCARSButton.PillHalf,
+        Direction=0,
+        Width=160,
+        Height=34,
+        Sound="ack"
+    )
+    CenterBottom.Add(BtnRunStream)
+
+    CenterCol.Add(CenterBottom)
+
+    MainScreen.Add(CenterCol, 1)
+
+    # =========================================================================
+    # ПРАВА КОЛОНА: ТАКТИЧНІ ДИРЕКТИВИ ТА ЕНЕРГОСИСТЕМА (260 px)
+    # =========================================================================
+    RightCol = Panel()
+    RightCol.SetVertical(0, 0, 0, 0, Spacing=6)
+    RightCol.GetSurface().setFixedWidth(260)
+
+    TopRightElbow = LCARSElbow(
+        Corner="top-right",
+        Text="DIRECTIVES",
+        Number="DIR-01",
+        Width=260,
+        Height=64,
+        Thickness=24,
+        Radius=18
+    )
+    RightCol.Add(TopRightElbow)
 
     LblDirectives = LCARSLabel(Text="TACTICAL DIRECTIVES", Height=24)
-    Col3.Add(LblDirectives)
+    RightCol.Add(LblDirectives)
 
     def SelectReport(TitleStr, CodeStr, DetailStr=""):
         SelectionLabel.SetText(f"ENGAGED: {TitleStr} [{CodeStr}]")
         if DetailStr:
             TelemetryLine.SetText(DetailStr)
 
-    for TextVal, NumVal, FormVal, DirVal in FormData:
-        def MakeHandler(T=TextVal, N=NumVal, D=DirVal):
-            return lambda: SelectReport(T, N, f"FORM TOPOLOGY PROCESSED // DIRECTION: {D} DEG")
-        BtnNode = Col1.Items.get(str(id(FormButtons[len(Col3.Items)]))) if False else None
-
     for Idx, BtnObj in enumerate(FormButtons):
         TName, CNum, _, CDir = FormData[Idx]
-        BtnObj.Clicked.Connect(lambda T=TName, C=CNum, D=CDir: SelectReport(T, C, f"GEOMETRY SYNTHESIZED // DIR: {D} DEG"))
+        BtnObj.Clicked.Connect(lambda T=TName, C=CNum, D=CDir: SelectReport(T, C, f"GEOMETRY SYNTHESIZED // DIRECTION: {D} DEG"))
 
     # Кнопки тривоги одразу у своїх станах з власними динамічними циклами
     BtnRed = LCARSButton(
@@ -188,7 +244,7 @@ def ButtonsInterface():
         Form=LCARSButton.Pill,
         State="alert",
         Sound="alertred",
-        Width=240,
+        Width=260,
         Height=40
     )
     def EngageRed():
@@ -197,7 +253,7 @@ def ButtonsInterface():
         SysStateLabel.SetText("RED ALERT // TACTICAL SHIELDS ENGAGED")
         SelectReport("RED ALERT", "TACTICAL-01", "ALL CONDUITS REDIRECTED TO DEFENSIVE SYSTEMS")
     BtnRed.Clicked.Connect(EngageRed)
-    Col3.Add(BtnRed)
+    RightCol.Add(BtnRed)
 
     BtnYellow = LCARSButton(
         Text="YELLOW ALERT",
@@ -207,7 +263,7 @@ def ButtonsInterface():
         Direction=180,
         State="yellow",
         Sound="alertyellow",
-        Width=240,
+        Width=260,
         Height=40
     )
     def EngageYellow():
@@ -216,7 +272,7 @@ def ButtonsInterface():
         SysStateLabel.SetText("YELLOW ALERT // SENSORS ON HIGH READINESS")
         SelectReport("YELLOW ALERT", "TACTICAL-02", "VERIFYING EPS COUPLINGS & WARP STATUS")
     BtnYellow.Clicked.Connect(EngageYellow)
-    Col3.Add(BtnYellow)
+    RightCol.Add(BtnYellow)
 
     BtnGreen = LCARSButton(
         Text="CONDITION GREEN",
@@ -225,7 +281,7 @@ def ButtonsInterface():
         Form=LCARSButton.Pill,
         State="normal",
         Sound="ack",
-        Width=240,
+        Width=260,
         Height=40
     )
     def EngageGreen():
@@ -234,7 +290,7 @@ def ButtonsInterface():
         SysStateLabel.SetText("CONDITION GREEN // ALL SUBSYSTEMS NOMINAL")
         SelectReport("CONDITION GREEN", "TACTICAL-03", "STANDARD ISOLINEAR CRUISE MATRIX RESTORED")
     BtnGreen.Clicked.Connect(EngageGreen)
-    Col3.Add(BtnGreen)
+    RightCol.Add(BtnGreen)
 
     BtnPower = LCARSButton(
         Text="GRID POWER",
@@ -243,7 +299,7 @@ def ButtonsInterface():
         Form=LCARSButton.Pill,
         Sound="ack",
         IsWakeupTrigger=True,
-        Width=240,
+        Width=260,
         Height=40
     )
     def TogglePowerGrid():
@@ -260,7 +316,7 @@ def ButtonsInterface():
             SysStateLabel.SetText("POWER ONLINE // ALL CIRCUITS ENERGIZED")
             SelectReport("GRID POWER", "EPS-100", "PRIMARY EPS COUPLINGS SYNCHRONIZED")
     BtnPower.Clicked.Connect(TogglePowerGrid)
-    Col3.Add(BtnPower)
+    RightCol.Add(BtnPower)
 
     BtnLock = LCARSButton(
         Text="STASIS LOCK",
@@ -271,7 +327,7 @@ def ButtonsInterface():
         Sound="ack",
         IsWakeupTrigger=True,
         DarkCycle=True,
-        Width=240,
+        Width=260,
         Height=40
     )
     def ToggleStasis():
@@ -282,19 +338,19 @@ def ButtonsInterface():
             PowerControl.Lock()
             SelectReport("STASIS LOCK", "LOCKED", "CONSOLE INPUT BLOCKED // STASIS ACTIVE")
     BtnLock.Clicked.Connect(ToggleStasis)
-    Col3.Add(BtnLock)
+    RightCol.Add(BtnLock)
 
     BtnSplit = LCARSButton(
         Text="SPLIT SYS",
         Number="47-SPL",
         SplitMode=True,
         Form=LCARSButton.RectType,
-        Width=240,
+        Width=260,
         Height=40,
         Sound="click"
     )
     BtnSplit.Clicked.Connect(lambda: SelectReport("SPLIT MODE", "47-SPL", "DUAL CHANNEL MATRIX ENGAGED"))
-    Col3.Add(BtnSplit)
+    RightCol.Add(BtnSplit)
 
     BtnDark = LCARSButton(
         Text="DARK CYCLE",
@@ -302,36 +358,30 @@ def ButtonsInterface():
         Form=LCARSButton.SoftType,
         DarkCycle=True,
         IsWakeupTrigger=True,
-        Width=240,
+        Width=260,
         Height=40,
         Sound="click"
     )
     BtnDark.Clicked.Connect(lambda: SelectReport("DARK CYCLE", "SEC-01", "NIGHT ROTATION ACTIVE"))
-    Col3.Add(BtnDark)
+    RightCol.Add(BtnDark)
 
-    Col3.AddStretch(1)
-    WorkArea.Add(Col3)
+    RightCol.Add(LCARSBar(Height=3))
 
-    MainScreen.Add(WorkArea, 1)
-
-    # 3. НИЖНІЙ ГОРИЗОНТ: ПІДВАЛ ІЗ ПАНЕЛЛЮ ДІЙ
-    BottomBar = Panel()
-    BottomBar.SetHorizontal(0, 0, 0, 0, Spacing=8)
-
-    FootLabel = LCARSLabel(
-        Text="LCARS TACTICAL MATRIX ACTIVE // EPS GRID SYNCHRONIZED // PULSE ENGINE NOMINAL",
-        Height=32
+    BotRightElbow = LCARSElbow(
+        Corner="bottom-right",
+        Text="COMMAND",
+        Number="CORE-01",
+        Width=260,
+        Height=52,
+        Thickness=22,
+        Radius=18
     )
-    BottomBar.Add(FootLabel, 1)
+    RightCol.Add(BotRightElbow)
+    RightCol.AddStretch(1)
 
-    BtnResetAll = LCARSButton(
-        Text="RESET CONSOLE",
-        Form=LCARSButton.PillHalf,
-        Direction=180,
-        Width=180,
-        Height=34,
-        Sound="click"
-    )
+    MainScreen.Add(RightCol)
+
+    # Обробники дій підвалу
     def ResetConsole():
         SystemTheme.SetSystemState("Normal")
         MainScreen.SetState("Normal")
@@ -342,21 +392,9 @@ def ButtonsInterface():
             PowerControl.Unlock()
         SysStateLabel.SetText("CONDITION GREEN // ALL SUBSYSTEMS NOMINAL")
         SelectReport("CONSOLE RESET", "NOMINAL", "DEFAULT ISOLINEAR PARAMETERS RESTORED")
+
     BtnResetAll.Clicked.Connect(ResetConsole)
-    BottomBar.Add(BtnResetAll)
-
-    BtnDataStream = LCARSButton(
-        Text="STREAM RUN",
-        Form=LCARSButton.PillHalf,
-        Direction=0,
-        Width=180,
-        Height=34,
-        Sound="ack"
-    )
-    BtnDataStream.Clicked.Connect(lambda: TelemetryStream.Start(Speed=0.03))
-    BottomBar.Add(BtnDataStream)
-
-    MainScreen.Add(BottomBar)
+    BtnRunStream.Clicked.Connect(lambda: TelemetryStream.Start(Speed=0.03))
 
     def ExitTerminal():
         HostSurface = MainScreen.GetSurface()
