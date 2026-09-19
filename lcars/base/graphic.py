@@ -731,6 +731,34 @@ class MagneticGrid(SystemComponent):
         return (SnapX, SnapY, SnapW, SnapH)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# СИСТЕМНІ УТИЛІТИ ВЕКТОРНОЇ ГРАФІКИ ТА МАГНІТНОЇ СІТКИ
+# ─────────────────────────────────────────────────────────────────────────────
+def SnapValue(Value: float, GridSize: int = 8) -> int:
+    if GridSize <= 1:
+        return int(round(Value))
+    return int(round(Value / float(GridSize)) * GridSize)
+
+def SnapPoint(X: float, Y: float, GridSize: int = 8) -> tuple[int, int]:
+    return (SnapValue(X, GridSize), SnapValue(Y, GridSize))
+
+def SnapRect(X: float, Y: float, Width: float, Height: float, GridSize: int = 8) -> tuple[int, int, int, int]:
+    SnapX = SnapValue(X, GridSize)
+    SnapY = SnapValue(Y, GridSize)
+    SnapW = max(GridSize, SnapValue(Width, GridSize))
+    SnapH = max(GridSize, SnapValue(Height, GridSize))
+    return (SnapX, SnapY, SnapW, SnapH)
+
+def FitFontSize(TextStr: str, ContainerWidth: float, MinSize: int = 16, MaxSize: int = 36) -> int:
+    if not TextStr:
+        return MinSize
+    CharCount = len(TextStr)
+    EstimatedWidth = CharCount * (MaxSize * 0.55)
+    if EstimatedWidth <= ContainerWidth:
+        return MaxSize
+    Calculated = int(ContainerWidth / (CharCount * 0.55))
+    return max(MinSize, min(MaxSize, Calculated))
+
 # Канонічні аліаси для зворотної сумісності
 Builder = Architect
 LCARSBuilder = Architect
@@ -744,6 +772,9 @@ LCARS.Types = (
     "Builder",
     "Architect",
     "MagneticGrid",
+    "SnapPoint",
+    "SnapRect",
+    "FitFontSize",
 )
 # Аліас експорту модуля для Python імпортів (from lcars.base.type import *)
 All = list(LCARS.Types)
