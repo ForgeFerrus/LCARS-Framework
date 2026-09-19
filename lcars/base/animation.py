@@ -405,6 +405,7 @@ class WaveStream(Graphic):
     Speed = 0.04            # Швидкість фазового зсуву за кадр
     Phase = 0.0             # Поточна фаза коливання
     Running = False
+    Timer = None
     Interval = 35           # ~28-30 FPS для плавності
 
     # Колірна схема
