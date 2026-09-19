@@ -71,16 +71,9 @@ class Component(Topology):
     YELLOW = "YellowAlert"
     ALERT = "RedAlert"
     STASIS = "Stasis"
-    # -------------------------------------------------------------------------
+    # ------------------------------------------------------------------------
     # ДИНАМІЧНИЙ СПЕКТР СВІТЛА ТА СТАНИ
-    # -------------------------------------------------------------------------
-    def Initialize(self, *args, **kwargs):
-        super().Initialize(*args, **kwargs)
-        self.Mount()
-        return self
-
-    Init = Initialize
-
+    # ------------------------------------------------------------------------
     def GetState(self):
         return str(getattr(self, "State", "Normal") or "Normal")
 
@@ -478,15 +471,6 @@ class LCARSButton(Component):
             self.Designation = self.Text if Active else self.Number
         self.Refresh()
         return self
-
-    def Initialize(self, *args, **kwargs):
-        super().Initialize(*args, **kwargs)
-        if self.SwapMode and self.Number:
-            self.Designation = self.Number
-        return self
-
-    Init = Initialize
-
     Focus = Hover
     # -------------------------------------------------------------------------
     # ЧИСТИЙ СИНТЕЗ ЧЕРЕЗ TOPOLOGY (БЕЗ ЗАЙВИХ ПРИМІТИВІВ)
@@ -744,10 +728,3 @@ Indicator = LCARSIndicator
 Normalize = NormalizeValue
 Take = getattr(LCARS, "Take", lambda Collection, Count: Collection[:Count] if hasattr(Collection, "__getitem__") else Collection)
 ValidateIndex = ValidateIndex
-
-# 2. Канонічний реекспорт активного аудіо-вузла (для терміналу, комп'ютера, реплікатора)
-try:
-    from lcars.modules.sound import ActiveAudio
-except Exception:
-    ActiveAudio = None
-

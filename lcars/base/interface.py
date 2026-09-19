@@ -199,15 +199,6 @@ class Element(Component):
     Tactile = False
     Interactive = False
 
-    # Канонічна ініціалізація складеного елемента
-    def Initialize(self, *args, **kwargs):
-        self.Items = {}
-        self.Layout = None
-        super().Initialize(*args, **kwargs)
-        return self
-
-    Init = Initialize
-
     def GetSurface(self):
         if self.SurfaceHost is None:
             SurfaceClass = LCARS.Retrieve("Base.Interface.Surface") or Surface
