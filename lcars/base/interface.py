@@ -939,12 +939,12 @@ class Frame(Element):
 # =============================================================================
 class PADD(Element):
     Type = "PADD"
-    Width = 920
-    Height = 580
-    MinWidth = 320
-    MinHeight = 240
-    PaddMinWidth = 320
-    PaddMinHeight = 240
+    Width = 20
+    Height = 80
+    MinWidth = 20
+    MinHeight = 40
+    PaddMinWidth = 20
+    PaddMinHeight = 40
     Portable = True
     PaddAction = ""
     PaddStartGlobal = (0, 0)

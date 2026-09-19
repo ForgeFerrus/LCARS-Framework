@@ -1,8 +1,8 @@
 ﻿# ◤ LCARS COMPONENT LIBRARY SHOWCASE
-# Демонстрація всіх компонентів фреймворку: кнопки, індикатори, балки, лікті, анімації
+# Демонстрація всіх компонентів фреймворку через Compose API
 
 from lcars.base.type import LCARS
-from lcars.base.interface import PADD, Panel, Header, Footer
+from lcars.base.interface import Screen, Panel, Frame
 from lcars.base.component import (
     LCARSButton, LCARSElbow, LCARSLabel, LCARSIndicator, LCARSBar
 )
@@ -12,110 +12,72 @@ from lcars.modules.sound import ActiveAudio
 
 
 def ComponentShowcase():
-    Padd = PADD(Title="LCARS COMPONENT LIBRARY", Width=1320, Height=820)
-    Padd.SetVertical(10, 10, 10, 10, Spacing=8)
+    Screen_ = Screen(Title="LCARS COMPONENT LIBRARY")
 
-    TopBar = Panel(Spectrum=Palette.Buttons[2])
-    TopBar.SetHorizontal(8, 0, 0, 0, Spacing=12)
-    TopBar.Add(LCARSElbow(Corner="top-left", Text="LCARS", Width=120, Height=48, Thickness=18, Radius=16, Spectrum=Palette.Buttons[2]))
-    TopBar.Add(LCARSLabel(Text="COMPONENT LIBRARY // TITANIUM STANDARD", FontSize=18, Spectrum=Palette.Background))
-    Padd.Add(TopBar)
+    # ── HEADER ──────────────────────────────────────────────────────────────
+    Header = LCARSElbow(Corner="top-left", Text="LCARS", Number="COMP-LIB",
+                        Width=320, Height=72, Thickness=28, Radius=20, Spectrum=Palette.Buttons[2])
 
-    Body = Panel(Spectrum=Palette.Background)
-    Body.SetHorizontal(0, 0, 0, 0, Spacing=14)
+    # ── FOOTER ──────────────────────────────────────────────────────────────
+    Footer = LCARSElbow(Corner="bottom-right", Text="STARFLEET", Number="SF-47",
+                        Width=320, Height=56, Thickness=24, Radius=18, Spectrum=Palette.Buttons[0])
 
-    # ─── ЛІВА: КНОПКИ ─────────────────────────────────────────────────────
-    Left = Panel(Spectrum=Palette.Background)
-    Left.SetVertical(0, 0, 0, 0, Spacing=6)
+    # ── LEFT COLUMN: BUTTONS ────────────────────────────────────────────────
+    LeftCol = Panel()
+    LeftCol.SetVertical(0, 0, 0, 0, Spacing=6)
+    LeftCol.GetSurface().setFixedWidth(280)
 
-    Left.Add(LCARSElbow(Corner="top-left", Text="BUTTONS", Number="01-BTN",
-                        Width=260, Height=64, Thickness=24, Radius=18, Spectrum=Palette.Buttons[1]))
-
-    Left.Add(LCARSLabel(Text="FORMS", FontSize=12, Spectrum=Palette.Buttons[0]))
+    LeftCol.Add(LCARSLabel(Text="BUTTON FORMS", FontSize=12, Spectrum=Palette.Buttons[0]))
 
     AllBtns = []
-
     FormData = [
-        ("RECT",       "01", LCARSButton.RectType,     0),
-        ("PILL",       "02", LCARSButton.PillType,     0),
-        ("SOFT",       "03", LCARSButton.SoftType,     0),
-        ("PILL-HALF E","04", LCARSButton.PillHalfType, 0),
-        ("PILL-HALF W","05", LCARSButton.PillHalfType, 180),
-        ("SOFT-HALF E","06", LCARSButton.SoftHalfType, 0),
-        ("SOFT-HALF W","07", LCARSButton.SoftHalfType, 180),
+        ("RECT",        "01", LCARSButton.RectType,     0),
+        ("PILL",        "02", LCARSButton.PillType,     0),
+        ("SOFT",        "03", LCARSButton.SoftType,     0),
+        ("PILL-HALF E", "04", LCARSButton.PillHalfType, 0),
+        ("PILL-HALF W", "05", LCARSButton.PillHalfType, 180),
+        ("SOFT-HALF E", "06", LCARSButton.SoftHalfType, 0),
+        ("SOFT-HALF W", "07", LCARSButton.SoftHalfType, 180),
     ]
 
     for Txt, Num, Fm, Dr in FormData:
         B = LCARSButton(Text=Txt, Number=Num, SwapMode=True, Form=Fm, Direction=Dr,
-                        Width=260, Height=38, Sound="click",
-                        Handler=lambda t=Txt: ActiveAudio.play("click"))
+                        Width=280, Height=40, Sound="click")
         AllBtns.append(B)
-        Left.Add(B)
+        LeftCol.Add(B)
 
-    Left.Add(LCARSBar(Height=3, Spectrum=Palette.Buttons[2]))
-    Left.Add(LCARSLabel(Text="STATES", FontSize=12, Spectrum=Palette.Buttons[0]))
+    LeftCol.Add(LCARSBar(Height=3, Spectrum=Palette.Buttons[2]))
+    LeftCol.Add(LCARSLabel(Text="BUTTON STATES", FontSize=12, Spectrum=Palette.Buttons[0]))
 
-    StateData = [
-        ("NORMAL",  LCARSButton.NORMAL,  Palette.Buttons[2]),
-        ("DISABLED",LCARSButton.DISABLED,Palette.Disabled[0]),
-        ("YELLOW",  LCARSButton.YELLOW,  Palette.YellowAlert[0]),
-        ("ALERT",   LCARSButton.ALERT,   Palette.RedAlert[0]),
-    ]
-
-    for Txt, St, Col in StateData:
-        B = LCARSButton(Text=Txt, State=St, Width=260, Height=38, Sound="click",
-                        Handler=lambda s=St: SystemTheme.SetSystemState(s.replace("YellowAlert","Yellow").replace("RedAlert","Red").replace("Normal","Normal")))
+    for Txt, St in [("NORMAL", LCARSButton.NORMAL), ("DISABLED", LCARSButton.DISABLED),
+                     ("YELLOW", LCARSButton.YELLOW), ("ALERT", LCARSButton.ALERT)]:
+        B = LCARSButton(Text=Txt, State=St, Width=280, Height=40, Sound="click")
         AllBtns.append(B)
-        Left.Add(B)
+        LeftCol.Add(B)
 
-    Left.AddStretch(1)
+    LeftCol.AddStretch(1)
 
-    IndRow = Panel(Spectrum=Palette.Background)
-    IndRow.SetHorizontal(0, 0, 0, 0, Spacing=4)
-    for Fm in [LCARSIndicator.RectType, LCARSIndicator.SoftType, LCARSIndicator.PillHalf]:
-        IndRow.Add(LCARSIndicator(Form=Fm, Width=82, Height=26, Spectrum=Palette.Buttons[2]))
-    Left.Add(IndRow)
+    IndRow = Panel()
+    IndRow.SetHorizontal(0, 0, 0, 0, Spacing=6)
+    IndRow.Add(LCARSIndicator(Form=LCARSIndicator.RectType, Width=88, Height=28, Spectrum=Palette.Buttons[2]))
+    IndRow.Add(LCARSIndicator(Form=LCARSIndicator.SoftType, Width=88, Height=28, Spectrum=Palette.Buttons[0]))
+    IndRow.Add(LCARSIndicator(Form=LCARSIndicator.PillHalf, Width=88, Height=28, Spectrum=Palette.Buttons[1]))
+    LeftCol.Add(IndRow)
 
-    Left.Add(LCARSElbow(Corner="bottom-left", Text="DECK-47", Number="47-LC",
-                        Width=260, Height=52, Thickness=22, Radius=18, Spectrum=Palette.Buttons[0]))
-    Body.Add(Left)
+    # ── CENTER: INTERACTIVE DEMO ────────────────────────────────────────────
+    CenterCol = Panel()
+    CenterCol.SetVertical(0, 0, 0, 0, Spacing=8)
 
-    # ─── ЦЕНТР: БАЛКИ + ЛІКТІ + ДЕМО ─────────────────────────────────────
-    Center = Panel(Spectrum=Palette.Background)
-    Center.SetVertical(0, 0, 0, 0, Spacing=8)
+    DemoStatus = LCARSLabel(Text="LCARS COMPONENT LIBRARY", FontSize=22,
+                            Align="center", Height=40, Spectrum=Palette.Buttons[2])
+    CenterCol.Add(DemoStatus)
 
-    Center.Add(LCARSLabel(Text="STRUCTURAL ELEMENTS", FontSize=16, Spectrum=Palette.Buttons[0]))
+    CenterCol.Add(LCARSBar(Height=4, Spectrum=Palette.Buttons[2]))
 
-    ElbowRow = Panel(Spectrum=Palette.Background)
-    ElbowRow.SetHorizontal(0, 0, 0, 0, Spacing=10)
-    for Corner, Txt in [("top-left","TL"), ("top-right","TR"), ("bottom-left","BL"), ("bottom-right","BR")]:
-        ElbowRow.Add(LCARSElbow(Corner=Corner, Text=Txt, Width=200, Height=70,
-                                Thickness=20, Radius=16, Spectrum=Palette.Buttons[1]))
-    ElbowRow.AddStretch()
-    Center.Add(ElbowRow)
+    CenterCol.Add(LCARSLabel(Text="SYSTEM STATE CONTROL", FontSize=14, Spectrum=Palette.Buttons[0]))
 
-    Center.Add(LCARSLabel(Text="BARS", FontSize=12, Spectrum=Palette.Buttons[0]))
-
-    BarCol = Panel(Spectrum=Palette.Background)
-    BarCol.SetVertical(0, 0, 0, 0, Spacing=6)
-    BarCol.Add(LCARSBar(Form=LCARSBar.RectType, Width=500, Height=16, Spectrum=Palette.Buttons[2]))
-    BarCol.Add(LCARSBar(Form=LCARSBar.PillHalfType, Width=500, Height=16, Spectrum=Palette.Buttons[0]))
-    BarCol.Add(LCARSBar(Form=LCARSBar.SoftType, Width=500, Height=16, Spectrum=Palette.Buttons[1]))
-    Center.Add(BarCol)
-
-    Center.Add(LCARSBar(Height=3, Spectrum=Palette.Buttons[3]))
-
-    Center.Add(LCARSLabel(Text="INTERACTIVE DEMO", FontSize=12, Spectrum=Palette.Buttons[0]))
-
-    DemoCard = Panel(Spectrum=Palette.Background)
-    DemoCard.SetVertical(8, 10, 8, 10, Spacing=6)
-
-    DemoStatus = LCARSLabel(Text="TOUCH ANY BUTTON TO ENGAGE", FontSize=16,
-                            Align="center", Height=32, Spectrum=Palette.Buttons[2])
-    DemoCard.Add(DemoStatus)
-
-    ActionRow = Panel(Spectrum=Palette.Background)
-    ActionRow.SetHorizontal(0, 0, 0, 0, Spacing=8)
+    ActionRow = Panel()
+    ActionRow.SetHorizontal(0, 0, 0, 0, Spacing=12)
 
     def OnRed():
         SystemTheme.SetSystemState("Red")
@@ -135,75 +97,81 @@ def ComponentShowcase():
         DemoStatus.Spectrum = Palette.Buttons[0]
         ActiveAudio.play("ack")
 
-    ActionRow.Add(LCARSButton(Text="RED ALERT", Form=LCARSButton.PillType, State="alert",
-                              Width=180, Height=44, Sound="alertred", Handler=OnRed))
-    ActionRow.Add(LCARSButton(Text="YELLOW", Form=LCARSButton.PillType, State="yellow",
-                              Width=180, Height=44, Sound="alertyellow", Handler=OnYellow))
-    ActionRow.Add(LCARSButton(Text="GREEN", Form=LCARSButton.PillType, State="normal",
-                              Width=180, Height=44, Sound="ack", Handler=OnGreen))
-    DemoCard.Add(ActionRow)
+    ActionRow.Add(LCARSButton(Text="RED ALERT", Form=LCARSButton.PillType, State=LCARSButton.ALERT,
+                              Width=200, Height=50, Sound="alertred", Handler=OnRed))
+    ActionRow.Add(LCARSButton(Text="YELLOW", Form=LCARSButton.PillType, State=LCARSButton.YELLOW,
+                              Width=200, Height=50, Sound="alertyellow", Handler=OnYellow))
+    ActionRow.Add(LCARSButton(Text="GREEN", Form=LCARSButton.PillType, State=LCARSButton.NORMAL,
+                              Width=200, Height=50, Sound="ack", Handler=OnGreen))
+    CenterCol.Add(ActionRow)
 
-    ScanBar = LCARSIndicator(Form=LCARSIndicator.SoftType, Width=500, Height=12, Spectrum=Palette.Buttons[2])
-    DemoCard.Add(ScanBar)
+    CenterCol.Add(LCARSBar(Height=3, Spectrum=Palette.Buttons[3]))
+
+    CenterCol.Add(LCARSLabel(Text="BARS & STRUCTURAL ELEMENTS", FontSize=14, Spectrum=Palette.Buttons[0]))
+
+    BarPanel = Panel()
+    BarPanel.SetVertical(0, 0, 0, 0, Spacing=8)
+    BarPanel.Add(LCARSBar(Form=LCARSBar.RectType, Height=18, Spectrum=Palette.Buttons[2]))
+    BarPanel.Add(LCARSBar(Form=LCARSBar.PillHalfType, Height=18, Spectrum=Palette.Buttons[0]))
+    BarPanel.Add(LCARSBar(Form=LCARSBar.SoftType, Height=18, Spectrum=Palette.Buttons[1]))
+    CenterCol.Add(BarPanel)
+
+    CenterCol.Add(LCARSLabel(Text="ELBOW VARIANTS", FontSize=14, Spectrum=Palette.Buttons[0]))
+
+    ElbowRow = Panel()
+    ElbowRow.SetHorizontal(0, 0, 0, 0, Spacing=10)
+    for Corner, Txt in [("top-left","TL"), ("top-right","TR"), ("bottom-left","BL"), ("bottom-right","BR")]:
+        ElbowRow.Add(LCARSElbow(Corner=Corner, Text=Txt, Width=180, Height=70,
+                                Thickness=22, Radius=16, Spectrum=Palette.Buttons[1]))
+    ElbowRow.AddStretch()
+    CenterCol.Add(ElbowRow)
+
+    CenterCol.AddStretch(1)
+
+    ScanBar = LCARSIndicator(Form=LCARSIndicator.SoftType, Height=10, Spectrum=Palette.Buttons[2])
+    CenterCol.Add(ScanBar)
     Blink(Target=ScanBar, Period=0.7, Loop=True).Start()
 
-    Center.Add(DemoCard, 1)
-    Center.AddStretch(1)
-    Body.Add(Center, 1)
+    # ── RIGHT COLUMN: INDICATORS + TELEMETRY ────────────────────────────────
+    RightCol = Panel()
+    RightCol.SetVertical(0, 0, 0, 0, Spacing=6)
+    RightCol.GetSurface().setFixedWidth(280)
 
-    # ─── ПРАВА: ІНДИКАТОРИ + ТЕЛЕМЕТРІЯ ───────────────────────────────────
-    Right = Panel(Spectrum=Palette.Background)
-    Right.SetVertical(0, 0, 0, 0, Spacing=6)
+    RightCol.Add(LCARSLabel(Text="INDICATORS (BLINK)", FontSize=12, Spectrum=Palette.Buttons[0]))
 
-    Right.Add(LCARSElbow(Corner="top-right", Text="TELEMETRY", Number="02-TLM",
-                         Width=260, Height=54, Thickness=22, Radius=18, Spectrum=Palette.Buttons[3]))
-
-    Right.Add(LCARSLabel(Text="INDICATORS (BLINK)", FontSize=12, Spectrum=Palette.Buttons[0]))
-
-    Indicators = []
     IndColors = ["#00CC66", Palette.Buttons[2], Palette.Buttons[4], Palette.RedAlert[0], Palette.YellowAlert[0]]
     IndForms = [LCARSIndicator.RectType, LCARSIndicator.SoftType, LCARSIndicator.PillHalf,
                 LCARSIndicator.RectType, LCARSIndicator.SoftType]
 
     for i in range(5):
-        Ind = LCARSIndicator(Form=IndForms[i], Width=260, Height=20, Spectrum=IndColors[i])
-        Indicators.append(Ind)
-        Right.Add(Ind)
+        Ind = LCARSIndicator(Form=IndForms[i], Width=280, Height=22, Spectrum=IndColors[i])
+        RightCol.Add(Ind)
         Blink(Target=Ind, Period=0.4 + i * 0.2, Loop=True).Start()
 
-    Right.Add(LCARSBar(Height=3, Spectrum=Palette.Disabled[1]))
+    RightCol.Add(LCARSBar(Height=3, Spectrum=Palette.Disabled[1]))
 
-    Right.Add(LCARSLabel(Text="DYNAMIC LABELS", FontSize=12, Spectrum=Palette.Buttons[0]))
+    RightCol.Add(LCARSLabel(Text="DYNAMIC LABELS", FontSize=12, Spectrum=Palette.Buttons[0]))
 
-    DynLabel = LCARSLabel(Text="DYNAMIC COLOR CYCLING", FontSize=14, Height=28, Spectrum=Palette.Buttons[2])
-    Right.Add(DynLabel)
+    DynLabel = LCARSLabel(Text="COLOR CYCLING", FontSize=16, Height=32, Spectrum=Palette.Buttons[2])
+    RightCol.Add(DynLabel)
     Blink(Target=DynLabel, Period=1.2, Loop=True,
           ActiveColor=Palette.Buttons[4], OffColor=Palette.Buttons[0]).Start()
 
-    Right.Add(LCARSBar(Height=3, Spectrum=Palette.Disabled[1]))
+    RightCol.Add(LCARSBar(Height=3, Spectrum=Palette.Disabled[1]))
 
-    Right.Add(LCARSLabel(Text="BARS GALLERY", FontSize=12, Spectrum=Palette.Buttons[0]))
+    RightCol.Add(LCARSLabel(Text="PALETTE STRIP", FontSize=12, Spectrum=Palette.Buttons[0]))
 
-    PaletteColors = Palette.Buttons[:6]
-    for i, Col in enumerate(PaletteColors):
-        Right.Add(LCARSBar(Form=LCARSBar.RectType, Width=260, Height=12, Spectrum=Col))
+    for Col in Palette.Buttons[:6]:
+        RightCol.Add(LCARSBar(Form=LCARSBar.RectType, Width=280, Height=14, Spectrum=Col))
 
-    Right.AddStretch(1)
+    RightCol.AddStretch(1)
 
-    Right.Add(LCARSElbow(Corner="bottom-right", Text="STARFLEET", Number="SF-47",
-                         Width=260, Height=52, Thickness=22, Radius=18, Spectrum=Palette.Buttons[4]))
+    # ── ASSEMBLE VIA COMPOSE ────────────────────────────────────────────────
+    CenterFrame = Frame()
+    CenterFrame.Compose(TopBar=Header, LeftPillar=LeftCol, Content=CenterCol, RightPillar=RightCol, BottomBar=Footer)
+    Screen_.Add(CenterFrame, 1)
 
-    Body.Add(Right)
-
-    Padd.Add(Body, 1)
-    BotBar = Panel(Spectrum=Palette.Buttons[0])
-    BotBar.SetHorizontal(0, 0, 8, 0, Spacing=12)
-    BotBar.Add(LCARSLabel(Text="LCARS TITANIUM v0.3 // ALL COMPONENTS OPERATIONAL", FontSize=12, Spectrum=Palette.Background))
-    BotBar.Add(LCARSElbow(Corner="bottom-right", Text="EXIT", Width=120, Height=48, Thickness=18, Radius=16, Spectrum=Palette.Buttons[0]))
-    Padd.Add(BotBar)
-
-    # ── SHOW + ANIM ────────────────────────────────────────────────────────
-    Padd.Show()
+    Screen_.Show()
 
     Cascade = Stagger()
     for B in AllBtns:
@@ -212,7 +180,7 @@ def ComponentShowcase():
 
     TextDecode().Decode(Target=DemoStatus, Text="LCARS COMPONENT LIBRARY READY", Period=1.4)
 
-    return Padd
+    return Screen_
 
 
 LCARS.Launch(ComponentShowcase)
