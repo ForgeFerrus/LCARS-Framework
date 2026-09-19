@@ -118,19 +118,22 @@ class Graphic(SystemComponent):
 
     # Отримання просторового прямокутника поля
     def SetField(self):
-        RectType = LCARS.Geometry.Rect
-        return RectType(self.X, self.Y, self.Width, self.Height)
+        RectType = LCARS.Retrieve("Base.Geometry.Rect") or LCARS.Geometry.Rect
+        if RectType and callable(RectType):
+            return RectType(self.X, self.Y, self.Width, self.Height)
+        return (self.X, self.Y, self.Width, self.Height)
 
     # Отримання внутрішньої зони випромінювання за вирахуванням зазорів
     def InnerField(self, Inset: int = 0):
         Offset = Inset + self.Gap
-        RectType = LCARS.Geometry.Rect
-        return RectType(
-            self.X + Offset,
-            self.Y + Offset,
-            max(0, self.Width - Offset * 2),
-            max(0, self.Height - Offset * 2)
-        )
+        RectType = LCARS.Retrieve("Base.Geometry.Rect") or LCARS.Geometry.Rect
+        X = self.X + Offset
+        Y = self.Y + Offset
+        W = max(0, self.Width - Offset * 2)
+        H = max(0, self.Height - Offset * 2)
+        if RectType and callable(RectType):
+            return RectType(X, Y, W, H)
+        return (X, Y, W, H)
 
     # Встановлення спектрального випромінювання
     def SetSpectrum(self, Spectrum: str):
@@ -857,12 +860,6 @@ class LCARSCanvas(Graphic):
 # Канонічні аліаси для зворотної сумісності
 Builder = Architect
 LCARSBuilder = Architect
-
-# Застосовує технічний стиль до графічного віджета.
-def SetStyle(TargetWidget, Style):
-    Setter = getattr(TargetWidget, "setStyleSheet", None)
-    if callable(Setter):
-        Setter(str(Style))
 
 LCARS.Types = (
     "Geometry",

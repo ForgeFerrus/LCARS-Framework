@@ -62,17 +62,14 @@ class Modulation(SystemComponent):
         if callable(LerpFunc):
             return LerpFunc(SpectrumA, SpectrumB, Factor)
         return SpectrumA
-
     ModulateColor = ModulateSpectrum
 
     def ModulateVector(self, Vector: tuple, Period: float = 1.0, WaveFunc=None) -> tuple:
         CurrentPhase = self.Phase(Period)
         Factor = WaveFunc(CurrentPhase) if callable(WaveFunc) else self.Sine(CurrentPhase)
         return tuple(v * Factor for v in Vector)
-
 Waveform = Modulation
 Easing = Modulation
-
 # =============================================================================
 # УНІВЕРСАЛЬНИЙ РУШІЙ АНІМАЦІЙ ТА ЧАСОВОЇ МОДУЛЯЦІЇ LCARS
 # Поєднує системний квантовий таймер із математичною модуляцією Graphic

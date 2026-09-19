@@ -20,6 +20,11 @@ SystemState = "Normal"
 MinFontSize = 16
 
 # Базовий профіль стилю системи
+def SetStyle(TargetWidget, Style):
+    Setter = getattr(TargetWidget, "setStyleSheet", None)
+    if callable(Setter):
+        Setter(str(Style))
+
 class SystemStyle(LCARS):
     FontFamily = "LCARS"
     FontWeight = "normal"
