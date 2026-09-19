@@ -8,15 +8,87 @@ from lcars.base.component import Component
 from lcars.base.graphic import Visual, Emitter
 from lcars.base.default import DefaultBackground, Palette
 from lcars.base.type import LCARS, SystemComponent
-ViewportClass = LCARS.Retrieve("Base.Interface.Viewport")
 
-class SurfaceViewport(ViewportClass if ViewportClass else object):
-    """Легковажний оптичний адаптер вікна LCARS. Малює Surface через Emitter."""
+class SurfaceViewport(LCARS):
+    """Легковажний оптичний адаптер вікна LCARS. Інкапсулює фізичне полотно без успадкування від системних класів."""
     SurfaceObj = None
+    NativeWindow = None
+
     def __init__(self, SurfaceObj=None, Parent=None):
-        if ViewportClass is not None:
-            super().__init__(Parent)
         self.SurfaceObj = SurfaceObj
+        ViewportClass = LCARS.Retrieve("Base.Interface.Viewport")
+        if ViewportClass is not None and callable(ViewportClass):
+            self.NativeWindow = ViewportClass(Parent) if Parent is not None else ViewportClass()
+            FramelessFlag = LCARS.Retrieve("Base.Protocol.DisplayFlag.Frameless") or LCARS.Retrieve("Base.Protocol.FramelessWindowHint")
+            if FramelessFlag is not None and not isinstance(FramelessFlag, str) and hasattr(self.NativeWindow, "setWindowFlags"):
+                self.NativeWindow.setWindowFlags(self.NativeWindow.windowFlags() | FramelessFlag)
+            if hasattr(self.NativeWindow, "setStyleSheet"):
+                self.NativeWindow.setStyleSheet("background-color: #000000; border: none;")
+            self.NativeWindow.paintEvent = self.paintEvent
+            self.NativeWindow.resizeEvent = self.resizeEvent
+            self.NativeWindow.mousePressEvent = self.mousePressEvent
+            self.NativeWindow.mouseReleaseEvent = self.mouseReleaseEvent
+            self.NativeWindow.mouseMoveEvent = self.mouseMoveEvent
+
+    def show(self):
+        if self.NativeWindow and hasattr(self.NativeWindow, "show"):
+            self.NativeWindow.show()
+        return self
+
+    def showFullScreen(self):
+        if self.NativeWindow and hasattr(self.NativeWindow, "showFullScreen"):
+            self.NativeWindow.showFullScreen()
+        return self
+
+    def hide(self):
+        if self.NativeWindow and hasattr(self.NativeWindow, "hide"):
+            self.NativeWindow.hide()
+        return self
+
+    def update(self):
+        if self.NativeWindow and hasattr(self.NativeWindow, "update"):
+            self.NativeWindow.update()
+        return self
+
+    def width(self):
+        if self.NativeWindow and hasattr(self.NativeWindow, "width"):
+            return self.NativeWindow.width()
+        return 800
+
+    def height(self):
+        if self.NativeWindow and hasattr(self.NativeWindow, "height"):
+            return self.NativeWindow.height()
+        return 600
+
+    def setFixedWidth(self, Width):
+        if self.NativeWindow and hasattr(self.NativeWindow, "setFixedWidth"):
+            self.NativeWindow.setFixedWidth(int(Width))
+        return self
+
+    def setFixedHeight(self, Height):
+        if self.NativeWindow and hasattr(self.NativeWindow, "setFixedHeight"):
+            self.NativeWindow.setFixedHeight(int(Height))
+        return self
+
+    def windowFlags(self):
+        if self.NativeWindow and hasattr(self.NativeWindow, "windowFlags"):
+            return self.NativeWindow.windowFlags()
+        return None
+
+    def setWindowFlags(self, Flags):
+        if self.NativeWindow and hasattr(self.NativeWindow, "setWindowFlags"):
+            self.NativeWindow.setWindowFlags(Flags)
+        return self
+
+    def setStyleSheet(self, Sheet):
+        if self.NativeWindow and hasattr(self.NativeWindow, "setStyleSheet"):
+            self.NativeWindow.setStyleSheet(Sheet)
+        return self
+
+    def isVisible(self):
+        if self.NativeWindow and hasattr(self.NativeWindow, "isVisible"):
+            return self.NativeWindow.isVisible()
+        return True
 
     def paintEvent(self, Event):
         if self.SurfaceObj:
