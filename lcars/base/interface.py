@@ -231,6 +231,14 @@ class Element(Component):
 
     show = Show
 
+    def ShowFullScreen(self):
+        Host = self.GetSurface()
+        if hasattr(Host, "showFullScreen"):
+            Host.showFullScreen()
+        elif hasattr(Host, "show"):
+            Host.show()
+        return self
+
     # -------------------------------------------------------------------------
     # КОМПОЗИЦІЙНЕ КЕРУВАННЯ (ATTACH / DETACH)
     # -------------------------------------------------------------------------
@@ -813,6 +821,22 @@ class AccessPanel(Element):
 class Screen(Element):
     TypeName = "Screen"
     Type = "Screen"
+
+    def Show(self):
+        Host = self.GetSurface()
+        if hasattr(Host, "setWindowFlags"):
+            FramelessFlag = LCARS.Retrieve(getattr(LCARS, "Frameless", None))
+            if FramelessFlag is not None and not isinstance(FramelessFlag, str):
+                Host.setWindowFlags(Host.windowFlags() | FramelessFlag)
+        if hasattr(Host, "setStyleSheet"):
+            Host.setStyleSheet("background-color: #000000;")
+        if hasattr(Host, "showFullScreen"):
+            Host.showFullScreen()
+        elif hasattr(Host, "show"):
+            Host.show()
+        return self
+
+    show = Show
 
     def Compose(self, Top=None, Center=None, Bottom=None):
         self.Clear()

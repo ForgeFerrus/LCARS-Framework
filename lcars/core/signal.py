@@ -89,7 +89,10 @@ class Transmission(SystemComponent):
         else:
             self.State = "Detected"
 
-        Result = Sensor(Cargo)
+        try:
+            Result = Sensor(Cargo)
+        except TypeError:
+            Result = Sensor()
         if Result is not None:
             self.Response = Result
         return Result

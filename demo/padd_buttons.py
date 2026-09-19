@@ -1,233 +1,366 @@
-# ◤ LCARS PADD — SECURITY ACCESS PANEL
-# Код: 4721 | Макс спроб: 3
+# LCARS FULLSCREEN SECURITY ACCESS TERMINAL
+# Standard: Titanium (Zero-Except, Zero Underscores, Strict PascalCase)
+
 from lcars.base.type import LCARS
-from lcars.base.interface import PADD, Panel, Header, Footer
+from lcars.base.interface import Screen, Panel, Header, Footer
 from lcars.base.component import LCARSButton, LCARSElbow, LCARSLabel, LCARSIndicator, LCARSBar
-from lcars.base.animation import TextDecode, Typewriter, Reveal, Stagger, Blink
-from lcars.base.default import Palette, SystemTheme
+from lcars.base.animation import TextDecode, Reveal, Stagger, Blink
+from lcars.base.default import SystemTheme
 from lcars.modules.sound import ActiveAudio
 
-AUTH_CODE = "4721"
+AuthCode = "4721"
 
-def PaddAccessInterface():
-    Padd = PADD(Title="LCARS PADD // SECURITY ACCESS", Width=1180, Height=760)
-    Padd.SetVertical(10, 10, 10, 10, Spacing=8)
+def SecurityAccessInterface():
+    MainScreen = Screen(Title="LCARS FULLSCREEN SECURITY TERMINAL")
+    MainScreen.SetVertical(10, 14, 10, 14, Spacing=8)
 
-    Padd.Add(Header(Title="SECURITY ACCESS TERMINAL // AUTHORIZATION REQUIRED", Spectrum=Palette.Buttons[2]))
+    # 1. ВЕРХНІЙ ТАКТИЧНИЙ РЯД
+    TopBar = Panel()
+    TopBar.SetHorizontal(0, 0, 0, 0, Spacing=8)
 
-    Body = Panel(Spectrum=Palette.Background)
-    Body.SetHorizontal(0, 0, 0, 0, Spacing=12)
+    TopElbow = LCARSElbow(Corner="top-left", Text="SECURITY", Number="SEC-47", Width=220, Height=54, Thickness=22, Radius=18)
+    TopBar.Add(TopElbow)
 
-    # ─── ЛІВА ──────────────────────────────────────────────────────────────
-    Left = Panel(Spectrum=Palette.Background)
+    TopLabel = LCARSLabel(Text="SECURITY CLEARANCE TERMINAL // AUTHORIZATION REQUIRED", FontSize=20, Align="left", Height=36)
+    TopBar.Add(TopLabel, 1)
+
+    BtnExit = LCARSButton(Text="EXIT FULLSCREEN", Form=LCARSButton.PillHalf, Direction=0, Width=180, Height=36, Sound="click")
+    TopBar.Add(BtnExit)
+
+    MainScreen.Add(TopBar)
+
+    # 2. ГОЛОВНИЙ ТРИКОЛОНКОВИЙ БЛОК
+    Body = Panel()
+    Body.SetHorizontal(0, 0, 0, 0, Spacing=14)
+
+    # ─── ЛІВА КОЛОНКА: НАВІГАЦІЯ ТА АУДИТ ───
+    Left = Panel()
     Left.SetVertical(0, 0, 0, 0, Spacing=6)
-    Left.Add(LCARSElbow(Corner="top-left", Text="SECURITY", Number="01-SEC",
-                        Width=210, Height=56, Spectrum=Palette.Buttons[1]))
-    for t, c in [("ACCESS LOG", Palette.Buttons[2]), ("USER MATRIX", Palette.Buttons[0]),
-                 ("CLEARANCE", Palette.Buttons[1]), ("AUDIT TRAIL", Palette.Buttons[3])]:
-        Left.Add(LCARSButton(Text=t, Form=LCARSButton.PillHalfType, Direction=0,
-                             Width=210, Height=36, FontSize=12, Spectrum=c, Sound="click"))
-    Left.Add(LCARSButton(Text="LOCKOUT", Form=LCARSButton.PillHalfType, Direction=0,
-                         Width=210, Height=36, FontSize=12, Spectrum=Palette.Disabled[0],
-                         State="disabled"))
-    Left.AddStretch()
-    Left.Add(LCARSIndicator(Form=LCARSIndicator.SoftType, Width=210, Height=16, Spectrum=Palette.Buttons[2]))
+
+    LeftElbow = LCARSElbow(Corner="top-left", Text="ACCESS DECK", Number="01-ACC", Width=230, Height=54, Thickness=22, Radius=18)
+    Left.Add(LeftElbow)
+
+    for NavTitle in ["ACCESS LOG", "USER MATRIX", "CLEARANCE", "AUDIT TRAIL"]:
+        BNav = LCARSButton(
+            Text=NavTitle,
+            Form=LCARSButton.PillHalfType,
+            Direction=0,
+            Width=230,
+            Height=38,
+            Sound="click"
+        )
+        Left.Add(BNav)
+
+    BLockout = LCARSButton(
+        Text="LOCKOUT",
+        Form=LCARSButton.PillHalfType,
+        Direction=0,
+        Width=230,
+        Height=38,
+        State="disabled"
+    )
+    Left.Add(BLockout)
+    Left.AddStretch(1)
+
+    LeftInd = LCARSIndicator(Form=LCARSIndicator.SoftType, Width=230, Height=22)
+    Left.Add(LeftInd)
     Body.Add(Left)
 
-    # ─── ЦЕНТР ─────────────────────────────────────────────────────────────
-    Center = Panel(Spectrum=Palette.Background)
+    # ─── ЦЕНТРАЛЬНА КОЛОНКА: КЛАВІАТУРА ТА ДИСПЛЕЙ ───
+    Center = Panel()
     Center.SetVertical(0, 0, 0, 0, Spacing=8)
 
-    DisplayCard = Panel(Spectrum=Palette.Background)
-    DisplayCard.SetVertical(12, 10, 12, 10, Spacing=4)
-    DisplayCard.Add(LCARSLabel(Text="ENTER ACCESS CODE", FontSize=13, Spectrum=Palette.Buttons[2],
-                               Width=500, Height=24))
-    CodeDisplay = LCARSLabel(Text="_", FontSize=36, Align="center", Spectrum=Palette.Buttons[4],
-                             Width=500, Height=56)
+    DisplayCard = Panel()
+    DisplayCard.SetVertical(10, 12, 10, 12, Spacing=4)
+
+    PromptMsg = LCARSLabel(Text="ENTER AUTHORIZATION CODE", Height=26)
+    DisplayCard.Add(PromptMsg)
+
+    CodeDisplay = LCARSLabel(Text="*", FontSize=36, Align="center", Height=56)
     DisplayCard.Add(CodeDisplay)
-    StatusMsg = LCARSLabel(Text="AWAITING INPUT...", FontSize=11, Align="center",
-                           Spectrum=Palette.Buttons[2], Width=500, Height=22)
+
+    StatusMsg = LCARSLabel(Text="AWAITING INPUT...", Align="center", Height=26)
     DisplayCard.Add(StatusMsg)
+
     Center.Add(DisplayCard)
 
-    Center.Add(LCARSBar(Height=3, Spectrum=Palette.Buttons[2]))
+    DividerBar = LCARSBar(Height=3)
+    Center.Add(DividerBar)
 
-    S = {"code": "", "ok": False, "tries": 0}
+    StateStore = {"Code": "", "Passed": False, "Attempts": 0}
     KeypadBtns = []
 
-    def Refresh():
-        c = S["code"]
-        CodeDisplay.SetText("*" * len(c) if c else "_")
-        if S["ok"]:
-            StatusMsg.SetText("ACCESS GRANTED // WELCOME, COMMANDER")
-            StatusMsg.Spectrum = "#00CC66"
-        elif S["tries"] >= 3:
+    def UpdateDisplay():
+        CurCode = StateStore["Code"]
+        CodeDisplay.SetText("*" * len(CurCode) if CurCode else "EMPTY")
+        if StateStore["Passed"]:
+            StatusMsg.SetText("ACCESS GRANTED // COMMAND CONSOLE OPEN")
+        elif StateStore["Attempts"] >= 3:
             StatusMsg.SetText("LOCKOUT // CONTACT STARFLEET COMMAND")
-            StatusMsg.Spectrum = Palette.RedAlert[0]
-        elif S["tries"] > 0:
-            StatusMsg.SetText(f"DENIED // {3 - S['tries']} ATTEMPTS LEFT")
-            StatusMsg.Spectrum = Palette.RedAlert[0]
+        elif StateStore["Attempts"] > 0:
+            Remain = 3 - StateStore["Attempts"]
+            StatusMsg.SetText(f"DENIED // {Remain} ATTEMPTS REMAINING")
         else:
-            StatusMsg.SetText(f"CODE LENGTH: {len(c)}/8")
-            StatusMsg.Spectrum = Palette.Buttons[2]
+            StatusMsg.SetText(f"BUFFER: {len(CurCode)} / 8 DIGITS")
 
-    def Digit(d):
-        if S["ok"] or S["tries"] >= 3 or len(S["code"]) >= 8:
-            ActiveAudio.play("denied"); return
-        S["code"] += d
-        ActiveAudio.play("click")
-        Refresh()
-
-    def Clear():
-        ActiveAudio.play("click")
-        S["code"] = ""; S["ok"] = False; S["tries"] = 0
-        Refresh()
-
-    def Back():
-        if S["ok"]: ActiveAudio.play("denied"); return
-        if S["code"]:
-            S["code"] = S["code"][:-1]
-            ActiveAudio.play("click")
-            Refresh()
-
-    def Enter():
-        if S["ok"] or not S["code"]:
-            ActiveAudio.play("denied"); return
-        if S["code"] == AUTH_CODE:
-            S["ok"] = True
-            ActiveAudio.play("ack")
-            Refresh()
-        else:
-            S["tries"] += 1
+    def AddDigit(DigitChar):
+        if StateStore["Passed"] or StateStore["Attempts"] >= 3 or len(StateStore["Code"]) >= 8:
             ActiveAudio.play("denied")
-            S["code"] = ""
-            Refresh()
+            return
+        StateStore["Code"] += DigitChar
+        ActiveAudio.play("click")
+        UpdateDisplay()
 
-    KeypadPanel = Panel(Spectrum=Palette.Background)
-    KeypadPanel.SetVertical(0, 0, 0, 0, Spacing=5)
+    def ClearCode():
+        ActiveAudio.play("click")
+        StateStore["Code"] = ""
+        StateStore["Passed"] = False
+        StateStore["Attempts"] = 0
+        UpdateDisplay()
 
-    for row in [("1","2","3",Palette.Buttons[2],Palette.Buttons[0],Palette.Buttons[1]),
-               ("4","5","6",Palette.Buttons[0],Palette.Buttons[1],Palette.Buttons[2]),
-               ("7","8","9",Palette.Buttons[1],Palette.Buttons[2],Palette.Buttons[0])]:
-        R = Panel(Spectrum=Palette.Background)
-        R.SetHorizontal(0, 0, 0, 0, Spacing=6)
-        for d, c in [(row[0],row[3]),(row[1],row[4]),(row[2],row[5])]:
-            b = LCARSButton(Text=d, Form=LCARSButton.RectType, Width=155, Height=54,
-                            FontSize=22, Spectrum=c, Sound="click",
-                            Handler=lambda digit=d: Digit(digit))
-            KeypadBtns.append(b)
-            R.Add(b)
-        KeypadPanel.Add(R)
+    def BackspaceCode():
+        if StateStore["Passed"]:
+            ActiveAudio.play("denied")
+            return
+        if StateStore["Code"]:
+            StateStore["Code"] = StateStore["Code"][:-1]
+            ActiveAudio.play("click")
+            UpdateDisplay()
 
-    R4 = Panel(Spectrum=Palette.Background)
-    R4.SetHorizontal(0, 0, 0, 0, Spacing=6)
-    bc = LCARSButton(Text="CLR", Form=LCARSButton.SoftHalfType, Direction=180,
-                     Width=155, Height=54, FontSize=15, Spectrum=Palette.Buttons[3],
-                     Sound="click", Handler=Clear)
-    KeypadBtns.append(bc)
-    R4.Add(bc)
-    b0 = LCARSButton(Text="0", Form=LCARSButton.RectType, Width=155, Height=54,
-                     FontSize=22, Spectrum=Palette.Buttons[4], Sound="click",
-                     Handler=lambda: Digit("0"))
-    KeypadBtns.append(b0)
-    R4.Add(b0)
-    bb = LCARSButton(Text="BSP", Form=LCARSButton.SoftHalfType, Direction=0,
-                     Width=155, Height=54, FontSize=15, Spectrum=Palette.Buttons[5],
-                     Sound="click", Handler=Back)
-    KeypadBtns.append(bb)
-    R4.Add(bb)
-    KeypadPanel.Add(R4)
+    def SubmitCode():
+        if StateStore["Passed"] or not StateStore["Code"]:
+            ActiveAudio.play("denied")
+            return
+        if StateStore["Code"] == AuthCode:
+            StateStore["Passed"] = True
+            ActiveAudio.play("ack")
+            UpdateDisplay()
+        else:
+            StateStore["Attempts"] += 1
+            ActiveAudio.play("denied")
+            StateStore["Code"] = ""
+            UpdateDisplay()
 
+    KeypadPanel = Panel()
+    KeypadPanel.SetVertical(0, 0, 0, 0, Spacing=6)
+
+    NumRows = [
+        ("1", "2", "3"),
+        ("4", "5", "6"),
+        ("7", "8", "9")
+    ]
+
+    for RowTuple in NumRows:
+        RowPanel = Panel()
+        RowPanel.SetHorizontal(0, 0, 0, 0, Spacing=6)
+        for DigitStr in RowTuple:
+            BNum = LCARSButton(
+                Text=DigitStr,
+                Form=LCARSButton.RectType,
+                Width=160,
+                Height=52,
+                FontSize=24,
+                Sound="click"
+            )
+            BNum.Clicked.Connect(lambda D=DigitStr: AddDigit(D))
+            KeypadBtns.append(BNum)
+            RowPanel.Add(BNum)
+        KeypadPanel.Add(RowPanel)
+
+    BottomKeyRow = Panel()
+    BottomKeyRow.SetHorizontal(0, 0, 0, 0, Spacing=6)
+
+    BtnClr = LCARSButton(
+        Text="CLR",
+        Form=LCARSButton.SoftHalfType,
+        Direction=180,
+        Width=160,
+        Height=52,
+        Sound="click"
+    )
+    BtnClr.Clicked.Connect(ClearCode)
+    KeypadBtns.append(BtnClr)
+    BottomKeyRow.Add(BtnClr)
+
+    BtnZero = LCARSButton(
+        Text="0",
+        Form=LCARSButton.RectType,
+        Width=160,
+        Height=52,
+        FontSize=24,
+        Sound="click"
+    )
+    BtnZero.Clicked.Connect(lambda: AddDigit("0"))
+    KeypadBtns.append(BtnZero)
+    BottomKeyRow.Add(BtnZero)
+
+    BtnBsp = LCARSButton(
+        Text="BSP",
+        Form=LCARSButton.SoftHalfType,
+        Direction=0,
+        Width=160,
+        Height=52,
+        Sound="click"
+    )
+    BtnBsp.Clicked.Connect(BackspaceCode)
+    KeypadBtns.append(BtnBsp)
+    BottomKeyRow.Add(BtnBsp)
+
+    KeypadPanel.Add(BottomKeyRow)
     Center.Add(KeypadPanel, 1)
 
-    ActRow = Panel(Spectrum=Palette.Background)
-    ActRow.SetHorizontal(0, 0, 0, 0, Spacing=10)
-    ba = LCARSButton(Text="ABORT", Form=LCARSButton.PillHalfType, Direction=180,
-                     Width=180, Height=44, FontSize=14, Spectrum=Palette.Buttons[3],
-                     Sound="click", Handler=Clear)
-    KeypadBtns.append(ba)
-    ActRow.Add(ba)
-    ActRow.AddStretch()
-    bk = LCARSButton(Text="CONFIRM", Form=LCARSButton.PillHalfType, Direction=0,
-                     Width=180, Height=44, FontSize=14, Spectrum=Palette.Buttons[4],
-                     Sound="ack", Handler=Enter)
-    KeypadBtns.append(bk)
-    ActRow.Add(bk)
-    Center.Add(ActRow)
-    Center.AddStretch()
+    ActionRow = Panel()
+    ActionRow.SetHorizontal(0, 0, 0, 0, Spacing=10)
+
+    BtnAbort = LCARSButton(
+        Text="ABORT",
+        Form=LCARSButton.PillHalfType,
+        Direction=180,
+        Width=190,
+        Height=46,
+        Sound="click"
+    )
+    BtnAbort.Clicked.Connect(ClearCode)
+    KeypadBtns.append(BtnAbort)
+    ActionRow.Add(BtnAbort)
+    ActionRow.AddStretch(1)
+
+    BtnConfirm = LCARSButton(
+        Text="CONFIRM",
+        Form=LCARSButton.PillHalfType,
+        Direction=0,
+        Width=190,
+        Height=46,
+        Sound="ack"
+    )
+    BtnConfirm.Clicked.Connect(SubmitCode)
+    KeypadBtns.append(BtnConfirm)
+    ActionRow.Add(BtnConfirm)
+
+    Center.Add(ActionRow)
+    Center.AddStretch(1)
     Body.Add(Center, 1)
 
-    # ─── ПРАВА ─────────────────────────────────────────────────────────────
-    Right = Panel(Spectrum=Palette.Background)
+    # ─── ПРАВА КОЛОНКА: ДИРЕКТИВИ ТА ТЕЛЕМЕТРІЯ ───
+    Right = Panel()
     Right.SetVertical(0, 0, 0, 0, Spacing=6)
-    Right.Add(LCARSLabel(Text="TELEMETRY", FontSize=11, Spectrum=Palette.Buttons[0]))
 
-    IR = Panel(Spectrum=Palette.Background)
-    IR.SetHorizontal(0, 0, 0, 0, Spacing=4)
-    IndPwr  = LCARSIndicator(Form=LCARSIndicator.RectType, Width=65, Height=24, Spectrum="#00CC66")
-    IndNet  = LCARSIndicator(Form=LCARSIndicator.SoftType, Width=65, Height=24, Spectrum=Palette.Buttons[2])
-    IndSec  = LCARSIndicator(Form=LCARSIndicator.PillHalf, Width=65, Height=24, Spectrum=Palette.Disabled[0])
-    IR.Add(IndPwr); IR.Add(IndNet); IR.Add(IndSec)
-    Right.Add(IR)
+    LblTelemetry = LCARSLabel(Text="SECURITY TELEMETRY", Height=24)
+    Right.Add(LblTelemetry)
 
-    Right.Add(LCARSLabel(Text="PWR: ONLINE",  FontSize=10, Spectrum="#00CC66"))
-    Right.Add(LCARSLabel(Text="NET: STABLE",  FontSize=10, Spectrum=Palette.Buttons[2]))
-    Right.Add(LCARSLabel(Text="SEC: STANDBY", FontSize=10, Spectrum=Palette.Disabled[0]))
-    Right.Add(LCARSBar(Height=2, Spectrum=Palette.Disabled[1]))
+    IndicatorRow = Panel()
+    IndicatorRow.SetHorizontal(0, 0, 0, 0, Spacing=4)
+    IndPwr = LCARSIndicator(Form=LCARSIndicator.RectType, Width=72, Height=26)
+    IndNet = LCARSIndicator(Form=LCARSIndicator.SoftType, Width=72, Height=26)
+    IndSec = LCARSIndicator(Form=LCARSIndicator.PillHalf, Width=72, Height=26)
+    IndicatorRow.Add(IndPwr)
+    IndicatorRow.Add(IndNet)
+    IndicatorRow.Add(IndSec)
+    Right.Add(IndicatorRow)
 
-    Right.Add(LCARSLabel(Text="ALERT DIRECTIVES", FontSize=11, Spectrum=Palette.Buttons[0]))
+    LblPwr = LCARSLabel(Text="POWER GRID: ONLINE", Height=22)
+    LblNet = LCARSLabel(Text="ODN NETWORK: STABLE", Height=22)
+    LblSec = LCARSLabel(Text="SECURITY BUS: ACTIVE", Height=22)
+    Right.Add(LblPwr)
+    Right.Add(LblNet)
+    Right.Add(LblSec)
 
-    def SetRed():
+    RightBar = LCARSBar(Height=3)
+    Right.Add(RightBar)
+
+    LblAlertDirectives = LCARSLabel(Text="ALERT DIRECTIVES", Height=24)
+    Right.Add(LblAlertDirectives)
+
+    # Червона та жовта тривоги передаються у стані alert і yellow зі своїми динамічними циклами
+    BtnRed = LCARSButton(
+        Text="RED ALERT",
+        Form=LCARSButton.PillType,
+        Width=230,
+        Height=40,
+        State="alert",
+        Sound="alertred"
+    )
+    def SetRedState():
         SystemTheme.SetSystemState("Red")
-        IndPwr.Spectrum = Palette.RedAlert[0]; IndPwr.Refresh()
-        IndNet.Spectrum = Palette.RedAlert[1]; IndNet.Refresh()
-        IndSec.Spectrum = Palette.RedAlert[2]; IndSec.Refresh()
+        StatusMsg.SetText("RED ALERT ACTIVATED")
+    BtnRed.Clicked.Connect(SetRedState)
+    Right.Add(BtnRed)
 
-    def SetYellow():
+    BtnYellow = LCARSButton(
+        Text="YELLOW ALERT",
+        Form=LCARSButton.PillType,
+        Width=230,
+        Height=40,
+        State="yellow",
+        Sound="alertyellow"
+    )
+    def SetYellowState():
         SystemTheme.SetSystemState("Yellow")
-        IndPwr.Spectrum = Palette.YellowAlert[0]; IndPwr.Refresh()
-        IndNet.Spectrum = Palette.YellowAlert[1]; IndNet.Refresh()
-        IndSec.Spectrum = Palette.YellowAlert[2]; IndSec.Refresh()
+        StatusMsg.SetText("YELLOW ALERT ACTIVATED")
+    BtnYellow.Clicked.Connect(SetYellowState)
+    Right.Add(BtnYellow)
 
-    def SetGreen():
+    BtnGreen = LCARSButton(
+        Text="CONDITION GREEN",
+        Form=LCARSButton.PillType,
+        Width=230,
+        Height=40,
+        State="normal",
+        Sound="ack"
+    )
+    def SetGreenState():
         SystemTheme.SetSystemState("Normal")
-        IndPwr.Spectrum = "#00CC66"; IndPwr.Refresh()
-        IndNet.Spectrum = Palette.Buttons[2]; IndNet.Refresh()
-        IndSec.Spectrum = Palette.Disabled[0]; IndSec.Refresh()
+        StatusMsg.SetText("CONDITION GREEN RESTORED")
+    BtnGreen.Clicked.Connect(SetGreenState)
+    Right.Add(BtnGreen)
 
-    br = LCARSButton(Text="RED ALERT", Form=LCARSButton.PillType, Width=210, Height=38,
-                     FontSize=13, State="alert", Sound="alert_red", Handler=SetRed)
-    Right.Add(br)
-    by = LCARSButton(Text="YELLOW ALERT", Form=LCARSButton.PillType, Width=210, Height=38,
-                     FontSize=13, State="yellow", Sound="alert_yellow", Handler=SetYellow)
-    Right.Add(by)
-    bg = LCARSButton(Text="CONDITION GREEN", Form=LCARSButton.PillType, Width=210, Height=38,
-                     FontSize=13, State="normal", Sound="ack", Handler=SetGreen)
-    Right.Add(bg)
-    brst = LCARSButton(Text="RESET CONSOLE", Form=LCARSButton.SoftType, Width=210, Height=36,
-                       FontSize=12, Spectrum=Palette.Buttons[3], Sound="click", Handler=Clear)
-    Right.Add(brst)
-    Right.AddStretch()
+    BtnReset = LCARSButton(
+        Text="RESET CONSOLE",
+        Form=LCARSButton.SoftType,
+        Width=230,
+        Height=38,
+        Sound="click"
+    )
+    BtnReset.Clicked.Connect(ClearCode)
+    Right.Add(BtnReset)
+
+    Right.AddStretch(1)
     Body.Add(Right)
 
-    Padd.Add(Body, 1)
-    Padd.Add(Footer(Title="PADD SECURITY v5.1 // ISOLINEAR OPTICAL INTERFACE ACTIVE", Spectrum=Palette.Buttons[0]))
+    MainScreen.Add(Body, 1)
 
-    Padd.Show()
+    # 3. ПІДВАЛ ЕКРАНА
+    FootBar = Panel()
+    FootBar.SetHorizontal(0, 0, 0, 0, Spacing=8)
+
+    FootLabel = LCARSLabel(Text="LCARS SECURITY SYSTEM v5.1 // BIOMETRIC & CODE CONDUIT OPERATIONAL", Height=32)
+    FootBar.Add(FootLabel, 1)
+
+    MainScreen.Add(FootBar)
+
+    # 4. ДІЇ ТА АНІМАЦІЯ
+    def ExitTerminal():
+        HostSurface = MainScreen.GetSurface()
+        if hasattr(HostSurface, "close"):
+            HostSurface.close()
+
+    BtnExit.Clicked.Connect(ExitTerminal)
 
     Cascade = Stagger()
-    for b in KeypadBtns:
-        r = Reveal()
-        r.StartReveal(Target=b, Period=0.25, Direction="Left")
-        Cascade.Add(r)
+    for BKey in KeypadBtns:
+        Rev = Reveal()
+        Rev.StartReveal(Target=BKey, Period=0.25, Direction="Left")
+        Cascade.Add(Rev)
     Cascade.Play(DelayMs=30)
 
-    TextDecode().Decode(Target=StatusMsg, Text="SYSTEM READY // ENTER ACCESS CODE TO PROCEED", Period=1.4)
+    Decoder = TextDecode()
+    Decoder.Decode(Target=StatusMsg, Text="ENTER 4-DIGIT SECURITY PIN", Period=1.2)
 
     Blink(Target=IndPwr, Period=0.6, Loop=True).Start()
     Blink(Target=IndNet, Period=0.8, Loop=True).Start()
     Blink(Target=IndSec, Period=1.0, Loop=True).Start()
 
-    return Padd
+    MainScreen.Show()
+    return MainScreen
 
-LCARS.Launch(PaddAccessInterface)
+LCARS.Launch(SecurityAccessInterface)

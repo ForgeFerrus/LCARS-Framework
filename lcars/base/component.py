@@ -298,7 +298,7 @@ class LCARSLabel(Component):
     # Габарити текстового контейнера
     Width = 120
     Height = 24
-    FontSize = 14
+    FontSize = 16
     Align = "left"          # left, right, center
     Uppercase = True        # Канон Окуди: весь текст у верхньому регістрі
 
@@ -375,7 +375,7 @@ class LCARSButton(Component):
     # --- СТАНДАРТНІ ГАБАРИТИ ТА ПАРАМЕТРИ ОКУДИ ---
     Width = 140
     Height = 36
-    FontSize = 14
+    FontSize = 16
     CornerRadius = 18.0  # Радіус пігулки (Height / 2)
     BevelSize = 6.0      # Розмір зрізу кута
     Sound = "click"
@@ -420,6 +420,7 @@ class LCARSButton(Component):
             Text=self.Text,
             State=self.State
         )
+        self.TransmitClick(self)
 
         # Якщо призначено колбек — виконуємо
         if callable(self.Handler):
@@ -662,7 +663,7 @@ class LCARSElbow(Component):
         H = float(self.Height)
         Thick = float(getattr(self, "Thickness", 24))
         R = float(getattr(self, "Radius", 24))
-        CornerName = str(getattr(self, "Corner", self.TopLeft)).lower()
+        CornerName = str(getattr(self, "Corner", None) or getattr(self, "Direction", self.TopLeft)).lower()
         PillarW = float(self.PillarWidth) if self.PillarWidth is not None else None
         RailH = float(self.RailHeight) if self.RailHeight is not None else Thick
 

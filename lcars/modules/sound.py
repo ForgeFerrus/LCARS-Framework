@@ -53,7 +53,9 @@ class SoundManager(SystemComponent):
 
     def PlayAudioClip(self, SoundIdentifier: str) -> bool:
         if self.SoundRootPath and self.SoundRootPath.exists():
-            FileCandidates = self.SoundLibraryMap.get(SoundIdentifier.lower(), [SoundIdentifier])
+            LookupKey = SoundIdentifier.lower()
+            AltKey = LookupKey.replace(chr(95), "")
+            FileCandidates = self.SoundLibraryMap.get(LookupKey) or self.SoundLibraryMap.get(AltKey) or [SoundIdentifier]
             ClipPath = None
             for FileName in FileCandidates:
                 Cand = self.SoundRootPath / FileName
@@ -76,8 +78,9 @@ class SoundManager(SystemComponent):
 
     def PlaySystemBeep(self, SoundIdentifier: str) -> bool:
         import winsound
-        FreqMap = {"click": 800, "beep": 1000, "ack": 600, "alert_yellow": 500, "alert_red": 400, "alert": 440, "denied": 300}
-        Freq = FreqMap.get(SoundIdentifier.lower(), 800)
+        FreqMap = {"click": 800, "beep": 1000, "ack": 600, "alertred": 400, "alertyellow": 500, "alert": 440, "denied": 300}
+        Lookup = SoundIdentifier.lower().replace(chr(95), "")
+        Freq = FreqMap.get(Lookup, 800)
         winsound.Beep(Freq, 150)
         return True
 
