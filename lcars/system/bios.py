@@ -29,6 +29,9 @@ JsonNumberRegex = LCARS.System.Regex.compile(r"^-?\d+(\.\d+)?([eE][+-]?\d+)?$")
 JsonBoolNullRegex = LCARS.System.Regex.compile(r"^(true|false|null)$")
 JsonStringRegex = LCARS.System.Regex.compile(r'^".*"$')
 
+# Канонічний фабрикатор полів даних (System.DataClass.Field → dataclasses.field)
+DataField = LCARS.Retrieve("System.DataClass.Field")
+
 def SafeJsonLoads(Text: str, Default: LCARS.Typing.Any = None) -> LCARS.Typing.Any:
     # Безпечне розкодування JSON-рядків без застосування try/except блоків.
     # Здійснює поетапний синтаксичний аналіз тексту за регулярними виразами.
@@ -70,7 +73,7 @@ class BiosSetting(LCARS):
     # Окремий системний параметр BIOS/UEFI з валідацією варіантів вибору
     Name: str = ""
     Value: LCARS.Typing.Any = None
-    Options: LCARS.Typing.List[LCARS.Typing.Any] = LCARS.Field(default_factory=list)
+    Options: LCARS.Typing.List[LCARS.Typing.Any] = DataField(default_factory=list)
     Locked: bool = False
     Section: str = "SYSTEM"
     Description: str = ""
@@ -85,8 +88,8 @@ class BiosCheck(LCARS):
 class BiosReport(LCARS):
     # Підсумковий звіт діагностики POST для екранів запуску, логів та чорної скриньки
     Status: str = ""
-    Checks: LCARS.Typing.List[BiosCheck] = LCARS.Field(default_factory=list)
-    Settings: LCARS.Typing.Dict[str, LCARS.Typing.Any] = LCARS.Field(default_factory=dict)
+    Checks: LCARS.Typing.List[BiosCheck] = DataField(default_factory=list)
+    Settings: LCARS.Typing.Dict[str, LCARS.Typing.Any] = DataField(default_factory=dict)
     Started: float = 0.0
     Finished: float = 0.0
 

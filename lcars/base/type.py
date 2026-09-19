@@ -16,9 +16,11 @@ class Namespace(type):
 
     # Побудова ланцюжка та прохід углиб через крапку
     def ResolvePattern(cls, AttributeName: str):
-        # Протокольні проби інтерпретатора завжди починаються з підкреслення
+        # Протокольні проби інтерпретатора завжди починаються з підкреслення:
+        # невідомі dunders/службові імена мають чесно піднімати AttributeError,
+        # інакше hasattr/getattr (наприклад, dataclasses на Python 3.14) ламаються.
         if AttributeName.startswith("_"):
-            return None
+            raise AttributeError(AttributeName)
 
         ParentPath = getattr(cls, "PatternBuffer", "")
         # Канонічні кореневі точки входу в реєстр
@@ -67,7 +69,9 @@ class Namespace(type):
 
         if Resolved is not None:
             return Resolved
-        return None
+        # Канонічна поведінка getattr: невідома сутність — AttributeError,
+        # тоді getattr(Obj, "Name", Default) чесно повертає Default.
+        raise AttributeError(f"{cls.__name__}.{AttributeName} is not resolved by the LCARS Registry")
 
     # ═══ ПРОТОКОЛ ВИКЛИКУ: МАТЕРІАЛІЗАЦІЯ ЕКЗЕМПЛЯРА ЧЕРЕЗ ІНІЦІАЛІЗАТОР ═══
     def Construct(cls, *args, **kwargs):

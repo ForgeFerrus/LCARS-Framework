@@ -8,6 +8,15 @@
 #        3. Інтерактивні контрольні точки (Handles) на кожному виділеному об'єкті (4 кутові точки + 4 точки товщини Г-елементів).
 #        4. Вільне перетягування (Drag & Drop) із кроком сітки (10px).
 #        5. Канонічна типографіка LCARS (FontSize >= 16) без випадкових обрізань тексту.
+#        6. Повний каталог: усі 5 канонічних форм кнопок, 4 квадранти Г-елементів (Elbow), композитні збірки, сенсори та блоки даних.
+#        7. Гарячі клавіші полотна: ← ↑ ↓ → переміщення, DEL — видалити, CTRL+D — клон, ESC — зняти виділення, CTRL+S — зберегти, CTRL+O — відкрити.
+#        8. SAVE / LOAD — збереження та завантаження розкладки у JSON, EXPORT CODE — генерація Python-коду екрана.
+#        9. Z-ORDER: кнопки FRONT / BACK в інспекторі керують порядком шарів.
+
+import json
+
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QFileDialog
 
 from lcars.base.type import LCARS
 from lcars.base.interface import PADD
@@ -22,18 +31,27 @@ from lcars.service.onboard import Computer
 
 class LCARSDataBlock(LCARSLabel):
     def __init__(self, *args, **kwargs):
-        kwargs.pop("Data", None)
-        kwargs.pop("Title", None)
-        super().__init__(Text="DATA BLOCK", *args, **kwargs)
+        DataVal = kwargs.pop("Data", None)
+        TitleVal = kwargs.pop("Title", None)
+        self.Data = DataVal
+        self.Title = str(TitleVal or "")
+        super().__init__(Text=str(TitleVal or "DATA BLOCK"), *args, **kwargs)
+        if DataVal is not None:
+            self.SetData(DataVal)
     
     def SetData(self, data):
+        self.Data = data
         if isinstance(data, dict):
             parts = []
             for k, v in data.items():
                 parts.append(f"{k}: {v}")
-            self.SetText(" | ".join(parts))
+            DataText = " | ".join(parts)
         else:
-            self.SetText(str(data))
+            DataText = str(data)
+        if self.Title:
+            self.SetText(f"{self.Title} // {DataText}")
+        else:
+            self.SetText(DataText)
 
 class HandlePoint(LCARS.Widget):
     def __init__(self, Name: str, CanvasRef, Parent=None, Color="#99ccff"):
@@ -80,6 +98,7 @@ class LiveDesignerCanvas(LCARS.Widget):
 
         self.InitHandles()
         SetStyle(self, "background-color: #000000; border: none;")
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
     def InitHandles(self):
         HandleNames = [
@@ -94,6 +113,60 @@ class LiveDesignerCanvas(LCARS.Widget):
     def Snap(self, Value: int) -> int:
         Step = max(1, self.GridStep)
         return int(round(Value / Step) * Step)
+
+    def mousePressEvent(self, Event):
+        self.setFocus()
+        self.Select(None)
+        Event.accept()
+
+    def keyPressEvent(self, Event):
+        Key = Event.key()
+        Ctrl = bool(Event.modifiers() & Qt.KeyboardModifier.ControlModifier)
+        Step = self.GridStep
+        if Key == Qt.Key.Key_Escape:
+            self.Select(None)
+            Event.accept()
+            return
+        if Ctrl and Key == Qt.Key.Key_D:
+            if self.Workbench:
+                self.Workbench.DuplicateActive()
+            Event.accept()
+            return
+        if Key == Qt.Key.Key_Delete:
+            self.Remove(self.Selected)
+            Event.accept()
+            return
+        if Key == Qt.Key.Key_Left:
+            if self.Workbench:
+                self.Workbench.MoveActive(-Step, 0)
+            Event.accept()
+            return
+        if Key == Qt.Key.Key_Right:
+            if self.Workbench:
+                self.Workbench.MoveActive(Step, 0)
+            Event.accept()
+            return
+        if Key == Qt.Key.Key_Up:
+            if self.Workbench:
+                self.Workbench.MoveActive(0, -Step)
+            Event.accept()
+            return
+        if Key == Qt.Key.Key_Down:
+            if self.Workbench:
+                self.Workbench.MoveActive(0, Step)
+            Event.accept()
+            return
+        if Ctrl and Key == Qt.Key.Key_S:
+            if self.Workbench:
+                self.Workbench.SaveLayout()
+            Event.accept()
+            return
+        if Ctrl and Key == Qt.Key.Key_O:
+            if self.Workbench:
+                self.Workbench.LoadLayout()
+            Event.accept()
+            return
+        Event.ignore()
 
     def Spawn(self, ClassType, **Args):
         X = Args.pop("X", 60)
@@ -113,6 +186,7 @@ class LiveDesignerCanvas(LCARS.Widget):
         self.BindEvents(Item)
         NativeWidget.show()
         self.Select(Item)
+        self.setFocus()
         return Item
 
     def BindEvents(self, Item):
@@ -122,6 +196,7 @@ class LiveDesignerCanvas(LCARS.Widget):
 
         def MousePress(Event):
             Event.accept()
+            self.Canvas.setFocus()
             self.Select(Item)
             if self.EditMode:
                 Pos = Event.position().toPoint() if hasattr(Event, "position") else Event.pos()
@@ -182,7 +257,7 @@ class LiveDesignerCanvas(LCARS.Widget):
         }
 
         # Точки товщини для Г-елементів (Elbow)
-        IsElbow = isinstance(self.Selected, LCARSElbow) or getattr(self.Selected, "Thickness", None) is not None
+        IsElbow = isinstance(self.Selected, LCARSElbow)
         if IsElbow:
             Th = int(getattr(self.Selected, "Thickness", 28))
             Positions["th_minus"] = (WX + WW // 2 - 18, WY + Th - 7)
@@ -271,6 +346,8 @@ class LiveDesignerCanvas(LCARS.Widget):
         self.ResizeStartGeom = None
 
     def Remove(self, Item):
+        if Item is None:
+            return
         if Item in self.Components:
             self.Components.remove(Item)
         if hasattr(Item.widget, "deleteLater"):
@@ -305,10 +382,11 @@ class LiveDesignerCanvas(LCARS.Widget):
 
 class InteractiveWorkbench:
     def __init__(self, Title="LCARS ARCHITECT // BOARD DEVELOPMENT ENVIRONMENT", Width=1540, Height=960):
-        self.App = LCARS.Application.instance()
+        AppClass = LCARS.Retrieve(LCARS.Application)
+        self.App = AppClass.instance() if AppClass is not None and hasattr(AppClass, "instance") else None
         if self.App is None:
             Argv = getattr(LCARS.System.Core, "argv", []) if hasattr(LCARS.System, "Core") else []
-            self.App = LCARS.Application(Argv)
+            self.App = AppClass(Argv)
 
         # 1. Автоініціалізація Бортового Комп'ютера зорельота
         self.BoardComputer = Computer()
@@ -369,6 +447,18 @@ class InteractiveWorkbench:
         BtnPreset.Clicked.Connect(lambda data: self.LoadPreset())
         TopBarLayout.addWidget(BtnPreset.widget)
 
+        BtnSaveLayout = LCARSButton(Text="SAVE", Form=LCARSButton.Soft, Width=90, Height=38, FontSize=16)
+        BtnSaveLayout.Clicked.Connect(lambda data: self.SaveLayout())
+        TopBarLayout.addWidget(BtnSaveLayout.widget)
+
+        BtnLoadLayout = LCARSButton(Text="LOAD", Form=LCARSButton.Soft, Width=90, Height=38, FontSize=16)
+        BtnLoadLayout.Clicked.Connect(lambda data: self.LoadLayout())
+        TopBarLayout.addWidget(BtnLoadLayout.widget)
+
+        BtnExportCode = LCARSButton(Text="EXPORT CODE", Form=LCARSButton.Soft, Width=150, Height=38, FontSize=16)
+        BtnExportCode.Clicked.Connect(lambda data: self.ExportCode())
+        TopBarLayout.addWidget(BtnExportCode.widget)
+
         BtnClear = LCARSButton(Text="CLEAR", Form=LCARSButton.Rect, State=LCARSButton.ALERT, Width=100, Height=38, FontSize=16)
         BtnClear.Clicked.Connect(lambda data: self.Canvas.Clear())
         TopBarLayout.addWidget(BtnClear.widget)
@@ -401,7 +491,11 @@ class InteractiveWorkbench:
         # Категорія 1: Базові форми
         SidebarLayout.addWidget(LCARSLabel(Text="1. CANONICAL BASE FORMS", FontSize=16).widget)
         ButtonsDefs = [
-            ("BUTTON", LCARSButton, {"Text": "BUTTON", "Form": LCARSButton.Rect, "Width": 200, "Height": 44, "FontSize": 16}),
+            ("BUTTON RECT", LCARSButton, {"Text": "BUTTON", "Form": LCARSButton.Rect, "Width": 200, "Height": 44, "FontSize": 16}),
+            ("BUTTON PILL", LCARSButton, {"Text": "BUTTON", "Form": LCARSButton.Pill, "Width": 200, "Height": 44, "FontSize": 16}),
+            ("BUTTON SOFT", LCARSButton, {"Text": "BUTTON", "Form": LCARSButton.Soft, "Width": 200, "Height": 44, "FontSize": 16}),
+            ("BUTTON HALF PILL", LCARSButton, {"Text": "BUTTON", "Form": LCARSButton.PillHalf, "Direction": 0, "Width": 200, "Height": 44, "FontSize": 16}),
+            ("BUTTON HALF SOFT", LCARSButton, {"Text": "BUTTON", "Form": LCARSButton.SoftHalf, "Direction": 0, "Width": 200, "Height": 44, "FontSize": 16}),
         ]
         for LabelText, Cls, Kwargs in ButtonsDefs:
             Btn = LCARSButton(Text=LabelText, Form=LCARSButton.SoftHalf, Direction=180, Height=34, FontSize=16)
@@ -412,7 +506,10 @@ class InteractiveWorkbench:
         SidebarLayout.addSpacing(6)
         SidebarLayout.addWidget(LCARSLabel(Text="2. L-FRAME ELBOWS", FontSize=16).widget)
         ElbowDefs = [
-            ("STRUCTURAL ELBOW", LCARSElbow, {"Direction": "top-left", "Text": "ELBOW", "Number": "01", "Width": 320, "Height": 60, "Thickness": 26, "Radius": 20, "FontSize": 16}),
+            ("ELBOW TOP LEFT", LCARSElbow, {"Direction": "top-left", "Text": "ELBOW", "Number": "01", "Width": 320, "Height": 60, "Thickness": 26, "Radius": 20, "FontSize": 16}),
+            ("ELBOW TOP RIGHT", LCARSElbow, {"Direction": "top-right", "Text": "ELBOW", "Number": "02", "Width": 320, "Height": 60, "Thickness": 26, "Radius": 20, "FontSize": 16}),
+            ("ELBOW BOTTOM LEFT", LCARSElbow, {"Direction": "bottom-left", "Text": "ELBOW", "Number": "03", "Width": 320, "Height": 60, "Thickness": 26, "Radius": 20, "FontSize": 16}),
+            ("ELBOW BOTTOM RIGHT", LCARSElbow, {"Direction": "bottom-right", "Text": "ELBOW", "Number": "04", "Width": 320, "Height": 60, "Thickness": 26, "Radius": 20, "FontSize": 16}),
         ]
         for LabelText, Cls, Kwargs in ElbowDefs:
             Btn = LCARSButton(Text=LabelText, Form=LCARSButton.PillHalf, Direction=0, Height=34, FontSize=16)
@@ -431,6 +528,19 @@ class InteractiveWorkbench:
         for LabelText, Cls, Kwargs in DataDefs:
             Btn = LCARSButton(Text=LabelText, Form=LCARSButton.SoftHalf, Direction=0, Height=34, FontSize=16)
             Btn.Clicked.Connect(lambda data, c=Cls, k=Kwargs: self.Canvas.Spawn(c, **k.copy()))
+            SidebarLayout.addWidget(Btn.widget)
+
+        # Категорія 4: Композитні збірки
+        SidebarLayout.addSpacing(6)
+        SidebarLayout.addWidget(LCARSLabel(Text="4. COMPOSITE ASSEMBLIES", FontSize=16).widget)
+        CompDefs = [
+            ("TOP FRAME OPS", self.SpawnCompositeTopFrame),
+            ("CONTROL STACK", self.SpawnCompositeControlStack),
+            ("STATUS STRIP", self.SpawnCompositeStatusStrip),
+        ]
+        for LabelText, Handler in CompDefs:
+            Btn = LCARSButton(Text=LabelText, Form=LCARSButton.PillHalf, Direction=0, Height=34, FontSize=16)
+            Btn.Clicked.Connect(lambda data, h=Handler: h())
             SidebarLayout.addWidget(Btn.widget)
 
         SidebarLayout.addStretch()
@@ -582,6 +692,19 @@ class InteractiveWorkbench:
         ActionRowLayout.addWidget(BtnDelete.widget, 1)
         InspectorLayout.addWidget(ActionRow)
 
+        # Порядок шарів (Z-ORDER)
+        ZOrderRow = LCARS.Widget()
+        ZOrderLayout = LCARS.Horizontal(ZOrderRow)
+        ZOrderLayout.setContentsMargins(0, 0, 0, 0)
+        ZOrderLayout.setSpacing(3)
+        BtnToFront = LCARSButton(Text="FRONT", Form=LCARSButton.SoftHalf, Direction=180, Height=36, FontSize=16)
+        BtnToFront.Clicked.Connect(lambda data: self.BringToFrontActive())
+        BtnToBack = LCARSButton(Text="BACK", Form=LCARSButton.SoftHalf, Direction=0, Height=36, FontSize=16)
+        BtnToBack.Clicked.Connect(lambda data: self.SendToBackActive())
+        ZOrderLayout.addWidget(BtnToFront.widget, 1)
+        ZOrderLayout.addWidget(BtnToBack.widget, 1)
+        InspectorLayout.addWidget(ZOrderRow)
+
         # Генератор коду
         self.CodeBlock = LCARSDataBlock(
             Title="PYTHON CODE GENERATOR",
@@ -719,10 +842,20 @@ class InteractiveWorkbench:
                 "STATE": f"Direction='{getattr(Item, 'Direction', 'top-left')}', FontSize=16)"
             })
         else:
+            FormLiterals = {
+                1: "LCARSButton.Rect", 2: "LCARSButton.Pill", 3: "LCARSButton.Soft",
+                4: "LCARSButton.PillHalf", 5: "LCARSButton.SoftHalf", 6: "LCARSButton.Elbow",
+            }
+            StateLiterals = {
+                "NORMAL": "NORMAL", "YELLOWALERT": "YELLOW",
+                "REDALERT": "ALERT", "DISABLED": "DISABLED", "STASIS": "STASIS",
+            }
+            FormLiteral = FormLiterals.get(int(FormVal), str(FormVal)) if isinstance(FormVal, int) else str(FormVal)
+            StateLiteral = StateLiterals.get(StateVal, "NORMAL")
             self.CodeBlock.SetData({
                 "CALL": f"{ClassName}(Text='{TextVal}',",
-                "PARAMS": f"Form={FormName}, W={WidthVal}, H={HeightVal},",
-                "STATE": f"State=LCARSButton.{StateVal}, FontSize=16)"
+                "PARAMS": f"Form={FormLiteral}, W={WidthVal}, H={HeightVal},",
+                "STATE": f"State=LCARSButton.{StateLiteral}, FontSize=16)"
             })
 
     def MoveActive(self, DX: int, DY: int):
@@ -792,7 +925,7 @@ class InteractiveWorkbench:
 
     def CycleFormActive(self):
         Item = self.Canvas.Selected
-        if not Item or not hasattr(Item, "Form"):
+        if not Item or not isinstance(Item, LCARSButton):
             return
         Forms = [LCARSButton.Rect, LCARSButton.Pill, LCARSButton.Soft, LCARSButton.PillHalf, LCARSButton.SoftHalf]
         Current = getattr(Item, "Form", LCARSButton.Rect)
@@ -835,6 +968,197 @@ class InteractiveWorkbench:
             Y=W.y() + 20
         )
         self.Canvas.Select(NewItem)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # КОМПОЗИТНІ ЗБІРКИ (CATALOG → COMPOSITE ASSEMBLIES)
+    # ─────────────────────────────────────────────────────────────────────────
+    def SpawnCompositeTopFrame(self):
+        X0 = 80
+        Y0 = 60
+        self.Canvas.Spawn(LCARSElbow, Direction="top-left", Text="OPERATIONS", Number="01-OPS", Width=340, Height=60, Thickness=26, Radius=20, FontSize=16, X=X0, Y=Y0)
+        self.Canvas.Spawn(LCARSBar, Width=360, Height=14, X=X0 + 346, Y=Y0 + 6)
+        self.Canvas.Spawn(LCARSBar, Width=180, Height=14, X=X0 + 712, Y=Y0 + 6)
+        for Idx in range(3):
+            self.Canvas.Spawn(LCARSButton, Text=f"SYS-{Idx + 1:02d}", Form=LCARSButton.Pill, Number=f"47-20{Idx:02d}", Width=170, Height=40, FontSize=16, X=X0, Y=Y0 + 84 + Idx * 48)
+
+    def SpawnCompositeControlStack(self):
+        X0 = 620
+        Y0 = 80
+        StackDefs = ["WARP", "IMPULSE", "SHIELDS", "TRACTOR"]
+        for Idx, NameTxt in enumerate(StackDefs):
+            self.Canvas.Spawn(LCARSButton, Text=NameTxt, Form=LCARSButton.PillHalf, Direction=0, Number=f"47-30{Idx:02d}", Width=200, Height=44, FontSize=16, X=X0, Y=Y0 + Idx * 52)
+
+    def SpawnCompositeStatusStrip(self):
+        X0 = 80
+        Y0 = 420
+        self.Canvas.Spawn(LCARSLabel, Text="DIAGNOSTIC STRIP", FontSize=16, X=X0, Y=Y0 - 26)
+        for Idx in range(5):
+            self.Canvas.Spawn(LCARSIndicator, Form=LCARSIndicator.PillHalf, Direction=0, Width=90, Height=30, X=X0 + Idx * 96, Y=Y0)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # ПОРЯДОК ШАРІВ (Z-ORDER)
+    # ─────────────────────────────────────────────────────────────────────────
+    def BringToFrontActive(self):
+        Item = self.Canvas.Selected
+        if Item and getattr(Item, "widget", None):
+            Item.widget.raise_()
+
+    def SendToBackActive(self):
+        Item = self.Canvas.Selected
+        if Item and getattr(Item, "widget", None):
+            Item.widget.lower()
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # ЗБЕРЕЖЕННЯ / ЗАВАНТАЖЕННЯ РОЗКЛАДКИ (JSON) ТА ЕКСПОРТ КОДУ
+    # ─────────────────────────────────────────────────────────────────────────
+    LayoutClasses = {
+        "LCARSButton": LCARSButton,
+        "LCARSLabel": LCARSLabel,
+        "LCARSBar": LCARSBar,
+        "LCARSIndicator": LCARSIndicator,
+        "LCARSElbow": LCARSElbow,
+        "LCARSDataBlock": LCARSDataBlock,
+    }
+
+    def CollectLayout(self):
+        Layout = []
+        for Item in self.Canvas.Components:
+            W = getattr(Item, "widget", None)
+            if W is None:
+                continue
+            Entry = {
+                "Class": Item.__class__.__name__,
+                "X": int(W.x()),
+                "Y": int(W.y()),
+                "Width": int(W.width()),
+                "Height": int(W.height()),
+                "Text": str(getattr(Item, "Text", "") or ""),
+                "Number": str(getattr(Item, "Number", "") or ""),
+                "FontSize": int(getattr(Item, "FontSize", 16) or 16),
+            }
+            FormVal = getattr(Item, "Form", None)
+            if isinstance(Item, (LCARSButton, LCARSIndicator, LCARSBar)) and FormVal is not None:
+                Entry["Form"] = int(FormVal)
+            if getattr(Item, "State", None):
+                Entry["State"] = str(getattr(Item, "State"))
+            DirectionVal = getattr(Item, "Direction", None)
+            if DirectionVal is not None:
+                Entry["Direction"] = DirectionVal if isinstance(DirectionVal, int) else str(DirectionVal)
+            if isinstance(Item, LCARSElbow):
+                Entry["Thickness"] = int(getattr(Item, "Thickness", 26))
+                Entry["Radius"] = int(getattr(Item, "Radius", 24))
+            if isinstance(Item, LCARSDataBlock):
+                Entry["Title"] = str(getattr(Item, "Title", "") or "")
+                Entry["RawText"] = str(getattr(Item, "Text", "") or "")
+            Layout.append(Entry)
+        return Layout
+
+    def ApplyLayout(self, Layout):
+        self.Canvas.Clear()
+        for Entry in Layout:
+            Cls = self.LayoutClasses.get(str(Entry.get("Class", "")))
+            if Cls is None:
+                continue
+            Args = dict(Entry)
+            RawText = str(Args.pop("RawText", "") or "")
+            Args.pop("Class", None)
+            Item = self.Canvas.Spawn(Cls, **Args)
+            if RawText and hasattr(Item, "SetText"):
+                Item.SetText(RawText)
+        self.Canvas.Select(self.Canvas.Components[-1] if self.Canvas.Components else None)
+
+    def SaveLayout(self):
+        FilePath, FilterName = QFileDialog.getSaveFileName(
+            self.Padd.widget, "SAVE LCARS LAYOUT", "layout.json", "LCARS Layout (*.json)"
+        )
+        if not FilePath:
+            return
+        with open(FilePath, "w", encoding="utf-8") as File:
+            json.dump(self.CollectLayout(), File, indent=2)
+        if hasattr(self.TerminalInstance, "OnCommandOutput"):
+            self.TerminalInstance.OnCommandOutput(f"LCARS: Layout saved // {FilePath}")
+
+    def LoadLayout(self):
+        FilePath, FilterName = QFileDialog.getOpenFileName(
+            self.Padd.widget, "OPEN LCARS LAYOUT", "", "LCARS Layout (*.json)"
+        )
+        if not FilePath:
+            return
+        with open(FilePath, "r", encoding="utf-8") as File:
+            Data = json.load(File)
+        if not isinstance(Data, list):
+            return
+        self.ApplyLayout(Data)
+        if hasattr(self.TerminalInstance, "OnCommandOutput"):
+            self.TerminalInstance.OnCommandOutput(f"LCARS: Layout loaded // {FilePath}")
+
+    def GenerateCode(self):
+        FormLiterals = {
+            "LCARSButton": {1: "LCARSButton.Rect", 2: "LCARSButton.Pill", 3: "LCARSButton.Soft", 4: "LCARSButton.PillHalf", 5: "LCARSButton.SoftHalf", 6: "LCARSButton.Elbow"},
+            "LCARSIndicator": {1: "LCARSIndicator.RectType", 2: "LCARSIndicator.SoftType", 3: "LCARSIndicator.PillHalf"},
+            "LCARSBar": {1: "LCARSBar.RectType", 2: "LCARSBar.PillHalfType", 3: "LCARSBar.SoftType"},
+        }
+        StateLiterals = {
+            "Normal": "NORMAL", "YellowAlert": "YELLOW", "RedAlert": "ALERT",
+            "Disabled": "DISABLED", "Stasis": "STASIS",
+        }
+        Lines = []
+        Lines.append("# Auto-generated by LCARS ARCHITECT (demo/designer.py)")
+        Lines.append("from lcars.base.type import LCARS")
+        Lines.append("from lcars.base.component import LCARSButton, LCARSLabel, LCARSBar, LCARSIndicator, LCARSElbow")
+        Lines.append("")
+        Lines.append("")
+        Lines.append("class GeneratedScreen:")
+        Lines.append("    def Build(self, Canvas):")
+        Lines.append("        Items = []")
+        for Entry in self.CollectLayout():
+            ClsName = str(Entry.get("Class", ""))
+            X = Entry.get("X", 0)
+            Y = Entry.get("Y", 0)
+            Wd = Entry.get("Width", 200)
+            Ht = Entry.get("Height", 44)
+            TextVal = str(Entry.get("Text", "") or "")
+            FontVal = Entry.get("FontSize", 16)
+            CallName = self.LayoutClasses.get(ClsName, LCARSLabel).__name__
+            if ClsName == "LCARSDataBlock":
+                CallName = "LCARSLabel"
+            Extra = f"Text={TextVal!r}, " if TextVal else ""
+            FormVal = Entry.get("Form")
+            if FormVal is not None and ClsName in FormLiterals:
+                Extra += f"Form={FormLiterals[ClsName][int(FormVal)]}, "
+            StateKey = StateLiterals.get(str(Entry.get("State", "")))
+            if StateKey:
+                Extra += f"State={CallName}.{StateKey}, "
+            DirectionVal = Entry.get("Direction")
+            if DirectionVal is not None:
+                Extra += f"Direction={DirectionVal!r}, "
+            if Entry.get("Thickness") is not None and ClsName == "LCARSElbow":
+                Extra += f"Thickness={int(Entry['Thickness'])}, "
+            if Entry.get("Radius") is not None and ClsName == "LCARSElbow":
+                Extra += f"Radius={int(Entry['Radius'])}, "
+            if Entry.get("Number"):
+                Extra += f"Number={Entry['Number']!r}, "
+            Extra += f"FontSize={FontVal}, "
+            Lines.append(f"        # {ClsName} '{TextVal}'")
+            Lines.append(f"        Item = {CallName}(Parent=Canvas, {Extra}Width={Wd}, Height={Ht})")
+            Lines.append(f"        Item.widget.resize({Wd}, {Ht})")
+            Lines.append(f"        Item.widget.move({X}, {Y})")
+            Lines.append(f"        Item.widget.show()")
+            Lines.append(f"        Items.append(Item)")
+        Lines.append("        return Items")
+        return "\n".join(Lines)
+
+    def ExportCode(self):
+        FilePath, FilterName = QFileDialog.getSaveFileName(
+            self.Padd.widget, "EXPORT LCARS CODE", "lcars_screen.py", "Python (*.py)"
+        )
+        if not FilePath:
+            return
+        with open(FilePath, "w", encoding="utf-8") as File:
+            File.write(self.GenerateCode())
+            File.write("\n")
+        if hasattr(self.TerminalInstance, "OnCommandOutput"):
+            self.TerminalInstance.OnCommandOutput(f"LCARS: Code exported // {FilePath}")
 
     def Run(self):
         self.Padd.show()

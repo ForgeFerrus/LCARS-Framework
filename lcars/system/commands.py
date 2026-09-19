@@ -15,20 +15,25 @@ from lcars.system.alert import AlertLevel, AlertSystem
 from lcars.system.bios import BIOS
 from lcars.modules.protocol import ProtocolManager
 
+# Канонічні вузли даних (System.DataClass → dataclasses)
+DataClass = LCARS.Retrieve("System.DataClass")
+DataField = LCARS.Retrieve("System.DataClass.Field")
+
 # ═════════════════════════════════════════════════════════════════════
 # 1. ДИРЕКТИВА (DIRECTIVE DESCRIPTOR)
 # ═════════════════════════════════════════════════════════════════════
-@LCARS.DataClass
+@DataClass
 class Directive(LCARS):
     # Паспорт системної команди для консолі, IDE, BIOS-screen або сервісів
     Name: str = ""
     Handler: any = None
     Description: str = ""
-    Parameters: dict[str, str] = LCARS.Field(default_factory=dict)
+    Parameters: dict[str, str] = DataField(default_factory=dict)
     Level: str = "SYSTEM"
 
     def __post_init__(self):
-        super().__init__(Id=f"Directive.{self.Name}")
+        self.SystemId = f"Directive.{self.Name}"
+        self.Id = self.SystemId
 
     def Export(self) -> dict[str, any]:
         # Експорт опису директиви у словник

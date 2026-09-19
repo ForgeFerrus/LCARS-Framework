@@ -50,6 +50,10 @@ class Version:
     def String() -> str:
         return f"{Version.Title} v{Version.Release} [Stardate {Version.Stardate()}]"
 
+    # Канонічний отримувач релізу (вузол інженерного контуру: VersionInfo.GetVersion())
+    def GetVersion() -> str:
+        return Version.Release
+
 # Канонічні аліаси для зворотної сумісності
 Passport = Version
 VersionInfo = Version

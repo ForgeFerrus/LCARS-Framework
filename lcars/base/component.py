@@ -730,3 +730,9 @@ Normalize = NormalizeValue
 Take = getattr(LCARS, "Take", lambda Collection, Count: Collection[:Count] if hasattr(Collection, "__getitem__") else Collection)
 ValidateIndex = ValidateIndex
 
+# 2. Канонічний реекспорт активного аудіо-вузла (для терміналу, комп'ютера, реплікатора)
+try:
+    from lcars.modules.sound import ActiveAudio
+except Exception:
+    ActiveAudio = None
+

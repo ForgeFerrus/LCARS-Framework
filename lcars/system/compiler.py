@@ -887,9 +887,10 @@ class PythonCompiler(LCARS):
 # ═════════════════════════════════════════════════════════════════════
 class IsolinearCompiler(LCARS):
     # Головний уніфікований компілятор підтримуваних мов, скриптів та додатків
-    self.Options = OptionsNode or CompileOptions()
-    self.Store = StoreNode or IsolinearArtifact()
-    self.Compilers: list[BaseCompiler] = [
+    def __init__(self, OptionsNode: any = None, StoreNode: any = None):
+        self.Options = OptionsNode or CompileOptions()
+        self.Store = StoreNode or IsolinearArtifact()
+        self.Compilers: list[BaseCompiler] = [
             ScriptCompiler(),
             PythonAppCompiler(),
             AndroidCompiler(),
