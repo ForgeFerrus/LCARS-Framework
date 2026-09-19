@@ -8,7 +8,7 @@ from lcars.base.graphic import Visual, Emitter
 from lcars.base.default import DefaultBackground, Palette
 from lcars.base.type import LCARS
 # =============================================================================
-# 5. СЕНСОРНА ОПТИЧНА ПОВЕРХНЯ LCARS (SURFACE / PANEL / WIDGET)
+# СЕНСОРНА ОПТИЧНА ПОВЕРХНЯ LCARS (SURFACE / PANEL)
 Display: type = LCARS.Retrieve(LCARS.Display) or object
 # =============================================================================
 class Surface(Display):
@@ -41,7 +41,6 @@ class Surface(Display):
     def SetOptics(self, Value):
         self.Optics = Value
         return self
-
     Visual = None
     Graphic = None
 
