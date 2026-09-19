@@ -42,7 +42,7 @@ def ButtonsInterface():
 
     PromptLabel = LCARSLabel(
         Text="PRESS INITIALIZE TO ENGAGE LCARS INTERFACE MATRIX",
-        FontSize=13,
+        FontSize=16,
         Align="center",
         Width=800,
         Height=26,
@@ -73,7 +73,7 @@ def ButtonsInterface():
         Width=800,
         Height=180,
         Rows=6,
-        FontSize=12,
+        FontSize=16,
         Spectrum=Palette.Buttons[2],
         Accent=Palette.Buttons[0]
     )
@@ -110,7 +110,7 @@ def ButtonsInterface():
         ("SOFT-HALF EAST",   "06-SHE", LCARSButton.SoftHalfType, 0),
         ("SOFT-HALF WEST",   "07-SHW", LCARSButton.SoftHalfType, 180),
     ]:
-        B = LCARSButton(Text=Text, Number=Num, SwapMode=True, Form=FormVal, Direction=DirVal, Width=210, Height=36, FontSize=12, Spectrum=Palette.Buttons[2])
+        B = LCARSButton(Text=Text, Number=Num, SwapMode=True, Form=FormVal, Direction=DirVal, Width=210, Height=36, FontSize=16, Spectrum=Palette.Buttons[2])
         FormButtons.append(B)
         Col1.Add(B)
 
@@ -121,7 +121,7 @@ def ButtonsInterface():
     Col2 = Panel(Spectrum=Palette.Background)
     Col2.SetVertical(0, 0, 0, 0, Spacing=6)
 
-    LblStates = LCARSLabel(Text="OPERATIONAL STATES", FontSize=12, Spectrum=Palette.Buttons[1])
+    LblStates = LCARSLabel(Text="OPERATIONAL STATES", FontSize=16, Spectrum=Palette.Buttons[1])
     Col2.Add(LblStates)
 
     for Text, Num, State, Sensory, Color in [
@@ -130,13 +130,13 @@ def ButtonsInterface():
         ("WARNING YELLOW", "12-WRN", "yellow",   True,  Palette.YellowAlert[0]),
         ("CRITICAL ALERT", "13-ALT", "alert",    True,  Palette.RedAlert[0]),
     ]:
-        B = LCARSButton(Text=Text, Number=Num, SwapMode=True, Form=LCARSButton.Pill, State=State, Sensory=Sensory, Spectrum=Color, Width=210, Height=36, FontSize=12)
+        B = LCARSButton(Text=Text, Number=Num, SwapMode=True, Form=LCARSButton.Pill, State=State, Sensory=Sensory, Spectrum=Color, Width=210, Height=36, FontSize=16)
         Col2.Add(B)
 
-    BSplit1 = LCARSButton(Text="SPLIT SYS", Number="47-SPL", SplitMode=True, Form=LCARSButton.RectType, Width=210, Height=36, FontSize=12, Spectrum=Palette.Buttons[0])
+    BSplit1 = LCARSButton(Text="SPLIT SYS", Number="47-SPL", SplitMode=True, Form=LCARSButton.RectType, Width=210, Height=36, FontSize=16, Spectrum=Palette.Buttons[0])
     Col2.Add(BSplit1)
 
-    BDark = LCARSButton(Text="DARK CYCLE", Form=LCARSButton.PillHalf, Direction=0, Number="SEC-01", DarkCycle=True, IsWakeupTrigger=True, Width=210, Height=36, FontSize=12, Spectrum=Palette.Buttons[3])
+    BDark = LCARSButton(Text="DARK CYCLE", Form=LCARSButton.PillHalf, Direction=0, Number="SEC-01", DarkCycle=True, IsWakeupTrigger=True, Width=210, Height=36, FontSize=16, Spectrum=Palette.Buttons[3])
     Col2.Add(BDark)
 
     LblInd = LCARSLabel(Text="OPTICAL INDICATORS", FontSize=11, Spectrum=Palette.Buttons[0])
@@ -159,26 +159,26 @@ def ButtonsInterface():
     Col3 = Panel(Spectrum=Palette.Background)
     Col3.SetVertical(0, 0, 0, 0, Spacing=6)
 
-    LblAlert = LCARSLabel(Text="TACTICAL DIRECTIVES", FontSize=12, Spectrum=Palette.Buttons[0])
+    LblAlert = LCARSLabel(Text="TACTICAL DIRECTIVES", FontSize=16, Spectrum=Palette.Buttons[0])
     Col3.Add(LblAlert)
 
-    BRed = LCARSButton(Text="RED ALERT", Number="01-RED", SwapMode=True, Form=LCARSButton.Pill, State="alert", Sound="alert_red", Spectrum=Palette.RedAlert[0], Width=210, Height=38, FontSize=13)
+    BRed = LCARSButton(Text="RED ALERT", Number="01-RED", SwapMode=True, Form=LCARSButton.Pill, State="alert", Sound="alert_red", Spectrum=Palette.RedAlert[0], Width=210, Height=38, FontSize=16)
     BRed.Clicked.Connect(lambda: SystemTheme.SetSystemState("Red"))
     Col3.Add(BRed)
 
-    BYellow = LCARSButton(Text="YELLOW ALERT", Number="02-YEL", SwapMode=True, Form=LCARSButton.PillHalf, Direction=180, State="yellow", Sound="alert_yellow", Spectrum=Palette.YellowAlert[0], Width=210, Height=38, FontSize=13)
+    BYellow = LCARSButton(Text="YELLOW ALERT", Number="02-YEL", SwapMode=True, Form=LCARSButton.PillHalf, Direction=180, State="yellow", Sound="alert_yellow", Spectrum=Palette.YellowAlert[0], Width=210, Height=38, FontSize=16)
     BYellow.Clicked.Connect(lambda: SystemTheme.SetSystemState("Yellow"))
     Col3.Add(BYellow)
 
-    BGreen = LCARSButton(Text="CONDITION GREEN", Number="03-GRN", SwapMode=True, Form=LCARSButton.Pill, State="normal", Sound="acknowledge", Spectrum=Palette.Buttons[0], Width=210, Height=38, FontSize=13)
+    BGreen = LCARSButton(Text="CONDITION GREEN", Number="03-GRN", SwapMode=True, Form=LCARSButton.Pill, State="normal", Sound="acknowledge", Spectrum=Palette.Buttons[0], Width=210, Height=38, FontSize=16)
     BGreen.Clicked.Connect(lambda: SystemTheme.SetSystemState("Normal"))
     Col3.Add(BGreen)
 
-    BPower = LCARSButton(Text="GRID POWER", Number="04-PWR", SwapMode=True, Form=LCARSButton.Pill, Sound="acknowledge", IsWakeupTrigger=True, Spectrum=Palette.Buttons[3], Width=210, Height=36, FontSize=12)
+    BPower = LCARSButton(Text="GRID POWER", Number="04-PWR", SwapMode=True, Form=LCARSButton.Pill, Sound="acknowledge", IsWakeupTrigger=True, Spectrum=Palette.Buttons[3], Width=210, Height=36, FontSize=16)
     BPower.Clicked.Connect(lambda: PowerControl.PowerOff() if PowerControl.State != 0 else PowerControl.PowerOn())
     Col3.Add(BPower)
 
-    BLock = LCARSButton(Text="STASIS LOCK", Number="05-LCK", SwapMode=True, Form=LCARSButton.PillHalf, Direction=0, Sound="alert_yellow", IsWakeupTrigger=True, DarkCycle=True, Spectrum=Palette.Buttons[5], Width=210, Height=36, FontSize=12)
+    BLock = LCARSButton(Text="STASIS LOCK", Number="05-LCK", SwapMode=True, Form=LCARSButton.PillHalf, Direction=0, Sound="alert_yellow", IsWakeupTrigger=True, DarkCycle=True, Spectrum=Palette.Buttons[5], Width=210, Height=36, FontSize=16)
     BLock.Clicked.Connect(lambda: PowerControl.Unlock() if PowerControl.Locked else PowerControl.Lock())
     Col3.Add(BLock)
 
@@ -210,8 +210,8 @@ def ButtonsInterface():
     FootLabel = LCARSLabel(Text="PADD v4.7 // ISOLINEAR OPTICAL INTERFACE ACTIVE", FontSize=12, Spectrum=Palette.Buttons[0])
     BottomFoot.Add(FootLabel, 1)
 
-    BtnShowStandby = LCARSButton(Text="STANDBY MODE", Form=LCARSButton.PillHalf, Direction=180, Width=160, Height=28, FontSize=11, Spectrum=Palette.Buttons[3])
-    BtnShowCatalog = LCARSButton(Text="FULL CATALOG", Form=LCARSButton.PillHalf, Direction=0, Width=160, Height=28, FontSize=11, Spectrum=Palette.Buttons[2])
+    BtnShowStandby = LCARSButton(Text="STANDBY MODE", Form=LCARSButton.PillHalf, Direction=180, Width=160, Height=28, FontSize=16, Spectrum=Palette.Buttons[3])
+    BtnShowCatalog = LCARSButton(Text="FULL CATALOG", Form=LCARSButton.PillHalf, Direction=0, Width=160, Height=28, FontSize=16, Spectrum=Palette.Buttons[2])
 
     BottomFoot.Add(BtnShowStandby)
     BottomFoot.Add(BtnShowCatalog)
