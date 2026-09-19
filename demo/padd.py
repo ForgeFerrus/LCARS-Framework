@@ -10,9 +10,8 @@ from lcars.modules.sound import ActiveAudio
 
 AuthCode = "4721"
 
-
 def PaddAccessInterface():
-    Padd = PADD(Title="LCARS PADD // SECURITY ACCESS TERMINAL", Width=1180, Height=760)
+    Padd = PADD(Title="LCARS PADD // SECURITY ACCESS TERMINAL", Width=180, Height=260)
     Padd.SetVertical(10, 10, 10, 10, Spacing=8)
 
     Padd.Add(Header(Title="SECURITY CLEARANCE TERMINAL // AUTHORIZATION REQUIRED", Spectrum=Palette.Buttons[2]))
