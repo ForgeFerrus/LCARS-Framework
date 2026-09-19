@@ -1,7 +1,9 @@
-# ◤ TITANIUM SOUND MANAGER — СИСТЕМА НЕЙРО-АУДІО LCARS
-# СТАНДАРТ: Titanium (Zero-Except, No Underscores, Strict PascalCase).
+# TITANIUM SOUND MANAGER — СИСТЕМА НЕЙРО-АУДІО LCARS
+# СТАНДАРТ: Titanium (Zero-Except, No Underscores, Strict PascalCase)
 
-from __future__ import annotations
+import sys
+import ctypes
+import winsound
 from pathlib import Path
 from lcars.base.type import SystemComponent, LCARS
 from lcars.base.info import VersionInfo
@@ -10,23 +12,14 @@ from lcars.service.bridge import Bridge
 class SoundManager(SystemComponent):
     InstanceNode = None
 
-    def __new__(cls):
-        if cls.InstanceNode is None:
-            cls.InstanceNode = super().__new__(cls)
-            cls.InstanceNode.Initialized = False
-            cls.InstanceNode.PrepareSoundPaths()
-        return cls.InstanceNode
-
-    def PrepareSoundPaths(self) -> None:
-        SelfFile = Path(__file__).resolve()
-        ProjectRoot = SelfFile.parent.parent.parent
+    def Initialize(self):
+        SelfPath = Path(sys.argv[0]).resolve()
+        ProjectRoot = SelfPath.parent
         self.SoundRootPath = ProjectRoot / "lcars" / "sound"
         if not self.SoundRootPath.exists():
-            self.SoundRootPath = ProjectRoot / "resources" / "sounds"
+            self.SoundRootPath = ProjectRoot.parent / "lcars" / "sound"
         self.MediaPlayerNode = None
         self.AudioOutputNode = None
-        self.AlertLoopTimer = None
-        self.AlertLoopSound = None
         self.AlertLoopActive = False
 
         self.SoundLibraryMap = {
@@ -52,34 +45,34 @@ class SoundManager(SystemComponent):
         }
 
     def PlayAudioClip(self, SoundIdentifier: str, Loop: bool = False) -> bool:
+        if not hasattr(self, "SoundLibraryMap"):
+            self.Initialize()
+        LookupKey = SoundIdentifier.lower()
+        FileCandidates = self.SoundLibraryMap.get(LookupKey, [SoundIdentifier])
+        ClipPath = None
         if self.SoundRootPath and self.SoundRootPath.exists():
-            LookupKey = SoundIdentifier.lower()
-            AltKey = LookupKey.replace(chr(95), "")
-            FileCandidates = self.SoundLibraryMap.get(LookupKey) or self.SoundLibraryMap.get(AltKey) or [SoundIdentifier]
-            ClipPath = None
             for FileName in FileCandidates:
                 Cand = self.SoundRootPath / FileName
                 if Cand.exists():
                     ClipPath = Cand
                     break
-                SubDirs = ["sfx", "voice", ""]
+                SubDirs = ["sfx", "voice"]
                 for Sub in SubDirs:
-                    SubCand = self.SoundRootPath / Sub / FileName if Sub else self.SoundRootPath / FileName
+                    SubCand = self.SoundRootPath / Sub / FileName
                     if SubCand.exists():
                         ClipPath = SubCand
                         break
                 if ClipPath and ClipPath.exists():
                     break
 
-            if ClipPath and ClipPath.exists():
-                return self.ExecutePlaybackProtocol(ClipPath, Loop=Loop)
+        if ClipPath and ClipPath.exists():
+            return self.ExecutePlaybackProtocol(ClipPath, Loop=Loop)
 
         return self.PlaySystemBeep(SoundIdentifier)
 
     def PlaySystemBeep(self, SoundIdentifier: str) -> bool:
-        import winsound
         FreqMap = {"click": 800, "beep": 1000, "ack": 600, "alertred": 400, "alertyellow": 500, "alert": 440, "denied": 300}
-        Lookup = SoundIdentifier.lower().replace(chr(95), "")
+        Lookup = SoundIdentifier.lower()
         Freq = FreqMap.get(Lookup, 800)
         winsound.Beep(Freq, 150)
         return True
@@ -88,8 +81,9 @@ class SoundManager(SystemComponent):
     Play = PlayAudioClip
 
     def PlayAlertSignal(self, SeverityStr: str = "yellow") -> None:
-        SearchKey = f"alert_{SeverityStr}"
-        self.PlayAudioClip(SearchKey if SearchKey in self.SoundLibraryMap else "klaxon")
+        Lookup = SeverityStr.lower()
+        SoundKey = "alertred" if Lookup in ("red", "alert", "critical") else "alertyellow"
+        self.PlayAudioClip(SoundKey)
 
     def StartAlertLoop(self, SeverityStr: str = "red") -> None:
         self.StopAlertLoop()
@@ -100,45 +94,32 @@ class SoundManager(SystemComponent):
 
     def StopAlertLoop(self) -> None:
         self.AlertLoopActive = False
-        import ctypes
-        try:
-            ctypes.windll.winmm.mciSendStringW("stop lcarsaudio", None, 0, None)
-            ctypes.windll.winmm.mciSendStringW("close lcarsaudio", None, 0, None)
-        except Exception:
-            pass
+        ctypes.windll.winmm.mciSendStringW("stop lcarsaudio", None, 0, None)
+        ctypes.windll.winmm.mciSendStringW("close lcarsaudio", None, 0, None)
 
     def ExecutePlaybackProtocol(self, TargetPath: any, Loop: bool = False) -> bool:
         PathStr = str(TargetPath)
         if PathStr.lower().endswith(".mp3"):
-            import ctypes
-            try:
-                ctypes.windll.winmm.mciSendStringW("close lcarsaudio", None, 0, None)
-                ResOpen = ctypes.windll.winmm.mciSendStringW(f'open "{PathStr}" type mpegvideo alias lcarsaudio', None, 0, None)
-                PlayCmd = "play lcarsaudio repeat" if Loop else "play lcarsaudio from 0"
-                ResPlay = ctypes.windll.winmm.mciSendStringW(PlayCmd, None, 0, None)
-                return ResOpen == 0 or ResPlay == 0
-            except Exception:
-                return False
+            ctypes.windll.winmm.mciSendStringW("close lcarsaudio", None, 0, None)
+            OpenCmd = "open " + chr(34) + PathStr + chr(34) + " type mpegvideo alias lcarsaudio"
+            ctypes.windll.winmm.mciSendStringW(OpenCmd, None, 0, None)
+            PlayCmd = "play lcarsaudio repeat" if Loop else "play lcarsaudio from 0"
+            ctypes.windll.winmm.mciSendStringW(PlayCmd, None, 0, None)
+            return True
         else:
-            import winsound
-            try:
-                Flags = winsound.SND_FILENAME | (winsound.SND_LOOP if Loop else winsound.SND_ASYNC)
-                winsound.PlaySound(PathStr, Flags)
-                return True
-            except Exception:
-                return False
+            Flags = winsound.SND_FILENAME | (winsound.SND_LOOP if Loop else winsound.SND_ASYNC)
+            winsound.PlaySound(PathStr, Flags)
+            return True
 
 class SoundAccess(LCARS):
     GlobalSoundInstance = None
 
-    @classmethod
-    def GetSound(cls) -> SoundManager:
-        if cls.GlobalSoundInstance is None:
-            cls.GlobalSoundInstance = SoundManager()
-        return cls.GlobalSoundInstance
+    def GetSound() -> SoundManager:
+        if SoundAccess.GlobalSoundInstance is None:
+            SoundAccess.GlobalSoundInstance = SoundManager()
+            SoundAccess.GlobalSoundInstance.Initialize()
+        return SoundAccess.GlobalSoundInstance
 
 GetSound = SoundAccess.GetSound
 GetSoundManager = SoundAccess.GetSound
 ActiveAudio = SoundAccess.GetSound()
-
-__all__ = ["SoundManager", "SoundAccess", "ActiveAudio", "GetSound", "GetSoundManager"]

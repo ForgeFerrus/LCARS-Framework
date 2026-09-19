@@ -8,7 +8,7 @@ from lcars.base.animation import TextDecode, Reveal, Stagger, Blink
 from lcars.base.default import Palette, SystemTheme
 from lcars.modules.sound import ActiveAudio
 
-AUTH_CODE = "4721"
+AuthCode = "4721"
 
 
 def PaddAccessInterface():
@@ -85,7 +85,7 @@ def PaddAccessInterface():
     def SubmitCode():
         if S["ok"] or not S["code"]:
             ActiveAudio.play("denied"); return
-        if S["code"] == AUTH_CODE:
+        if S["code"] == AuthCode:
             S["ok"] = True; ActiveAudio.play("ack"); UpdateDisplay()
         else:
             S["tries"] += 1; ActiveAudio.play("denied"); S["code"] = ""; UpdateDisplay()

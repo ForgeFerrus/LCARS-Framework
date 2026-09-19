@@ -156,20 +156,17 @@ def SetSystemState(State: String) -> None:
     if ODNNode and hasattr(ODNNode, "Transmit"):
         ODNNode.Transmit("UI.AlertChanged", State=SystemState)
 
-    try:
-        from lcars.modules.sound import ActiveAudio
-        LowState = SystemState.lower()
-        if LowState in ("red", "alert", "critical"):
-            ActiveAudio.StartAlertLoop("red")
-        elif LowState in ("yellow", "warning", "caution"):
-            ActiveAudio.StartAlertLoop("yellow")
-        elif LowState in ("normal", "green"):
-            ActiveAudio.StopAlertLoop()
-            ActiveAudio.PlayAudioClip("ack")
-        else:
-            ActiveAudio.StopAlertLoop()
-    except Exception:
-        pass
+    from lcars.modules.sound import ActiveAudio
+    LowState = SystemState.lower()
+    if LowState in ("red", "alert", "critical"):
+        ActiveAudio.StartAlertLoop("red")
+    elif LowState in ("yellow", "warning", "caution"):
+        ActiveAudio.StartAlertLoop("yellow")
+    elif LowState in ("normal", "green"):
+        ActiveAudio.StopAlertLoop()
+        ActiveAudio.PlayAudioClip("ack")
+    else:
+        ActiveAudio.StopAlertLoop()
 # Отримання контрасту
 def ContrastColor(Hex: String) -> String:
     H = Hex.lstrip("#")
