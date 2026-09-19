@@ -481,9 +481,16 @@ class Emitter(Graphic):
     # Запуск оптичного циклу випромінювання на фізичному пристрої
     # Активація оптичного випромінювача на фізичному пристрої
     def Activate(self, Device):
-        self.Device = Device
+        RealDevice = getattr(Device, "NativeWindow", Device)
+        if hasattr(RealDevice, "NativeWindow"):
+            RealDevice = getattr(RealDevice, "NativeWindow", RealDevice)
+        self.Device = RealDevice
         PainterClass = LCARS.Visual.Painter
-        self.Context = PainterClass(Device)
+        if PainterClass and callable(PainterClass):
+            if hasattr(RealDevice, "inherits") or hasattr(RealDevice, "devType"):
+                self.Context = PainterClass(RealDevice)
+            else:
+                self.Context = PainterClass()
         if self.Context is not None:
             RenderHint = getattr(self.Context, "RenderHint", None)
             if RenderHint is not None and hasattr(RenderHint, "Antialiasing"):

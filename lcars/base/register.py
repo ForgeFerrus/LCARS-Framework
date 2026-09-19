@@ -1003,6 +1003,8 @@ registry: dict[str, Any] = {
     "Base.Audio.Player"               : ("PyQt6.QtMultimedia", "QMediaPlayer"),
     "Base.Audio.Output"               : ("PyQt6.QtMultimedia", "QAudioOutput"),
     "Base.Audio.Devices"              : ("PyQt6.QtMultimedia", "QMediaDevices"),
+    "System.Core.Ctypes"              : ("ctypes", None),
+    "System.Core.Ctypes.WinTypes"     : ("ctypes.wintypes", None),
 
 # ────────────────────────────────────────────────────────────────────────────
 # 2.11 СЕНСОРНЕ ТА ЖЕСТОВЕ ВВЕДЕННЯ // TOUCH & GESTURE (Base.Input.*)

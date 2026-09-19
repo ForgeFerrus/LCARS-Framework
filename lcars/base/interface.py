@@ -8,87 +8,79 @@ from lcars.base.component import Component
 from lcars.base.graphic import Visual, Emitter
 from lcars.base.default import DefaultBackground, Palette
 from lcars.base.type import LCARS, SystemComponent
+from lcars.base.display import LCARSNativeViewport
 
 class SurfaceViewport(LCARS):
-    """Легковажний оптичний адаптер вікна LCARS. Інкапсулює фізичне полотно без успадкування від системних класів."""
+    """100% Власний векторний в'юпорт LCARS."""
     SurfaceObj = None
     NativeWindow = None
 
     def __init__(self, SurfaceObj=None, Parent=None):
         self.SurfaceObj = SurfaceObj
-        ViewportClass = LCARS.Retrieve("Base.Interface.Viewport")
-        if ViewportClass is not None and callable(ViewportClass):
-            self.NativeWindow = ViewportClass(Parent) if Parent is not None else ViewportClass()
-            FramelessFlag = LCARS.Retrieve("Base.Protocol.DisplayFlag.Frameless") or LCARS.Retrieve("Base.Protocol.FramelessWindowHint")
-            if FramelessFlag is not None and not isinstance(FramelessFlag, str) and hasattr(self.NativeWindow, "setWindowFlags"):
-                self.NativeWindow.setWindowFlags(self.NativeWindow.windowFlags() | FramelessFlag)
-            if hasattr(self.NativeWindow, "setStyleSheet"):
-                self.NativeWindow.setStyleSheet("background-color: #000000; border: none;")
-            self.NativeWindow.paintEvent = self.paintEvent
-            self.NativeWindow.resizeEvent = self.resizeEvent
-            self.NativeWindow.mousePressEvent = self.mousePressEvent
-            self.NativeWindow.mouseReleaseEvent = self.mouseReleaseEvent
-            self.NativeWindow.mouseMoveEvent = self.mouseMoveEvent
+        W = 800
+        H = 600
+        if SurfaceObj and hasattr(SurfaceObj, "Optics") and SurfaceObj.Optics:
+            W = getattr(SurfaceObj.Optics, "Width", 800)
+            H = getattr(SurfaceObj.Optics, "Height", 600)
+        self.NativeWindow = LCARSNativeViewport(SurfaceObj=SurfaceObj, Width=W, Height=H)
 
     def show(self):
-        if self.NativeWindow and hasattr(self.NativeWindow, "show"):
+        if self.NativeWindow:
             self.NativeWindow.show()
         return self
 
     def showFullScreen(self):
-        if self.NativeWindow and hasattr(self.NativeWindow, "showFullScreen"):
+        if self.NativeWindow:
             self.NativeWindow.showFullScreen()
         return self
 
     def hide(self):
-        if self.NativeWindow and hasattr(self.NativeWindow, "hide"):
+        if self.NativeWindow:
             self.NativeWindow.hide()
         return self
 
     def update(self):
-        if self.NativeWindow and hasattr(self.NativeWindow, "update"):
+        if self.NativeWindow:
             self.NativeWindow.update()
         return self
 
     def width(self):
-        if self.NativeWindow and hasattr(self.NativeWindow, "width"):
+        if self.NativeWindow:
             return self.NativeWindow.width()
         return 800
 
     def height(self):
-        if self.NativeWindow and hasattr(self.NativeWindow, "height"):
+        if self.NativeWindow:
             return self.NativeWindow.height()
         return 600
 
     def setFixedWidth(self, Width):
-        if self.NativeWindow and hasattr(self.NativeWindow, "setFixedWidth"):
-            self.NativeWindow.setFixedWidth(int(Width))
+        if self.NativeWindow:
+            self.NativeWindow.Width = int(Width)
         return self
 
     def setFixedHeight(self, Height):
-        if self.NativeWindow and hasattr(self.NativeWindow, "setFixedHeight"):
-            self.NativeWindow.setFixedHeight(int(Height))
+        if self.NativeWindow:
+            self.NativeWindow.Height = int(Height)
         return self
 
     def windowFlags(self):
-        if self.NativeWindow and hasattr(self.NativeWindow, "windowFlags"):
-            return self.NativeWindow.windowFlags()
         return None
 
     def setWindowFlags(self, Flags):
-        if self.NativeWindow and hasattr(self.NativeWindow, "setWindowFlags"):
-            self.NativeWindow.setWindowFlags(Flags)
         return self
 
     def setStyleSheet(self, Sheet):
-        if self.NativeWindow and hasattr(self.NativeWindow, "setStyleSheet"):
-            self.NativeWindow.setStyleSheet(Sheet)
         return self
 
     def isVisible(self):
-        if self.NativeWindow and hasattr(self.NativeWindow, "isVisible"):
+        if self.NativeWindow:
             return self.NativeWindow.isVisible()
         return True
+
+    def RunEventLoop(self):
+        if self.NativeWindow:
+            self.NativeWindow.RunEventLoop()
 
     def paintEvent(self, Event):
         if self.SurfaceObj:
@@ -133,8 +125,6 @@ class Surface(SystemComponent):
                 self.setFixedHeight(int(OpticsHeight))
             if OpticsWidth is not None and OpticsType in ("button", "indicator", "elbow"):
                 self.setFixedWidth(int(OpticsWidth))
-
-    Init = Initialize
 
     def GetViewport(self):
         if self.Viewport is None:
@@ -1093,8 +1083,9 @@ class Screen(Element):
         Host = self.GetSurface()
         if hasattr(Host, "setWindowFlags"):
             FramelessFlag = LCARS.Retrieve(getattr(LCARS, "Frameless", None))
-            if FramelessFlag is not None and not isinstance(FramelessFlag, str):
-                Host.setWindowFlags(Host.windowFlags() | FramelessFlag)
+            CurFlags = Host.windowFlags()
+            if CurFlags is not None and FramelessFlag is not None and not isinstance(FramelessFlag, str):
+                Host.setWindowFlags(CurFlags | FramelessFlag)
         if hasattr(Host, "setStyleSheet"):
             Host.setStyleSheet("background-color: #000000;")
         if hasattr(Host, "showFullScreen"):
@@ -1219,8 +1210,9 @@ class PADD(Element):
         Host.resizeEvent = PaddResizeHook
 
         FramelessFlag = LCARS.Retrieve(getattr(LCARS, "Frameless", None))
-        if hasattr(Host, "setWindowFlags") and FramelessFlag is not None and not isinstance(FramelessFlag, str):
-            Host.setWindowFlags(Host.windowFlags() | FramelessFlag)
+        CurFlags = Host.windowFlags()
+        if hasattr(Host, "setWindowFlags") and CurFlags is not None and FramelessFlag is not None and not isinstance(FramelessFlag, str):
+            Host.setWindowFlags(CurFlags | FramelessFlag)
         if hasattr(Host, "setStyleSheet"):
             Host.setStyleSheet("background-color: #000000;")
         if hasattr(Host, "setSizePolicy"):
