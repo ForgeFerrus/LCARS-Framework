@@ -108,7 +108,7 @@ class Surface(Display):
         )
         HandledByOptics = False
         if IsLeftButton and self.Optics is not None:
-            IsTactile = getattr(self.Optics, "Tactile", False)
+            IsTactile = getattr(self.Optics, "Tactile", False) or getattr(self.Optics, "IsWakeupTrigger", False)
             TargetEngage = getattr(self.Optics, "Engage", getattr(self.Optics, "Trigger", None))
             if IsTactile and callable(TargetEngage):
                 TargetEngage()

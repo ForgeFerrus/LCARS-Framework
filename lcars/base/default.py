@@ -155,6 +155,18 @@ def SetSystemState(State: String) -> None:
     ODNNode = LCARS.Retrieve("Core.ODN")
     if ODNNode and hasattr(ODNNode, "Transmit"):
         ODNNode.Transmit("UI.AlertChanged", State=SystemState)
+
+    try:
+        from lcars.modules.sound import ActiveAudio
+        LowState = SystemState.lower()
+        if LowState in ("red", "alert", "critical"):
+            ActiveAudio.PlayAudioClip("alertred")
+        elif LowState in ("yellow", "warning", "caution"):
+            ActiveAudio.PlayAudioClip("alertyellow")
+        elif LowState in ("normal", "green"):
+            ActiveAudio.PlayAudioClip("ack")
+    except Exception:
+        pass
 # Отримання контрасту
 def ContrastColor(Hex: String) -> String:
     H = Hex.lstrip("#")
