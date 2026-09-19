@@ -74,6 +74,13 @@ class Component(Topology):
     # -------------------------------------------------------------------------
     # ДИНАМІЧНИЙ СПЕКТР СВІТЛА ТА СТАНИ
     # -------------------------------------------------------------------------
+    def Initialize(self, *args, **kwargs):
+        super().Initialize(*args, **kwargs)
+        self.Mount()
+        return self
+
+    Init = Initialize
+
     def GetState(self):
         return str(getattr(self, "State", "Normal") or "Normal")
 
@@ -83,9 +90,17 @@ class Component(Topology):
         return self
 
     def GetColor(self):
+        if getattr(self, "IsPressed", False):
+            return "#FFFFFF"
+
+        if not self.Power:
+            if getattr(self, "IsWakeupTrigger", False):
+                return Palette.Disabled[0]
+            return "#000000"
+
         StateStr = str(getattr(self, "State", "Normal") or "Normal").lower()
-        if not self.Power or StateStr in ("off", "stasis", "black"):
-            return Palette.Disabled[0]
+        if StateStr in ("off", "stasis", "black"):
+            return "#000000"
 
         if StateStr in ("disabled", "inactive"):
             return Palette.Disabled[0]
@@ -93,15 +108,16 @@ class Component(Topology):
         if getattr(self, "Interactive", True) and not self.Tactile:
             return Palette.Disabled[0]
 
-        if StateStr in ("alert", "red", "critical", "emergency", "redalert"):
+        GlobalState = str(getattr(SystemTheme, "SystemState", "Normal") or "Normal").lower()
+        EffectiveState = GlobalState if GlobalState not in ("normal", "default") else StateStr
+
+        if EffectiveState in ("alert", "red", "critical", "emergency", "redalert"):
             return SystemTheme.DynamicColor("red", Dynamic=True, Key=str(id(self)))
 
-        if StateStr in ("yellow", "warning", "caution", "yellowalert"):
+        if EffectiveState in ("yellow", "warning", "caution", "yellowalert"):
             return SystemTheme.DynamicColor("yellow", Dynamic=True, Key=str(id(self)))
 
         ExplicitColor = getattr(self, "Spectrum", getattr(self, "Color", None))
-        # Дефолт темного тла не рахується явним спектром: вузол без заданого
-        # спектру світиться канонічною палітрою Окуди
         if ExplicitColor and ExplicitColor is not DefaultBackground:
             return ExplicitColor
         return SystemTheme.DynamicColor("buttons", Dynamic=True, Key=str(id(self)))
@@ -411,6 +427,10 @@ class LCARSButton(Component):
         AudioMod = getattr(LCARS.System, "Audio", None) or getattr(LCARS, "Audio", None)
         if AudioMod and hasattr(AudioMod, "Play"):
             AudioMod.Play(self.Sound or "click")
+        else:
+            from lcars.modules.sound import ActiveAudio
+            if ActiveAudio and hasattr(ActiveAudio, "PlayAudioClip"):
+                ActiveAudio.PlayAudioClip(self.Sound or "click")
 
         # Системний імпульс по ODN
         ODN.Transmit(
@@ -439,15 +459,14 @@ class LCARSButton(Component):
         if not self.Tactile and not self.IsWakeupTrigger:
             return self
         self.IsHovered = bool(Active)
-        if self.SwapMode and self.Number:
-            self.Designation = self.Text if Active else self.Number
+        if self.SwapMode and self.Number and self.Text:
+            self.Designation = self.Number if Active else self.Text
         self.Refresh()
         return self
 
     def Initialize(self, *args, **kwargs):
         super().Initialize(*args, **kwargs)
-        if self.SwapMode and self.Number:
-            self.Designation = self.Number
+        self.Designation = self.Text if self.Text else self.Number
         return self
 
     Init = Initialize

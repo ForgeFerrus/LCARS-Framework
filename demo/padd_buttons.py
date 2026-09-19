@@ -282,6 +282,7 @@ def SecurityAccessInterface():
     )
     def SetRedState():
         SystemTheme.SetSystemState("Red")
+        MainScreen.SetState("Red")
         StatusMsg.SetText("RED ALERT ACTIVATED")
     BtnRed.Clicked.Connect(SetRedState)
     Right.Add(BtnRed)
@@ -296,6 +297,7 @@ def SecurityAccessInterface():
     )
     def SetYellowState():
         SystemTheme.SetSystemState("Yellow")
+        MainScreen.SetState("Yellow")
         StatusMsg.SetText("YELLOW ALERT ACTIVATED")
     BtnYellow.Clicked.Connect(SetYellowState)
     Right.Add(BtnYellow)
@@ -310,6 +312,7 @@ def SecurityAccessInterface():
     )
     def SetGreenState():
         SystemTheme.SetSystemState("Normal")
+        MainScreen.SetState("Normal")
         StatusMsg.SetText("CONDITION GREEN RESTORED")
     BtnGreen.Clicked.Connect(SetGreenState)
     Right.Add(BtnGreen)

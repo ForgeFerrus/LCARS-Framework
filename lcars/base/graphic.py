@@ -654,6 +654,8 @@ class Emitter(Graphic):
         if not IsTransparent and self.Device is not None and hasattr(self.Device, "rect"):
             SpaceColor = LCARS.Visual.Color("#000000")
             self.Context.fillRect(self.Device.rect(), SpaceColor)
+        if not getattr(GraphicObj, "Power", True) and not getattr(GraphicObj, "IsWakeupTrigger", False):
+            return True
         # 2. Прямий швидкісний рендерер компонента (якщо є власний метод Draw)
         if hasattr(GraphicObj, "Draw") and callable(GraphicObj.Draw):
             return bool(GraphicObj.Draw(self.Context, self.Device))

@@ -152,6 +152,9 @@ def SetSystemState(State: String) -> None:
     global SystemState
     SystemState = (State or "Normal")
     SystemTheme.DynamicColors.clear()
+    ODNNode = LCARS.Retrieve("Core.ODN")
+    if ODNNode and hasattr(ODNNode, "Transmit"):
+        ODNNode.Transmit("UI.AlertChanged", State=SystemState)
 # Отримання контрасту
 def ContrastColor(Hex: String) -> String:
     H = Hex.lstrip("#")

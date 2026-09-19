@@ -28,11 +28,11 @@ class Surface(Display):
         if self.Optics is not None and hasattr(self, "setFixedHeight"):
             OpticsHeight = getattr(self.Optics, "Height", None)
             OpticsType = str(getattr(self.Optics, "Type", "")).lower()
-            IsRigid = not getattr(self.Optics, "Flexible", False) or OpticsType in ("button", "indicator", "elbow")
+            IsRigid = not getattr(self.Optics, "Flexible", False) or OpticsType in ("button", "indicator", "elbow", "label", "bar", "text")
             if OpticsHeight is not None and IsRigid:
                 self.setFixedHeight(int(OpticsHeight))
         if hasattr(self, "startTimer"):
-            self.PulseTimer = self.startTimer(1000)
+            self.PulseTimer = self.startTimer(120)
 
     Init = Initialize
     def SetOptics(self, Value):
@@ -43,11 +43,12 @@ class Surface(Display):
     Graphic = None
 
     # Пульсація стану поверхні
-    def Pulse(self):
+    def Pulse(self, Event=None):
         if not self.Optics:
             return
-        if not getattr(self.Optics, "Spectrum", getattr(self.Optics, "Color", None)):
-            self.update()
+        if hasattr(self, "isVisible") and not self.isVisible():
+            return
+        self.update()
 
     # Рекомендований розмір поверхні для систем компонування
     def PreferredSize(self):
@@ -176,6 +177,7 @@ class Surface(Display):
     mousePressEvent = TouchContact
     mouseReleaseEvent = TouchRelease
     mouseMoveEvent = TouchMovement
+    timerEvent = Pulse
     sizeHint = PreferredSize
     minimumSizeHint = PreferredSize
 # =====================================================================
@@ -277,6 +279,31 @@ class Element(Component):
     def Item(self, Key: str) -> Component | None:
         return self.Items.get(Key)
 
+    def SetState(self, State):
+        self.State = str(State or "Normal")
+        for Child in list(self.Items.values()):
+            if hasattr(Child, "SetState") and callable(Child.SetState):
+                Child.SetState(State)
+            else:
+                Child.State = self.State
+                if hasattr(Child, "Refresh"):
+                    Child.Refresh()
+        self.Refresh()
+        return self
+
+    def SetPower(self, PowerVal: bool):
+        self.Power = bool(PowerVal)
+        for Child in list(self.Items.values()):
+            if hasattr(Child, "SetPower") and callable(Child.SetPower):
+                Child.SetPower(PowerVal)
+            else:
+                Child.Power = self.Power
+                Child.Tactile = self.Power and not getattr(Child, "Locked", False)
+                if hasattr(Child, "Refresh"):
+                    Child.Refresh()
+        self.Refresh()
+        return self
+
     # Додає новий компонент або лейаут у композицію
     def Add(self, *Arguments):
         if not Arguments:
@@ -309,6 +336,12 @@ class Element(Component):
 
         if Item is None or TargetLayout is None:
             return self
+
+        from lcars.base.component import Component
+        if isinstance(Item, Component):
+            ChildKey = str(getattr(Item, "Name", "") or id(Item))
+            self.Items[ChildKey] = Item
+            Item.Parent = self
 
         TargetSurface = getattr(Item, "SurfaceHost", None)
         if TargetSurface is None:
