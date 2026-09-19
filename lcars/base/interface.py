@@ -8,13 +8,14 @@ from lcars.base.component import Component
 from lcars.base.graphic import Visual, Emitter
 from lcars.base.default import DefaultBackground, Palette
 from lcars.base.type import LCARS, SystemComponent
-Display = LCARS.Retrieve("Base.Interface.Widget")
+ViewportClass = LCARS.Retrieve("Base.Interface.Viewport")
 
-class SurfaceHostWindow(Display):
-    """Легковажний адаптер ОС-вікна. Не містить UI елементів, лише малює Surface через Emitter."""
+class SurfaceViewport(ViewportClass if ViewportClass else object):
+    """Легковажний оптичний адаптер вікна LCARS. Малює Surface через Emitter."""
     SurfaceObj = None
     def __init__(self, SurfaceObj=None, Parent=None):
-        super().__init__(Parent)
+        if ViewportClass is not None:
+            super().__init__(Parent)
         self.SurfaceObj = SurfaceObj
 
     def paintEvent(self, Event):
@@ -46,7 +47,7 @@ class Surface(SystemComponent):
     Optics = None
     Layers = []
     PulseTimer = None
-    HostWindow = None
+    Viewport = None
 
     def Initialize(self, Optics=None, Parent=None, **kwargs):
         self.Optics = Optics
@@ -63,67 +64,67 @@ class Surface(SystemComponent):
 
     Init = Initialize
 
-    def GetHostWindow(self):
-        if self.HostWindow is None:
-            self.HostWindow = SurfaceHostWindow(SurfaceObj=self)
-        return self.HostWindow
+    def GetViewport(self):
+        if self.Viewport is None:
+            self.Viewport = SurfaceViewport(SurfaceObj=self)
+        return self.Viewport
 
     def width(self):
-        if self.HostWindow is not None:
-            return self.HostWindow.width()
+        if self.Viewport is not None:
+            return self.Viewport.width()
         return int(getattr(self, "Width", 800))
 
     def height(self):
-        if self.HostWindow is not None:
-            return self.HostWindow.height()
+        if self.Viewport is not None:
+            return self.Viewport.height()
         return int(getattr(self, "Height", 600))
 
     def setFixedWidth(self, Width):
         if self.Optics:
             self.Optics.Width = Width
         self.Width = Width
-        if self.HostWindow is not None and hasattr(self.HostWindow, "setFixedWidth"):
-            self.HostWindow.setFixedWidth(int(Width))
+        if self.Viewport is not None and hasattr(self.Viewport, "setFixedWidth"):
+            self.Viewport.setFixedWidth(int(Width))
         return self
 
     def setFixedHeight(self, Height):
         if self.Optics:
             self.Optics.Height = Height
         self.Height = Height
-        if self.HostWindow is not None and hasattr(self.HostWindow, "setFixedHeight"):
-            self.HostWindow.setFixedHeight(int(Height))
+        if self.Viewport is not None and hasattr(self.Viewport, "setFixedHeight"):
+            self.Viewport.setFixedHeight(int(Height))
         return self
 
     def update(self):
-        if self.HostWindow is not None and hasattr(self.HostWindow, "update"):
-            self.HostWindow.update()
+        if self.Viewport is not None and hasattr(self.Viewport, "update"):
+            self.Viewport.update()
         return self
 
     def show(self):
-        self.GetHostWindow().show()
+        self.GetViewport().show()
         return self
 
     def showFullScreen(self):
-        self.GetHostWindow().showFullScreen()
+        self.GetViewport().showFullScreen()
         return self
 
     def hide(self):
-        if self.HostWindow is not None and hasattr(self.HostWindow, "hide"):
-            self.HostWindow.hide()
+        if self.Viewport is not None and hasattr(self.Viewport, "hide"):
+            self.Viewport.hide()
         return self
 
     def windowFlags(self):
-        return self.GetHostWindow().windowFlags()
+        return self.GetViewport().windowFlags()
 
     def setWindowFlags(self, Flags):
-        return self.GetHostWindow().setWindowFlags(Flags)
+        return self.GetViewport().setWindowFlags(Flags)
 
     def setStyleSheet(self, Sheet):
-        return self.GetHostWindow().setStyleSheet(Sheet)
+        return self.GetViewport().setStyleSheet(Sheet)
 
     def isVisible(self):
-        if self.HostWindow is not None:
-            return self.HostWindow.isVisible()
+        if self.Viewport is not None:
+            return self.Viewport.isVisible()
         return True
 
     def SetOptics(self, Value):
@@ -171,7 +172,7 @@ class Surface(SystemComponent):
     def OpticalDispersion(self, Event=None):
         if self.Optics is None:
             return
-        TargetDevice = self.GetHostWindow()
+        TargetDevice = self.GetViewport()
         CurrentW = TargetDevice.width()
         CurrentH = TargetDevice.height()
         if getattr(self.Optics, "Width", 0) != CurrentW or getattr(self.Optics, "Height", 0) != CurrentH:
