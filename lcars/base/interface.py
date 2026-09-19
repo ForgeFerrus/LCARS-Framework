@@ -957,8 +957,24 @@ class PADD(Element):
             Host.PaddController = self
         if hasattr(Host, "setMinimumSize"):
             Host.setMinimumSize(self.MinWidth, self.MinHeight)
+
+        # Обмежити розмір PADD доступною площею екрану (90%)
+        PaddW = self.Width
+        PaddH = self.Height
+        App = LCARS.Application.instance() if hasattr(LCARS, "Application") else None
+        if App and hasattr(App, "primaryScreen"):
+            ScreenRef = App.primaryScreen()
+            if ScreenRef and hasattr(ScreenRef, "availableGeometry"):
+                Avail = ScreenRef.availableGeometry()
+                MaxW = int(Avail.width() * 0.9)
+                MaxH = int(Avail.height() * 0.9)
+                if PaddW > MaxW:
+                    PaddW = MaxW
+                if PaddH > MaxH:
+                    PaddH = MaxH
+
         if hasattr(Host, "resize"):
-            Host.resize(self.Width, self.Height)
+            Host.resize(PaddW, PaddH)
 
         OriginalResize = getattr(Host, "resizeEvent", None)
         PaddSelf = self
@@ -976,8 +992,18 @@ class PADD(Element):
             Host.setStyleSheet("background-color: #000000;")
         if hasattr(Host, "setSizePolicy"):
             Policy = getattr(LCARS, "Policy", None)
-            if Policy and hasattr(Policy, "Expanding"):
-                Host.setSizePolicy(Policy.Expanding, Policy.Expanding)
+            if Policy and hasattr(Policy, "Preferred"):
+                Host.setSizePolicy(Policy.Preferred, Policy.Preferred)
+
+        # Центрувати PADD на екрані
+        if App and hasattr(App, "primaryScreen"):
+            ScreenRef = App.primaryScreen()
+            if ScreenRef and hasattr(ScreenRef, "availableGeometry") and hasattr(Host, "move"):
+                Avail = ScreenRef.availableGeometry()
+                CenterX = Avail.x() + (Avail.width() - PaddW) // 2
+                CenterY = Avail.y() + (Avail.height() - PaddH) // 2
+                Host.move(CenterX, CenterY)
+
         self.EnablePortablePadd(Host)
 
     def Show(self):

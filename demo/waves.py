@@ -8,41 +8,29 @@ from lcars.base.animation import WaveStream
 
 
 def WaveSpectrograph():
-    Padd = PADD(Title="SUBSPACE FREQUENCY SPECTROGRAPH", Width=520, Height=700)
-    Padd.SetVertical(10, 10, 10, 10, Spacing=4)
+    Padd = PADD(Title="SUBSPACE FREQUENCY SPECTROGRAPH", Width=320, Height=480)
+    Padd.SetVertical(6, 6, 6, 6, Spacing=4)
 
-    # ── HEADER ──────────────────────────────────────────────────────────────
     Padd.Add(LCARSElbow(Corner="top-left", Text="SUBSPACE", Number="ODN-FREQ",
-                        Width=240, Height=56, Thickness=22, Radius=16))
+                        Width=180, Height=44, Thickness=18, Radius=14))
 
-    # ── WAVE MODES ──────────────────────────────────────────────────────────
-    for ModeName, Description in [
-        ("Harmonic",     "SUBSPACE HARMONIC EQUALIZER"),
-        ("Waterfall",    "ODN OPTICAL BUS WATERFALL"),
-        ("Segmented",    "DIAGNOSTIC MATRIX SENSOR BARS"),
-        ("Symmetric",    "DUAL-POLARITY CARRIER SPECTRO"),
-        ("Sine",         "CONTINUOUS FREQUENCY OSCILLOSCOPE"),
-        ("Pulse",        "BIOSCAN MEDICAL TELEMETRY PULSE"),
-        ("Interference", "DUAL-HARMONIC PHASE INTERFERENCE"),
-    ]:
+    for ModeName in ["Harmonic", "Waterfall", "Segmented", "Symmetric",
+                     "Sine", "Pulse", "Interference"]:
         Row = Panel()
-        Row.SetHorizontal(0, 0, 0, 0, Spacing=8)
+        Row.SetHorizontal(0, 0, 0, 0, Spacing=6)
 
-        Lbl = LCARSLabel(Text=f"{ModeName.upper()}: {Description}", FontSize=10)
+        Lbl = LCARSLabel(Text=ModeName.upper(), FontSize=10)
         Row.Add(Lbl, 1)
 
         Wv = WaveStream(Mode=ModeName, Frequency=3.0, Speed=0.035)
-        Wv.Height = 48
-        if hasattr(Wv.widget, "setFixedHeight"):
-            Wv.widget.setFixedHeight(48)
+        Wv.Height = 40
         Wv.Start()
         Row.Add(Wv, 2)
 
         Padd.Add(Row)
 
-    # ── FOOTER ──────────────────────────────────────────────────────────────
     Padd.Add(LCARSElbow(Corner="bottom-right", Text="WARP CORE", Number="NCC-1701",
-                        Width=240, Height=48, Thickness=20, Radius=16))
+                        Width=180, Height=40, Thickness=16, Radius=14))
 
     Padd.Show()
     return Padd
