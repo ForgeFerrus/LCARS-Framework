@@ -2,6 +2,7 @@
 # Готові елементи та канонічні композиції LCARS (Michael Okuda Standard).
 # У component.py лежать фізичні примітиви. Тут лежить віртуальний контейнер/оркестратор Element
 # та канонічні складені об'єкти інтерфейсу зорельота за векторними кресленнями CorelDRAW.
+
 from typing import Any, Optional, Dict, List, Union, Tuple
 from lcars.base.component import Component
 from lcars.base.graphic import Visual, Emitter
@@ -57,8 +58,10 @@ class Surface(Display):
         Node = self.Optics
         W = int(getattr(Node, "Width", 100) if Node is not None else 100)
         H = int(getattr(Node, "Height", 30) if Node is not None else 30)
+        W = max(10, min(16384, W))
+        H = max(10, min(16384, H))
         SizeClass = LCARS.Retrieve("Base.Geometry.Size.Int")
-        return SizeClass(max(10, W), max(10, H)) if SizeClass and callable(SizeClass) else None
+        return SizeClass(W, H) if SizeClass and callable(SizeClass) else None
     # Просторове вирівнювання сенсорного поля
     def AlignContent(self, Flag):
         if hasattr(self.Optics, "Align"):
@@ -272,11 +275,21 @@ class Element(Component):
     def Item(self, Key: str) -> Component | None:
         return self.Items.get(Key)
 
-    def SetState(self, State):
+    def SetState(self, State, Visited=None):
+        if Visited is None:
+            Visited = set()
+        ObjId = id(self)
+        if ObjId in Visited:
+            return self
+        Visited.add(ObjId)
+
         self.State = str(State or "Normal")
         for Child in list(self.Items.values()):
             if hasattr(Child, "SetState") and callable(Child.SetState):
-                Child.SetState(State)
+                try:
+                    Child.SetState(State, Visited)
+                except TypeError:
+                    Child.SetState(State)
             else:
                 Child.State = self.State
                 if hasattr(Child, "Refresh"):
@@ -284,11 +297,21 @@ class Element(Component):
         self.Refresh()
         return self
 
-    def SetPower(self, PowerVal: bool):
+    def SetPower(self, PowerVal: bool, Visited=None):
+        if Visited is None:
+            Visited = set()
+        ObjId = id(self)
+        if ObjId in Visited:
+            return self
+        Visited.add(ObjId)
+
         self.Power = bool(PowerVal)
         for Child in list(self.Items.values()):
             if hasattr(Child, "SetPower") and callable(Child.SetPower):
-                Child.SetPower(PowerVal)
+                try:
+                    Child.SetPower(PowerVal, Visited)
+                except TypeError:
+                    Child.SetPower(PowerVal)
             else:
                 Child.Power = self.Power
                 Child.Tactile = self.Power and not getattr(Child, "Locked", False)
@@ -405,22 +428,62 @@ class Element(Component):
             if not hasattr(Node, "Width") or not hasattr(Node, "Height"):
                 continue
             # Задаємо локальні координати компонента
+    def Synthesize(self, Visited=None):
+        if Visited is None:
+            Visited = set()
+        ObjId = id(self)
+        if ObjId in Visited:
+            return self
+        Visited.add(ObjId)
+
+        CurX = 0.0
+        CurY = 0.0
+        TotalW = 0.0
+        TotalH = 0.0
+        for Node in list(self.Items.values()):
+            import math
+            if not hasattr(Node, "Width") or not hasattr(Node, "Height"):
+                continue
             Node.X = int(CurX)
             Node.Y = int(CurY)
-            if hasattr(Node, "Synthesize"):
-                Node.Synthesize()
+            NW = float(getattr(Node, "Width", 0) or 0)
+            NH = float(getattr(Node, "Height", 0) or 0)
+            if math.isnan(NW) or math.isinf(NW) or NW > 16384.0:
+                NW = 100.0
+            if math.isnan(NH) or math.isinf(NH) or NH > 16384.0:
+                NH = 30.0
+
+            SafeX = max(0.0, min(16384.0, CurX))
+            SafeY = max(0.0, min(16384.0, CurY))
+            if math.isnan(SafeX) or math.isinf(SafeX):
+                SafeX = 0.0
+            if math.isnan(SafeY) or math.isinf(SafeY):
+                SafeY = 0.0
+
+            Node.X = int(SafeX)
+            Node.Y = int(SafeY)
+            if hasattr(Node, "Synthesize") and callable(Node.Synthesize):
+                try:
+                    Node.Synthesize(Visited)
+                except TypeError:
+                    Node.Synthesize()
             if self.Orientation == "horizontal":
                 CurX += float(Node.Width) + self.Spacing
+                CurX += NW + self.Spacing
                 TotalW = CurX
                 TotalH = max(TotalH, float(Node.Height))
+                TotalH = max(TotalH, NH)
             else:
                 CurY += float(Node.Height) + self.Spacing
+                CurY += NH + self.Spacing
                 TotalH = CurY
                 TotalW = max(TotalW, float(Node.Width))
-        # Оновлюємо габарити всього елемента
+                TotalW = max(TotalW, NW)
         if self.Items:
             self.Width = int(TotalW)
             self.Height = int(TotalH)
+            self.Width = int(max(10.0, min(16384.0, TotalW)))
+            self.Height = int(max(10.0, min(16384.0, TotalH)))
         return self
 # =============================================================================
 # HEADER — ВЕРХНЯ КОМПОЗИЦІЯ / ШАПКА ПАНЕЛІ ТЕРМІНАЛА

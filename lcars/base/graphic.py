@@ -398,7 +398,7 @@ class Topology(Graphic):
         return T
     # Скидання або підготовка чистої оптичної траєкторії
     def ResetTopology(self):
-        PathClass = LCARS.Visual.PainterPath
+        PathClass = LCARS.Retrieve("Base.Visual.PainterPath") or getattr(LCARS.Visual, "PainterPath", None)
         self.Wavefront = PathClass() if callable(PathClass) else None
         return self.Wavefront
     # -------------------------------------------------------------------------
