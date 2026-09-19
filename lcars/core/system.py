@@ -262,6 +262,13 @@ class MasterSystem(SystemComponent):
         self.ErrorList.append(str(ErrorMessage))
         ODN.Transmit("MasterSystem.Error", Error=str(ErrorMessage))
 
+    # Канонічний отримувач активного вузла (ідіпотентний синглтон)
+    @classmethod
+    def GetInstance(cls):
+        if getattr(cls, "ActiveInstance", None) is None:
+            cls.ActiveInstance = cls()
+        return cls.ActiveInstance
+
 # Системні аліаси зорельота
 ActiveSystem = MasterSystem.GetInstance
 # Готовий канонічний інстанс бортового комп'ютера

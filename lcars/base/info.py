@@ -58,3 +58,4 @@ class Version:
 Passport = Version
 VersionInfo = Version
 SystemInfo = Version
+getVersion = Version.GetVersion

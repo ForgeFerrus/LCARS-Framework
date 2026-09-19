@@ -294,12 +294,27 @@ class Component(Topology):
                 InterfaceMod = LCARS.Import("lcars.base.interface")
                 SurfaceClass = getattr(InterfaceMod, "Surface", None)
             if SurfaceClass is not None and callable(SurfaceClass):
-                self.SurfaceHost = SurfaceClass()
+                ParentRef = getattr(self, "Parent", None)
+                ParentSurface = None
+                if ParentRef is not None:
+                    ParentSurface = getattr(ParentRef, "SurfaceHost", None)
+                    if ParentSurface is None:
+                        GetParentSurface = getattr(ParentRef, "GetSurface", None)
+                        if callable(GetParentSurface):
+                            ParentSurface = GetParentSurface()
+                        else:
+                            ParentSurface = ParentRef
+                self.SurfaceHost = SurfaceClass(ParentSurface) if ParentSurface is not None else SurfaceClass()
                 if hasattr(self.SurfaceHost, "Initialize"):
-                    self.SurfaceHost.Initialize(Optics=self)
+                    self.SurfaceHost.Initialize(Optics=self, Parent=ParentSurface)
         return getattr(self, "SurfaceHost", None)
 
     Surface = GetSurface
+
+    # Канонічний нативний вузол поверхні (Qt-віджет компонента)
+    @property
+    def widget(self):
+        return self.GetSurface()
 
 # Канонічний аліас для зворотної сумісності
 Interactable = Component

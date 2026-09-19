@@ -154,6 +154,24 @@ class Transmission(SystemComponent):
             ODN.Disconnect(self.Channel, Callback)
         return self
 
+    # Канонічне випромінювання сигналу-вузла по шині ODN (Signal.Emit(...))
+    def Emit(self, *Args, **Flags) -> "Transmission":
+        if not self.Channel:
+            SystemIdVal = getattr(self, "SystemId", None)
+            if isinstance(SystemIdVal, str) and SystemIdVal and "." in SystemIdVal:
+                self.Channel = SystemIdVal
+            else:
+                self.Channel = f"Signal.{self.TypeName}.{id(self):x}"
+        if len(Args) == 1 and not Flags:
+            PayloadData = Args[0]
+        elif Args or Flags:
+            PayloadData = Args if Args else None
+        else:
+            PayloadData = None
+        return ODN.Transmit(self.Channel, Data=PayloadData, Source=self.Source, **Flags)
+
+    Fire = Emit
+
 
 # =============================================================================
 # 2. OPTICAL TRANSPORT LINE (OTN) — ФІЗИЧНА ОПТИЧНА ТРАНСПОРТНА ЛІНІЯ
@@ -318,6 +336,12 @@ class OpticalDataNetwork(SystemComponent):
 
     Send = Transmit
     Dispatch = Transmit
+
+    # Канонічний аліас випромінювання (ODN.Emit(Path, Data, **Flags))
+    def Emit(self, ConduitPath: str, Data: Any = None, **Flags) -> Transmission:
+        return self.Transmit(ConduitPath, Data=Data, **Flags)
+
+    BroadcastChannel = Emit
 
     def Broadcast(self, *Args, **Flags) -> List[Transmission]:
         Results = []

@@ -382,7 +382,7 @@ class LiveDesignerCanvas(LCARS.Widget):
 
 class InteractiveWorkbench:
     def __init__(self, Title="LCARS ARCHITECT // BOARD DEVELOPMENT ENVIRONMENT", Width=1540, Height=960):
-        AppClass = LCARS.Retrieve(LCARS.Application)
+        AppClass = LCARS.Application if callable(LCARS.Application) else LCARS.Retrieve(LCARS.Application)
         self.App = AppClass.instance() if AppClass is not None and hasattr(AppClass, "instance") else None
         if self.App is None:
             Argv = getattr(LCARS.System.Core, "argv", []) if hasattr(LCARS.System, "Core") else []

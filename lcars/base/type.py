@@ -15,6 +15,17 @@ class Namespace(type):
     Entity: object = None
 
     # Побудова ланцюжка та прохід углиб через крапку
+    def __getattribute__(cls, AttributeName: str):
+        # Канонічна матеріалізація шляхових каноній: якщо атрибут класу —
+        # рядок-шлях, який збігається з вузлом Реєстру, віддаємо живий вузол
+        # (клас/функцію), а не рядок. Інакше рядок повертається як є.
+        Value = super().__getattribute__(AttributeName)
+        if isinstance(Value, str) and "." in Value and not AttributeName.startswith("_"):
+            Resolved = Retrieve(Value)
+            if Resolved is not None and (callable(Resolved) or isinstance(Resolved, type)):
+                return Resolved
+        return Value
+
     def ResolvePattern(cls, AttributeName: str):
         # Протокольні проби інтерпретатора завжди починаються з підкреслення:
         # невідомі dunders/службові імена мають чесно піднімати AttributeError,
@@ -30,6 +41,8 @@ class Namespace(type):
             "Core": "Base.Core",
             "Interface": "Base.Interface",
             "Graphics": "Base.Graphics",
+            "Widget": "Base.Interface.Widget",
+            "Viewport": "Base.Interface.Viewport",
         }
         # Канонічні аліаси сегментів
         SegmentAliases = {
@@ -75,15 +88,15 @@ class Namespace(type):
 
     # ═══ ПРОТОКОЛ ВИКЛИКУ: МАТЕРІАЛІЗАЦІЯ ЕКЗЕМПЛЯРА ЧЕРЕЗ ІНІЦІАЛІЗАТОР ═══
     def Construct(cls, *args, **kwargs):
-        # Шов інтерпретатора всередині тіла: об'єкт створюється порожнім,
-        # дані проходять лише через канонічний ініціалізатор Initialize.
-        Instance = super().__call__()
-        InitMethod = getattr(Instance, "Initialize", getattr(Instance, "Init", None))
-        if callable(InitMethod) and not isinstance(InitMethod, str):
-            InitMethod(*args, **kwargs)
-        elif kwargs:
-            for Key, Value in kwargs.items():
-                setattr(Instance, Key, Value)
+        # Шов інтерпретатора всередині тіла: об'єкт створюється через
+        # канонічний ініціалізатор (__init__ → Initialize). Повторний виклик
+        # ініціалізатора — лише якщо він ще не відбувся (наприклад, dataclass).
+        Instance = super().__call__(*args, **kwargs)
+        if not getattr(Instance, "Initialized", False):
+            InitMethod = getattr(Instance, "Initialize", getattr(Instance, "Init", None))
+            if callable(InitMethod) and not isinstance(InitMethod, str):
+                InitMethod(*args, **kwargs)
+            Instance.Initialized = True
         return Instance
 
     # Прив'язка слотів протоколів без назв у коді:
@@ -231,7 +244,12 @@ class LCARS(metaclass=Namespace):
         self.Config = dict(getattr(self, "Config", {}))
         for Key, Value in kwargs.items():
             setattr(self, Key, Value)
+        self.Initialized = True
         return self
+    # Канонічний делегат конструктора: усе проходить через Initialize (DNA),
+    # щоб super().__init__(SystemId=...) у підкласах не впирався в object.
+    def __init__(self, *args, **kwargs):
+        self.Initialize(*args, **kwargs)
     # Канонічний замінник конструктора
     Init = Initialize
     Registry = registry

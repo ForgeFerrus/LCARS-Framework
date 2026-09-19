@@ -225,7 +225,7 @@ class CoreProcessor(SystemComponent):
     def __init__(self, ParentComputer = None):
         super().__init__(SystemId="Proc-DualCore-01")
         self.Computer = ParentComputer
-        self.CurrentState = ProcessorState.QUANTUM
+        self.CurrentState = ProcessorState.Quantum
 
         # Оптична та квантова просторові матриці станів зорельота
         self.OpticalMatrix = SystemMatrix([100, 100, 100], Id="Matrix.OpticalCore", ODN=ODN)
