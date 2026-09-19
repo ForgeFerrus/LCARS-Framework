@@ -16,6 +16,9 @@ from lcars.base.component import (
     LCARSButton, LCARSLabel, LCARSElbow, LCARSBar,
     LCARSIndicator, SetStyle
 )
+from lcars.base.default import Palette, SystemTheme
+from lcars.ui.terminal import LCARSTerminal
+from lcars.service.onboard import Computer
 
 class LCARSDataBlock(LCARSLabel):
     def __init__(self, *args, **kwargs):
@@ -31,11 +34,6 @@ class LCARSDataBlock(LCARSLabel):
             self.SetText(" | ".join(parts))
         else:
             self.SetText(str(data))
-
-from lcars.base.default import Palette, SystemTheme
-from lcars.ui.terminal import LCARSTerminal
-from lcars.service.onboard import Computer
-
 
 class HandlePoint(LCARS.Widget):
     def __init__(self, Name: str, CanvasRef, Parent=None, Color="#99ccff"):
@@ -847,6 +845,4 @@ def RunDesigner():
     Designer = InteractiveWorkbench()
     return Designer.Run()
 
-
-if __name__ == "__main__":
-    RunDesigner()
+LCARS.Launch(RunDesigner)

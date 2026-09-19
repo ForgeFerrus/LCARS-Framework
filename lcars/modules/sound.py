@@ -14,15 +14,15 @@ class SoundManager(SystemComponent):
         Parts = Parts[:-1] if Parts else []
         RootStr = "/".join(Parts)
         self.SoundRootPath = None
-        Os = LCARS.Retrieve("System.Operating")
-        if Os:
+        Operating = LCARS.Retrieve("System.Operating")
+        if Operating:
             Candidate = RootStr + "/lcars/sound"
-            if Os.path.isdir(Candidate):
+            if Operating.path.isdir(Candidate):
                 self.SoundRootPath = Candidate
             elif Parts:
                 ParentStr = "/".join(Parts[:-1])
                 Candidate2 = ParentStr + "/lcars/sound"
-                if Os.path.isdir(Candidate2):
+                if Operating.path.isdir(Candidate2):
                     self.SoundRootPath = Candidate2
         self.MediaPlayerNode = None
         self.AudioOutputNode = None
@@ -51,19 +51,19 @@ class SoundManager(SystemComponent):
         }
 
     def PlayAudioClip(self, SoundIdentifier, Loop=False):
-        Os = LCARS.Retrieve("System.Operating")
+        Operating = LCARS.Retrieve("System.Operating")
         LookupKey = SoundIdentifier.lower()
         FileCandidates = self.SoundLibraryMap.get(LookupKey, [SoundIdentifier])
         ClipPath = None
-        if self.SoundRootPath and Os and Os.path.isdir(self.SoundRootPath):
+        if self.SoundRootPath and Operating and Operating.path.isdir(self.SoundRootPath):
             for FileName in FileCandidates:
                 Cand = self.SoundRootPath + "/" + FileName
-                if Os.path.isfile(Cand):
+                if Operating.path.isfile(Cand):
                     ClipPath = Cand
                     break
                 for Sub in ["sfx", "voice"]:
                     SubCand = self.SoundRootPath + "/" + Sub + "/" + FileName
-                    if Os.path.isfile(SubCand):
+                    if Operating.path.isfile(SubCand):
                         ClipPath = SubCand
                         break
                 if ClipPath:
