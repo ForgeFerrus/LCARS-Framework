@@ -77,8 +77,6 @@ def MinimalPaletteDemo():
 
     # Scanning bars
     Padd.Add(LCARSBar(Height=14, Sensory=True))
-    Padd.Add(LCARSBar(Form=LCARSBar.PillType, Height=24, Sensory=True))
-
     Padd.AddStretch(1)
 
     # Footer
