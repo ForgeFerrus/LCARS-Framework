@@ -9,7 +9,6 @@ from lcars.base.component import (
 from lcars.base.animation import TextDecode, Reveal, Stagger, Blink
 from lcars.modules.sound import ActiveAudio
 
-
 def ComponentShowcase():
     Padd = PADD(Title="LCARS COMPONENT LIBRARY", Width=320, Height=480)
     Padd.SetVertical(6, 6, 6, 6, Spacing=4)
@@ -72,8 +71,6 @@ def ComponentShowcase():
     for B in AllBtns:
         R = Reveal(); R.StartReveal(Target=B, Period=0.2, Direction="Left"); Cascade.Add(R)
     Cascade.Play(DelayMs=25)
-
     return Padd
-
 
 LCARS.Launch(ComponentShowcase)

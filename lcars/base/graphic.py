@@ -849,6 +849,83 @@ class Architect(SystemComponent):
                     Child = getattr(Item, "layout", lambda: None)()
                     if Child:
                         self.Clear(Child)
+
+# =============================================================================
+# 4. МАГНІТНА СІТКА ТА ВЕКТОРНЕ ПОЛОТНО LCARS (MAGNETIC GRID & VECTOR CANVAS)
+# Чистий векторний рендеринг без рудиментних прямокутних QWidget-віджетів
+# =============================================================================
+class MagneticGrid(SystemComponent):
+    TypeName = "LCARSMagneticGrid"
+    GridSize = 8
+    Enabled = True
+
+    def Initialize(self, GridSize=8, Enabled=True):
+        self.GridSize = max(1, int(GridSize))
+        self.Enabled = bool(Enabled)
+
+    def Snap(self, Value: float) -> int:
+        if not self.Enabled or self.GridSize <= 1:
+            return int(round(Value))
+        return int(round(Value / float(self.GridSize)) * self.GridSize)
+
+    def SnapPoint(self, X: float, Y: float) -> tuple[int, int]:
+        return (self.Snap(X), self.Snap(Y))
+
+    def SnapRect(self, X: float, Y: float, Width: float, Height: float) -> tuple[int, int, int, int]:
+        SnapX = self.Snap(X)
+        SnapY = self.Snap(Y)
+        SnapW = max(self.GridSize, self.Snap(Width))
+        SnapH = max(self.GridSize, self.Snap(Height))
+        return (SnapX, SnapY, SnapW, SnapH)
+
+
+class LCARSVectorItem(Graphic):
+    TypeName = "LCARSVectorItem"
+
+    def Initialize(self, ElementType="Elbow", Spectrum="#FF9900", **kwargs):
+        self.ElementType = ElementType
+        self.Spectrum = Spectrum
+        self.X = kwargs.get("X", 0)
+        self.Y = kwargs.get("Y", 0)
+        self.Width = kwargs.get("Width", 120)
+        self.Height = kwargs.get("Height", 60)
+        self.Thickness = kwargs.get("Thickness", FrameThick)
+        self.Radius = kwargs.get("Radius", FrameRadius)
+        self.Corner = kwargs.get("Corner", "top-left")
+        self.Selected = False
+        self.Synthesize()
+
+    def Synthesize(self):
+        T = str(self.ElementType).lower()
+        if T == "elbow":
+            self.Wavefront = self.TraceElbow(0, 0, self.Width, self.Height, self.Thickness, self.Radius, self.Corner)
+        elif T == "bar":
+            self.Wavefront = self.TraceBar(0, 0, self.Width, self.Height)
+        elif T == "cap":
+            self.Wavefront = self.TraceCap(0, 0, self.Width, self.Height)
+        else:
+            self.Wavefront = self.TraceRect(0, 0, self.Width, self.Height)
+        return self.Wavefront
+
+
+class LCARSCanvas(Graphic):
+    TypeName = "LCARSCanvas"
+
+    def Initialize(self, GridSize=8):
+        self.Grid = MagneticGrid(GridSize=GridSize)
+        self.VectorItems = []
+
+    def AddItem(self, Item: LCARSVectorItem):
+        SnapX, SnapY, SnapW, SnapH = self.Grid.SnapRect(Item.X, Item.Y, Item.Width, Item.Height)
+        Item.X = SnapX
+        Item.Y = SnapY
+        Item.Width = SnapW
+        Item.Height = SnapH
+        Item.Synthesize()
+        self.VectorItems.append(Item)
+        return Item
+
+
 # Канонічні аліаси для зворотної сумісності
 Builder = Architect
 LCARSBuilder = Architect
@@ -868,6 +945,9 @@ LCARS.Types = (
     "Emitter",
     "Builder",
     "Architect",
+    "MagneticGrid",
+    "LCARSVectorItem",
+    "LCARSCanvas",
 )
 # Аліас експорту модуля для Python імпортів (from lcars.base.type import *)
 All = list(LCARS.Types)

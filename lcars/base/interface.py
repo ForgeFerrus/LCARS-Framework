@@ -9,7 +9,7 @@ from lcars.base.default import DefaultBackground, Palette
 from lcars.base.type import LCARS
 # =============================================================================
 # СЕНСОРНА ОПТИЧНА ПОВЕРХНЯ LCARS (SURFACE / PANEL)
-Display: type = LCARS.Retrieve(LCARS.Display) or object
+Display: type = LCARS.Retrieve("Base.Interface.Widget") or object
 # =============================================================================
 class Surface(Display):
     TypeName = "LCARSSurface"
