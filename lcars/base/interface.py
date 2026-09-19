@@ -8,24 +8,49 @@ from lcars.base.component import Component
 from lcars.base.graphic import Visual, Emitter
 from lcars.base.default import DefaultBackground, Palette
 from lcars.base.type import LCARS, SystemComponent
+Display = LCARS.Retrieve("Base.Interface.Widget")
+
+class SurfaceHostWindow(Display):
+    """Легковажний адаптер ОС-вікна. Не містить UI елементів, лише малює Surface через Emitter."""
+    SurfaceObj = None
+    def __init__(self, SurfaceObj=None, Parent=None):
+        super().__init__(Parent)
+        self.SurfaceObj = SurfaceObj
+
+    def paintEvent(self, Event):
+        if self.SurfaceObj:
+            self.SurfaceObj.OpticalDispersion(Event)
+
+    def resizeEvent(self, Event):
+        if self.SurfaceObj:
+            self.SurfaceObj.Rescale(Event)
+
+    def mousePressEvent(self, Event):
+        if self.SurfaceObj:
+            self.SurfaceObj.TouchContact(Event)
+
+    def mouseReleaseEvent(self, Event):
+        if self.SurfaceObj:
+            self.SurfaceObj.TouchRelease(Event)
+
+    def mouseMoveEvent(self, Event):
+        if self.SurfaceObj:
+            self.SurfaceObj.TouchMovement(Event)
+
 # =============================================================================
 # СЕНСОРНА ОПТИЧНА ПОВЕРХНЯ LCARS (SURFACE / PANEL)
-# Чистий векторний вузол LCARS без наслідування від застарілих прямокутників QWidget
+# Чистий векторний вузол LCARS (SystemComponent) без наслідування від QWidget
 # =============================================================================
 class Surface(SystemComponent):
     TypeName = "LCARSSurface"
     Optics = None
     Layers = []
     PulseTimer = None
-    # Канонічна ініціалізація консольного скла
+    HostWindow = None
+
     def Initialize(self, Optics=None, Parent=None, **kwargs):
         self.Optics = Optics
         self.Layers = kwargs.get("Layers", [])
-        if hasattr(self, "setMinimumSize"):
-            self.setMinimumSize(1, 1)
-        Policy = getattr(LCARS, "Policy", None)
-        if hasattr(self, "setSizePolicy") and Policy is not None and hasattr(Policy, "Preferred"):
-            self.setSizePolicy(Policy.Preferred, Policy.Preferred)
         if self.Optics is not None:
             OpticsHeight = getattr(self.Optics, "Height", None)
             OpticsWidth = getattr(self.Optics, "Width", None)
@@ -38,41 +63,67 @@ class Surface(SystemComponent):
 
     Init = Initialize
 
+    def GetHostWindow(self):
+        if self.HostWindow is None:
+            self.HostWindow = SurfaceHostWindow(SurfaceObj=self)
+        return self.HostWindow
+
+    def width(self):
+        if self.HostWindow is not None:
+            return self.HostWindow.width()
+        return int(getattr(self, "Width", 800))
+
+    def height(self):
+        if self.HostWindow is not None:
+            return self.HostWindow.height()
+        return int(getattr(self, "Height", 600))
+
     def setFixedWidth(self, Width):
         if self.Optics:
             self.Optics.Width = Width
         self.Width = Width
+        if self.HostWindow is not None and hasattr(self.HostWindow, "setFixedWidth"):
+            self.HostWindow.setFixedWidth(int(Width))
         return self
 
     def setFixedHeight(self, Height):
         if self.Optics:
             self.Optics.Height = Height
         self.Height = Height
-        return self
-
-    def setMinimumSize(self, *Args):
-        return self
-
-    def setMaximumSize(self, *Args):
-        return self
-
-    def setSizePolicy(self, *Args):
-        return self
-
-    def setLayout(self, Layout):
-        self.Layout = Layout
+        if self.HostWindow is not None and hasattr(self.HostWindow, "setFixedHeight"):
+            self.HostWindow.setFixedHeight(int(Height))
         return self
 
     def update(self):
+        if self.HostWindow is not None and hasattr(self.HostWindow, "update"):
+            self.HostWindow.update()
         return self
 
     def show(self):
+        self.GetHostWindow().show()
+        return self
+
+    def showFullScreen(self):
+        self.GetHostWindow().showFullScreen()
         return self
 
     def hide(self):
+        if self.HostWindow is not None and hasattr(self.HostWindow, "hide"):
+            self.HostWindow.hide()
         return self
 
+    def windowFlags(self):
+        return self.GetHostWindow().windowFlags()
+
+    def setWindowFlags(self, Flags):
+        return self.GetHostWindow().setWindowFlags(Flags)
+
+    def setStyleSheet(self, Sheet):
+        return self.GetHostWindow().setStyleSheet(Sheet)
+
     def isVisible(self):
+        if self.HostWindow is not None:
+            return self.HostWindow.isVisible()
         return True
 
     def SetOptics(self, Value):
@@ -98,14 +149,16 @@ class Surface(SystemComponent):
         H = max(10, min(16384, H))
         SizeClass = LCARS.Retrieve("Base.Geometry.Size.Int")
         return SizeClass(W, H) if SizeClass and callable(SizeClass) else None
+
     # Просторове вирівнювання сенсорного поля
     def AlignContent(self, Flag):
         if hasattr(self.Optics, "Align"):
             self.Optics.Align = "center" if "Center" in str(Flag) else ("right" if "Right" in str(Flag) else "left")
         self.update()
         return self
+
     # Зміна фізичної геометрії сенсорного скла
-    def Rescale(self, Event):
+    def Rescale(self, Event=None):
         if self.Optics is not None:
             self.Optics.Width = self.width()
             self.Optics.Height = self.height()
@@ -113,27 +166,21 @@ class Surface(SystemComponent):
                 self.Optics.Synthesize()
             elif hasattr(self.Optics, "Generate") and callable(self.Optics.Generate):
                 self.Optics.Generate()
-        ParentResize = getattr(super(), "Rescale", None)
-        if callable(ParentResize):
-            ParentResize(Event)
+
     # Цикл оптичного світіння (прояв фотонного поля на поверхні)
-    def OpticalDispersion(self, Event):
-        # Малює свій Optics / Graphic
+    def OpticalDispersion(self, Event=None):
         if self.Optics is None:
             return
-        # Синхронізація просторових меж
-        CurrentW = self.width()
-        CurrentH = self.height()
+        TargetDevice = self.GetHostWindow()
+        CurrentW = TargetDevice.width()
+        CurrentH = TargetDevice.height()
         if getattr(self.Optics, "Width", 0) != CurrentW or getattr(self.Optics, "Height", 0) != CurrentH:
             self.Optics.Width = CurrentW
             self.Optics.Height = CurrentH
             if hasattr(self.Optics, "Synthesize") and callable(self.Optics.Synthesize):
                 self.Optics.Synthesize()
-        # Випромінення через єдиний оптичний проєктор LCARS
         ProjectorInstance = Emitter()
-
-        if ProjectorInstance.Activate(self):
-            # Проєктор бере self.Optics і малює його на підкладці
+        if ProjectorInstance.Activate(TargetDevice):
             ProjectorInstance.Project(self.Optics)
             ProjectorInstance.Deactivate()
     # Сенсорний контакт (натискання на скло)
