@@ -1313,6 +1313,11 @@ class Starfield(Component):
         self.Refresh()
         return self
 
+    def SetWarpSpeed(self, Active: bool = True):
+        self.Mode = "Warp" if Active else "Impulse"
+        self.Refresh()
+        return self
+
     def Start(self, Speed=None, Mode=None):
         if Speed is not None:
             self.Speed = float(Speed)

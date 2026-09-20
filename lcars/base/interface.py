@@ -7,100 +7,57 @@ from typing import Any, Optional, Dict, List, Union, Tuple
 from lcars.base.component import Component
 from lcars.base.graphic import Visual, Emitter
 from lcars.base.default import DefaultBackground, Palette
-from lcars.base.type import LCARS, SystemComponent
+from lcars.base.type import LCARS, SystemComponent, Namespace
 from lcars.base.display import LCARSNativeViewport
 
-class SurfaceViewport(LCARS):
-    """100% Власний векторний в'юпорт LCARS."""
-    SurfaceObj = None
-    NativeWindow = None
+WidgetClass = LCARS.Retrieve("Base.Interface.Widget")
+if WidgetClass is None or not callable(WidgetClass):
+    QtWidgetsMod = LCARS.Import("PyQt6.QtWidgets")
+    WidgetClass = getattr(QtWidgetsMod, "QWidget", object) if QtWidgetsMod else object
 
-    def __init__(self, SurfaceObj=None, Parent=None):
-        self.SurfaceObj = SurfaceObj
-        W = 800
-        H = 600
-        if SurfaceObj and hasattr(SurfaceObj, "Optics") and SurfaceObj.Optics:
-            W = getattr(SurfaceObj.Optics, "Width", 800)
-            H = getattr(SurfaceObj.Optics, "Height", 600)
-        self.NativeWindow = LCARSNativeViewport(SurfaceObj=SurfaceObj, Width=W, Height=H)
+if WidgetClass is not object:
+    class SurfaceViewportMeta(type(WidgetClass), Namespace):
+        pass
 
-    def show(self):
-        if self.NativeWindow:
-            self.NativeWindow.show()
-        return self
+    class SurfaceViewport(WidgetClass, metaclass=SurfaceViewportMeta):
+        """Канонічний в'юпорт поверхні LCARS."""
+        SurfaceObj = None
 
-    def showFullScreen(self):
-        if self.NativeWindow:
-            self.NativeWindow.showFullScreen()
-        return self
+        def __init__(self, SurfaceObj=None, Parent=None):
+            super().__init__(Parent)
+            self.SurfaceObj = SurfaceObj
+            if SurfaceObj and hasattr(SurfaceObj, "Optics") and SurfaceObj.Optics:
+                W = getattr(SurfaceObj.Optics, "Width", 800)
+                H = getattr(SurfaceObj.Optics, "Height", 600)
+                if hasattr(self, "resize"):
+                    self.resize(int(W), int(H))
 
-    def hide(self):
-        if self.NativeWindow:
-            self.NativeWindow.hide()
-        return self
+        def paintEvent(self, Event):
+            if self.SurfaceObj and hasattr(self.SurfaceObj, "OpticalDispersion"):
+                self.SurfaceObj.OpticalDispersion(Event)
 
-    def update(self):
-        if self.NativeWindow:
-            self.NativeWindow.update()
-        return self
+        def resizeEvent(self, Event):
+            if self.SurfaceObj and hasattr(self.SurfaceObj, "Rescale"):
+                self.SurfaceObj.Rescale(Event)
 
-    def width(self):
-        if self.NativeWindow:
-            return self.NativeWindow.width()
-        return 800
+        def mousePressEvent(self, Event):
+            if self.SurfaceObj and hasattr(self.SurfaceObj, "TouchContact"):
+                self.SurfaceObj.TouchContact(Event)
 
-    def height(self):
-        if self.NativeWindow:
-            return self.NativeWindow.height()
-        return 600
+        def mouseReleaseEvent(self, Event):
+            if self.SurfaceObj and hasattr(self.SurfaceObj, "TouchRelease"):
+                self.SurfaceObj.TouchRelease(Event)
 
-    def setFixedWidth(self, Width):
-        if self.NativeWindow:
-            self.NativeWindow.Width = int(Width)
-        return self
+        def mouseMoveEvent(self, Event):
+            if self.SurfaceObj and hasattr(self.SurfaceObj, "TouchMovement"):
+                self.SurfaceObj.TouchMovement(Event)
+else:
+    class SurfaceViewport(LCARS):
+        """Канонічний в'юпорт поверхні LCARS."""
+        SurfaceObj = None
 
-    def setFixedHeight(self, Height):
-        if self.NativeWindow:
-            self.NativeWindow.Height = int(Height)
-        return self
-
-    def windowFlags(self):
-        return None
-
-    def setWindowFlags(self, Flags):
-        return self
-
-    def setStyleSheet(self, Sheet):
-        return self
-
-    def isVisible(self):
-        if self.NativeWindow:
-            return self.NativeWindow.isVisible()
-        return True
-
-    def RunEventLoop(self):
-        if self.NativeWindow:
-            self.NativeWindow.RunEventLoop()
-
-    def paintEvent(self, Event):
-        if self.SurfaceObj:
-            self.SurfaceObj.OpticalDispersion(Event)
-
-    def resizeEvent(self, Event):
-        if self.SurfaceObj:
-            self.SurfaceObj.Rescale(Event)
-
-    def mousePressEvent(self, Event):
-        if self.SurfaceObj:
-            self.SurfaceObj.TouchContact(Event)
-
-    def mouseReleaseEvent(self, Event):
-        if self.SurfaceObj:
-            self.SurfaceObj.TouchRelease(Event)
-
-    def mouseMoveEvent(self, Event):
-        if self.SurfaceObj:
-            self.SurfaceObj.TouchMovement(Event)
+        def __init__(self, SurfaceObj=None, Parent=None):
+            self.SurfaceObj = SurfaceObj
 
 # =============================================================================
 # СЕНСОРНА ОПТИЧНА ПОВЕРХНЯ LCARS (SURFACE / PANEL)

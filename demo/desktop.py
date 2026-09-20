@@ -685,8 +685,6 @@ class LCARSDesktop(Screen):
     def ShowCommander(self):  self.Select("COMMANDER")
     def ShowIDE(self):        self.Select("IDE")
     def RequestLock(self):    self.LockRequested.Emit()
-
-
 def Build(Parent=None):
     return LCARSDesktop(Parent=Parent)
 

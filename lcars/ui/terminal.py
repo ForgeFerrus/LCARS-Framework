@@ -8,8 +8,6 @@
 # Terminal відповідає за UI.
 # Console відповідає за виконання команд.
 
-from __future__ import annotations
-
 from lcars.base.type import LCARS
 from lcars.base.component import (
     LCARSButton,
@@ -17,7 +15,6 @@ from lcars.base.component import (
     LCARSBar,
     LCARSElbow,
     LCARSIndicator,
-    ActiveAudio,
 )
 from lcars.base.interface import Panel, PADD
 from lcars.base.default import Palette, SystemTheme
