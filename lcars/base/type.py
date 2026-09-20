@@ -238,6 +238,8 @@ class LCARS(metaclass=Namespace):
 
     # Канонічний ініціалізатор системного вузла LCARS
     def Initialize(self, SystemId=None, Id=None, Parent=None, **kwargs):
+        if getattr(self, "Initialized", False):
+            return self
         self.SystemId = SystemId or Id or getattr(self, "SystemId", None) or f"Sys{id(self)}"
         self.Id = self.SystemId
         self.Parent = Parent

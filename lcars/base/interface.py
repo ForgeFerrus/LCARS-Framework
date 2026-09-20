@@ -114,6 +114,9 @@ class Surface(SystemComponent):
     Viewport = None
 
     def Initialize(self, Optics=None, Parent=None, **kwargs):
+        if getattr(self, "Initialized", False):
+            return self
+        super().Initialize(Parent=Parent, **kwargs)
         self.Optics = Optics
         self.Layers = kwargs.get("Layers", [])
         if self.Optics is not None:
@@ -125,6 +128,7 @@ class Surface(SystemComponent):
                 self.setFixedHeight(int(OpticsHeight))
             if OpticsWidth is not None and OpticsType in ("button", "indicator", "elbow"):
                 self.setFixedWidth(int(OpticsWidth))
+        return self
 
     def GetViewport(self):
         if self.Viewport is None:
