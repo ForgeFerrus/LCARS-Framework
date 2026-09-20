@@ -389,6 +389,13 @@ class LCARSButton(Component):
     SoftHalf = SoftHalfType
     Elbow = ElbowType
 
+    SoftLeftType = SoftHalfType
+    SoftRightType = SoftHalfType
+    RectLeftType = RectType
+    RectRightType = RectType
+    PillLeftType = PillHalfType
+    PillRightType = PillHalfType
+
     # --- НАПРЯМКИ ЗРІЗУ/ЗАОКРУГЛЕННЯ (Direction) ---
     # 0 = праворуч, 180 = ліворуч, 90 = знизу, 270 = зверху
     East = 0
@@ -522,6 +529,16 @@ class LCARSIndicator(Component):
     RectType = 1        # Прямокутний блок
     SoftType = 2        # Зрізані кути (фаски)
     PillHalf = 3    # Напівпігулка (напівтаблетка)
+    PillHalfType = 3
+
+    Rect = RectType
+    Soft = SoftType
+    RectLeftType = RectType
+    RectRightType = RectType
+    SoftLeftType = SoftType
+    SoftRightType = SoftType
+    PillLeftType = PillHalfType
+    PillRightType = PillHalfType
 
     # Стандартні компактні розміри кінцевика
     Width = 24

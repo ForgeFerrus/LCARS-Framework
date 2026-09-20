@@ -690,4 +690,6 @@ class LCARSDesktop(Screen):
 def Build(Parent=None):
     return LCARSDesktop(Parent=Parent)
 
-LCARS.Launch(Build)
+
+if __name__ == "__main__":
+    LCARS.Launch(Build)
