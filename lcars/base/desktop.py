@@ -1,6 +1,6 @@
-# LCARS FRAMEWORK — Головний Десктопний Екран Зорельота
-# Векторна топологія LCARS без залежностей від застарілих фреймворків.
-# Стандарт: Titanium · Ідентифікатори PascalCase · Лише LCARS API
+# LCARS FRAMEWORK -- Головний Десктопний Екран Зорельота
+# Векторна топологія LCARS. Стандарт Titanium.
+# Ідентифікатори: PascalCase, латиниця. Кирилиця -- лише в коментарях та Text= рядках.
 
 from lcars.base.type import LCARS
 from lcars.base.default import Palette, RandomButtonColor
@@ -11,7 +11,7 @@ from lcars.core.signal import Transmission
 
 
 # =============================================================================
-# LCARS ДЕСКТОП — ГОЛОВНА ОПЕРАЦІЙНА ПОВЕРХНЯ ЗОРЕЛЬОТА
+# LCARS DESKTOP -- головна операційна поверхня зорельота
 # =============================================================================
 
 class LCARSDesktop(Screen):
@@ -20,17 +20,18 @@ class LCARSDesktop(Screen):
 
     def Initialize(self, Parent=None):
         super().Initialize(Parent=Parent)
-        self.ActivePage = None
+        self.ActivePage = ""
         self.Pages = {}
         self.NavItems = {}
         self.ModeLabel = None
         self.Build()
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # ВЕКТОРНА ПОБУДОВА ПОВЕРХНІ
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     def Build(self):
+        # Горизонтальний розподіл: ліва панель навігації + права зона вмісту
         self.SetHorizontal(18, 18, 18, 18, Spacing=10)
 
         self.LeftColumn = Panel()
@@ -46,52 +47,50 @@ class LCARSDesktop(Screen):
         self.BuildChamber()
         self.BuildFooterZone()
         self.BuildPages()
-        self.Select("МІСТОК")
+        self.Select("BRIDGE")
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # ЛІВА НАВІГАЦІЙНА ПАНЕЛЬ
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     def BuildNavigation(self):
-        # Верхня арка навігаційної панелі
-        TopArch = LCARSElbow(Corner="top-left", Height=85)
-        self.LeftColumn.Add(TopArch)
+        # Верхня арка лівої панелі
+        self.LeftColumn.Add(LCARSElbow(Corner="top-left", Height=85))
 
-        # Таблиця навігаційних кнопок: назва → обробник
+        # NavMap: (внутрішній ключ Latin, текст кнопки Ukrainian, обробник)
         NavMap = [
-            ("РОБОЧИЙ ПРОСТІР",  self.ActivateWorkspace),
-            ("МІСТОК",           self.ActivateBridge),
-            ("СИСТЕМИ",          self.ActivateSystem),
-            ("ПІДТРИМКА",        self.ActivateSupport),
-            ("МЕНЮ",             self.ActivateMenu),
-            ("КОНСОЛЬ",          self.ActivateConsole),
-            ("ДВИГУНИ",          self.ActivateEngineering),
-            ("НАУКА",            self.ActivateScience),
-            ("АГЕНТ",            self.ActivateAgent),
-            ("КОНСТРУКТОР",      self.ActivateDesigner),
-            ("КОМАНДУВАННЯ",     self.ActivateCommander),
-            ("РОЗРОБКА",         self.ActivateIDE),
-            ("БЛОКУВАННЯ",       self.TriggerLock),
+            ("WORKSPACE",   "РОБОЧИЙ ПРОСТІР",  self.ActivateWorkspace),
+            ("BRIDGE",      "МІСТОК",            self.ActivateBridge),
+            ("SYSTEMS",     "СИСТЕМИ",           self.ActivateSystem),
+            ("SUPPORT",     "ПІДТРИМКА",         self.ActivateSupport),
+            ("MENU",        "МЕНЮ",              self.ActivateMenu),
+            ("CONSOLE",     "КОНСОЛЬ",           self.ActivateConsole),
+            ("ENGINES",     "ДВИГУНИ",           self.ActivateEngineering),
+            ("SCIENCE",     "НАУКА",             self.ActivateScience),
+            ("AGENT",       "АГЕНТ",             self.ActivateAgent),
+            ("DESIGNER",    "КОНСТРУКТОР",       self.ActivateDesigner),
+            ("COMMANDER",   "КОМАНДУВАННЯ",      self.ActivateCommander),
+            ("IDE",         "РОЗРОБКА",          self.ActivateIDE),
+            ("LOCK",        "БЛОКУВАННЯ",        self.TriggerLock),
         ]
 
-        for Name, Handler in NavMap:
+        for Key, Label, Handler in NavMap:
             Btn = LCARSButton(
-                Text=Name,
+                Text=Label,
                 Form=LCARSButton.SoftLeftType,
                 Height=36,
                 FontSize=16,
                 Handler=Handler
             )
-            self.NavItems[Name] = Btn
+            self.NavItems[Key] = Btn
             self.LeftColumn.Add(Btn)
 
-        # Нижня арка навігаційної панелі
-        BottomArch = LCARSElbow(Corner="bottom-left", Height=61)
-        self.LeftColumn.Add(BottomArch)
+        # Нижня арка лівої панелі
+        self.LeftColumn.Add(LCARSElbow(Corner="bottom-left", Height=61))
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # ВЕРХНЯ ЗАГОЛОВКОВА ЗОНА
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     def BuildHeaderZone(self):
         # Рядок загального стану системи
@@ -99,13 +98,12 @@ class LCARSDesktop(Screen):
         TopRow.SetHorizontal(0, 0, 0, 0, Spacing=7)
 
         self.StatusBar = LCARSIndicator(
-            Text="LCARS БОРТОВИЙ КОМ'ЮТЕР // ОНЛАЙН",
+            Text="LCARS БОРТОВИЙ КОМП'ЮТЕР // ОНЛАЙН",
             Form=LCARSIndicator.RectLeftType,
             FontSize=18,
             Height=52
         )
         TopRow.Add(self.StatusBar, 1)
-
         TopRow.Add(LCARSBar(Form=LCARSBar.RectType, Width=72, Height=52))
         self.RightColumn.Add(TopRow)
 
@@ -123,28 +121,28 @@ class LCARSDesktop(Screen):
         ModeRow.Add(LCARSBar(Form=LCARSBar.PillHalfType, Width=180, Height=32))
         self.RightColumn.Add(ModeRow)
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # КАМЕРА — ОСНОВНА ЗОНА ВМІСТУ
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
+    # КАМЕРА -- ОСНОВНА ЗОНА ВМІСТУ
+    # -------------------------------------------------------------------------
 
     def BuildChamber(self):
-        # Центральна камера — векторний контейнер активних сторінок
+        # Центральна камера -- векторний контейнер активних сторінок
         self.Chamber = Panel()
         self.Chamber.SetVertical(0, 0, 0, 0, Spacing=4)
         self.RightColumn.Add(self.Chamber, 1)
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # НИЖНЯ ЗОНА СТАНУ
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     def BuildFooterZone(self):
-        # Рядок діагностичних показників
+        # Рядок діагностичних показників зорельота
         DiagRow = Panel()
         DiagRow.SetHorizontal(0, 0, 0, 0, Spacing=7)
 
         Metrics = [
-            ("ТЕМПЕРАТУРА ЯДРА", "47.2 °C"),
-            ("ПОТУЖНІСТЬ",       "12.4 ГВт"),
+            ("ТЕМПЕРАТУРА ЯДРА", "47.2 C"),
+            ("ПОТУЖНІСТЬ",       "12.4 GW"),
             ("СУБПРОСТІР",       "НОМІНАЛ"),
             ("ЗАХИСНІ ПОЛЯ",     "ГОТОВНІСТЬ"),
             ("СЕНСОРНИЙ МАСИВ",  "АКТИВНИЙ"),
@@ -173,66 +171,70 @@ class LCARSDesktop(Screen):
         StatusRow.Add(LCARSElbow(Corner="bottom-right", Width=160, Height=36))
         self.RightColumn.Add(StatusRow)
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # СТОРІНКИ КАМЕРИ
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     def BuildPages(self):
-        # Реєстрація всіх векторних сторінок у камері вмісту
+        # Реєстрація всіх векторних сторінок -- ключі Latin, тексти Ukrainian
         PageDefs = [
-            ("МІСТОК",           "ГОЛОВНИЙ ТАКТИЧНИЙ МОНІТОР"),
-            ("МЕНЮ",             "СИСТЕМНЕ УПРАВЛІННЯ БОРТОВИМ КОМ'ЮТЕРОМ"),
-            ("РОБОЧИЙ ПРОСТІР",  "ОПЕРАТИВНА ЗОНА ОПЕРАТОРА"),
-            ("СИСТЕМИ",          "ДІАГНОСТИКА ВСІХ СИСТЕМ ЗОРЕЛЬОТА"),
-            ("ПІДТРИМКА",        "ТЕХНІЧНА ДОПОМОГА ТА ОБСЛУГОВУВАННЯ"),
-            ("КОНСОЛЬ",          "ІНТЕРАКТИВНА КОМАНДНА КОНСОЛЬ LCARS"),
-            ("ДВИГУНИ",          "КОНТРОЛЬ ВАРП ТА ІМПУЛЬСНИХ ДВИГУНІВ"),
-            ("НАУКА",            "НАУКОВІ ПРИЛАДИ ТА АНАЛІЗ ДАНИХ"),
-            ("АГЕНТ",            "АВТОНОМНИЙ АГЕНТ ЗОРЕЛЬОТА"),
-            ("КОНСТРУКТОР",      "ІНТЕРФЕЙС ДИЗАЙНУ LCARS"),
-            ("КОМАНДУВАННЯ",     "СТРАТЕГІЧНИЙ КОМАНДНИЙ ЦЕНТР"),
-            ("РОЗРОБКА",         "ІНТЕГРОВАНЕ СЕРЕДОВИЩЕ РОЗРОБКИ"),
+            ("BRIDGE",     "МІСТОК",           "ГОЛОВНИЙ ТАКТИЧНИЙ МОНІТОР"),
+            ("MENU",       "МЕНЮ",             "СИСТЕМНЕ УПРАВЛІННЯ КОМП'ЮТЕРОМ"),
+            ("WORKSPACE",  "РОБОЧИЙ ПРОСТІР",  "ОПЕРАТИВНА ЗОНА ОПЕРАТОРА"),
+            ("SYSTEMS",    "СИСТЕМИ",          "ДІАГНОСТИКА СИСТЕМ ЗОРЕЛЬОТА"),
+            ("SUPPORT",    "ПІДТРИМКА",        "ТЕХНІЧНА ДОПОМОГА ТА ОБСЛУГОВУВАННЯ"),
+            ("CONSOLE",    "КОНСОЛЬ",          "ІНТЕРАКТИВНА КОМАНДНА КОНСОЛЬ"),
+            ("ENGINES",    "ДВИГУНИ",          "КОНТРОЛЬ ВАРП ТА ІМПУЛЬСНИХ ДВИГУНІВ"),
+            ("SCIENCE",    "НАУКА",            "НАУКОВІ ПРИЛАДИ ТА АНАЛІЗ ДАНИХ"),
+            ("AGENT",      "АГЕНТ",            "АВТОНОМНИЙ АГЕНТ ЗОРЕЛЬОТА"),
+            ("DESIGNER",   "КОНСТРУКТОР",      "ІНТЕРФЕЙС ДИЗАЙНУ LCARS"),
+            ("COMMANDER",  "КОМАНДУВАННЯ",     "СТРАТЕГІЧНИЙ КОМАНДНИЙ ЦЕНТР"),
+            ("IDE",        "РОЗРОБКА",         "ІНТЕГРОВАНЕ СЕРЕДОВИЩЕ РОЗРОБКИ"),
         ]
 
-        for Title, Subtitle in PageDefs:
+        for Key, Title, Subtitle in PageDefs:
             Page = Panel()
             Page.SetVertical(0, 0, 0, 0, Spacing=12)
             Page.Add(LCARSLabel(Text=Title,    FontSize=28, Align="center", Height=60))
             Page.Add(LCARSLabel(Text=Subtitle, FontSize=18, Align="center", Height=32))
-            self.Pages[Title] = Page
+            self.Pages[Key] = Page
             self.Chamber.Add(Page)
             Page.hide()
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # ПЕРЕМИКАННЯ СТОРІНОК
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
-    def Select(self, Name):
-        self.ActivePage = Name
-        if self.ModeLabel:
-            self.ModeLabel.SetText("РЕЖИМ // " + Name)
-        for PageName, Page in self.Pages.items():
-            if PageName == Name:
+    def Select(self, Key):
+        # Активує сторінку за Latin-ключем, приховує решту
+        self.ActivePage = Key
+        if self.ModeLabel is not None:
+            PageNode = self.Pages.get(Key)
+            Title = PageNode.Items.get("0", None) if PageNode else None
+            DisplayName = Title.Text if Title and hasattr(Title, "Text") else Key
+            self.ModeLabel.SetText("РЕЖИМ // " + DisplayName)
+        for PageKey, Page in self.Pages.items():
+            if PageKey == Key:
                 Page.show()
             else:
                 Page.hide()
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # ОБРОБНИКИ НАВІГАЦІЇ
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
-    def ActivateWorkspace(self):   self.Select("РОБОЧИЙ ПРОСТІР")
-    def ActivateBridge(self):      self.Select("МІСТОК")
-    def ActivateSystem(self):      self.Select("СИСТЕМИ")
-    def ActivateSupport(self):     self.Select("ПІДТРИМКА")
-    def ActivateMenu(self):        self.Select("МЕНЮ")
-    def ActivateConsole(self):     self.Select("КОНСОЛЬ")
-    def ActivateEngineering(self): self.Select("ДВИГУНИ")
-    def ActivateScience(self):     self.Select("НАУКА")
-    def ActivateAgent(self):       self.Select("АГЕНТ")
-    def ActivateDesigner(self):    self.Select("КОНСТРУКТОР")
-    def ActivateCommander(self):   self.Select("КОМАНДУВАННЯ")
-    def ActivateIDE(self):         self.Select("РОЗРОБКА")
+    def ActivateWorkspace(self):   self.Select("WORKSPACE")
+    def ActivateBridge(self):      self.Select("BRIDGE")
+    def ActivateSystem(self):      self.Select("SYSTEMS")
+    def ActivateSupport(self):     self.Select("SUPPORT")
+    def ActivateMenu(self):        self.Select("MENU")
+    def ActivateConsole(self):     self.Select("CONSOLE")
+    def ActivateEngineering(self): self.Select("ENGINES")
+    def ActivateScience(self):     self.Select("SCIENCE")
+    def ActivateAgent(self):       self.Select("AGENT")
+    def ActivateDesigner(self):    self.Select("DESIGNER")
+    def ActivateCommander(self):   self.Select("COMMANDER")
+    def ActivateIDE(self):         self.Select("IDE")
 
     def TriggerLock(self):
         # Надіслати сигнал блокування бортового комп'ютера
