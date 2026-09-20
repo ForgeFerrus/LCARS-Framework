@@ -15,15 +15,15 @@ from lcars.core.signal import Transmission
 # =============================================================================
 
 class LCARSDesktop(Screen):
-    """
-    Головна операційна поверхня бортового комп'ютера LCARS.
-    Векторна композиція: ліва навігаційна панель + права зона вмісту.
-    """
 
     LockRequested = Transmission()
 
-    def __init__(self, Parent=None):
-        super().__init__(Parent=Parent)
+    def Initialize(self, Parent=None):
+        super().Initialize(Parent=Parent)
+        self.ActivePage = None
+        self.Pages = {}
+        self.NavItems = {}
+        self.ModeLabel = None
         self.Build()
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -31,7 +31,6 @@ class LCARSDesktop(Screen):
     # ─────────────────────────────────────────────────────────────────────────
 
     def Build(self):
-        """Зведення усіх зон десктопу у єдину векторну топологію."""
         self.SetHorizontal(18, 18, 18, 18, Spacing=10)
 
         self.LeftColumn = Panel()
@@ -41,11 +40,6 @@ class LCARSDesktop(Screen):
         self.RightColumn = Panel()
         self.RightColumn.SetVertical(0, 0, 0, 0, Spacing=7)
         self.Add(self.RightColumn, 1)
-
-        self.ActivePage = None
-        self.Pages = {}
-        self.NavItems = {}
-        self.ModeLabel = None
 
         self.BuildNavigation()
         self.BuildHeaderZone()
@@ -59,13 +53,11 @@ class LCARSDesktop(Screen):
     # ─────────────────────────────────────────────────────────────────────────
 
     def BuildNavigation(self):
-        """Векторна ліва навігаційна панель з ліктьовими дугами LCARS."""
-        TopArch = LCARSElbow(
-            Corner="top-left",
-            Height=85
-        )
+        # Верхня арка навігаційної панелі
+        TopArch = LCARSElbow(Corner="top-left", Height=85)
         self.LeftColumn.Add(TopArch)
 
+        # Таблиця навігаційних кнопок: назва → обробник
         NavMap = [
             ("РОБОЧИЙ ПРОСТІР",  self.ActivateWorkspace),
             ("МІСТОК",           self.ActivateBridge),
@@ -93,10 +85,8 @@ class LCARSDesktop(Screen):
             self.NavItems[Name] = Btn
             self.LeftColumn.Add(Btn)
 
-        BottomArch = LCARSElbow(
-            Corner="bottom-left",
-            Height=61
-        )
+        # Нижня арка навігаційної панелі
+        BottomArch = LCARSElbow(Corner="bottom-left", Height=61)
         self.LeftColumn.Add(BottomArch)
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -104,26 +94,22 @@ class LCARSDesktop(Screen):
     # ─────────────────────────────────────────────────────────────────────────
 
     def BuildHeaderZone(self):
-        """Рядок стану системи та рядок поточного режиму."""
+        # Рядок загального стану системи
         TopRow = Panel()
         TopRow.SetHorizontal(0, 0, 0, 0, Spacing=7)
 
         self.StatusBar = LCARSIndicator(
-            Text="LCARS БОРТОВИЙ КОМП'ЮТЕР // ОНЛАЙН",
+            Text="LCARS БОРТОВИЙ КОМ'ЮТЕР // ОНЛАЙН",
             Form=LCARSIndicator.RectLeftType,
             FontSize=18,
             Height=52
         )
         TopRow.Add(self.StatusBar, 1)
 
-        AccentPill = LCARSBar(
-            Form=LCARSBar.RectType,
-            Width=72,
-            Height=52
-        )
-        TopRow.Add(AccentPill)
+        TopRow.Add(LCARSBar(Form=LCARSBar.RectType, Width=72, Height=52))
         self.RightColumn.Add(TopRow)
 
+        # Рядок поточного режиму
         ModeRow = Panel()
         ModeRow.SetHorizontal(0, 0, 0, 0, Spacing=7)
 
@@ -134,13 +120,7 @@ class LCARSDesktop(Screen):
             Height=32
         )
         ModeRow.Add(self.ModeLabel, 1)
-
-        ScanPill = LCARSBar(
-            Form=LCARSBar.PillHalfType,
-            Width=180,
-            Height=32
-        )
-        ModeRow.Add(ScanPill)
+        ModeRow.Add(LCARSBar(Form=LCARSBar.PillHalfType, Width=180, Height=32))
         self.RightColumn.Add(ModeRow)
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -148,7 +128,7 @@ class LCARSDesktop(Screen):
     # ─────────────────────────────────────────────────────────────────────────
 
     def BuildChamber(self):
-        """Центральна камера вмісту — векторний контейнер активних сторінок."""
+        # Центральна камера — векторний контейнер активних сторінок
         self.Chamber = Panel()
         self.Chamber.SetVertical(0, 0, 0, 0, Spacing=4)
         self.RightColumn.Add(self.Chamber, 1)
@@ -158,16 +138,16 @@ class LCARSDesktop(Screen):
     # ─────────────────────────────────────────────────────────────────────────
 
     def BuildFooterZone(self):
-        """Діагностичний рядок показників та нижній статус-рядок."""
+        # Рядок діагностичних показників
         DiagRow = Panel()
         DiagRow.SetHorizontal(0, 0, 0, 0, Spacing=7)
 
         Metrics = [
-            ("ТЕМПЕРАТУРА ЯДРА",    "47.2 °C"),
-            ("ПОТУЖНІСТЬ",          "12.4 ГВт"),
-            ("СУБПРОСТІР",          "НОМІНАЛ"),
-            ("ЗАХИСНІ ПОЛЯ",        "ГОТОВНІСТЬ"),
-            ("СЕНСОРНИЙ МАСИВ",     "АКТИВНИЙ"),
+            ("ТЕМПЕРАТУРА ЯДРА", "47.2 °C"),
+            ("ПОТУЖНІСТЬ",       "12.4 ГВт"),
+            ("СУБПРОСТІР",       "НОМІНАЛ"),
+            ("ЗАХИСНІ ПОЛЯ",     "ГОТОВНІСТЬ"),
+            ("СЕНСОРНИЙ МАСИВ",  "АКТИВНИЙ"),
         ]
 
         for Caption, Reading in Metrics:
@@ -179,6 +159,7 @@ class LCARSDesktop(Screen):
 
         self.RightColumn.Add(DiagRow)
 
+        # Нижній рядок статусу з кутовою аркою
         StatusRow = Panel()
         StatusRow.SetHorizontal(0, 0, 0, 0, Spacing=7)
 
@@ -189,13 +170,7 @@ class LCARSDesktop(Screen):
             Height=36
         )
         StatusRow.Add(self.SystemStatus, 1)
-
-        CornerArch = LCARSElbow(
-            Corner="bottom-right",
-            Width=160,
-            Height=36
-        )
-        StatusRow.Add(CornerArch)
+        StatusRow.Add(LCARSElbow(Corner="bottom-right", Width=160, Height=36))
         self.RightColumn.Add(StatusRow)
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -203,39 +178,36 @@ class LCARSDesktop(Screen):
     # ─────────────────────────────────────────────────────────────────────────
 
     def BuildPages(self):
-        """Реєстрація векторних сторінок у камері вмісту."""
+        # Реєстрація всіх векторних сторінок у камері вмісту
+        PageDefs = [
+            ("МІСТОК",           "ГОЛОВНИЙ ТАКТИЧНИЙ МОНІТОР"),
+            ("МЕНЮ",             "СИСТЕМНЕ УПРАВЛІННЯ БОРТОВИМ КОМ'ЮТЕРОМ"),
+            ("РОБОЧИЙ ПРОСТІР",  "ОПЕРАТИВНА ЗОНА ОПЕРАТОРА"),
+            ("СИСТЕМИ",          "ДІАГНОСТИКА ВСІХ СИСТЕМ ЗОРЕЛЬОТА"),
+            ("ПІДТРИМКА",        "ТЕХНІЧНА ДОПОМОГА ТА ОБСЛУГОВУВАННЯ"),
+            ("КОНСОЛЬ",          "ІНТЕРАКТИВНА КОМАНДНА КОНСОЛЬ LCARS"),
+            ("ДВИГУНИ",          "КОНТРОЛЬ ВАРП ТА ІМПУЛЬСНИХ ДВИГУНІВ"),
+            ("НАУКА",            "НАУКОВІ ПРИЛАДИ ТА АНАЛІЗ ДАНИХ"),
+            ("АГЕНТ",            "АВТОНОМНИЙ АГЕНТ ЗОРЕЛЬОТА"),
+            ("КОНСТРУКТОР",      "ІНТЕРФЕЙС ДИЗАЙНУ LCARS"),
+            ("КОМАНДУВАННЯ",     "СТРАТЕГІЧНИЙ КОМАНДНИЙ ЦЕНТР"),
+            ("РОЗРОБКА",         "ІНТЕГРОВАНЕ СЕРЕДОВИЩЕ РОЗРОБКИ"),
+        ]
 
-        def MakePage(Title, Subtitle=None):
+        for Title, Subtitle in PageDefs:
             Page = Panel()
             Page.SetVertical(0, 0, 0, 0, Spacing=12)
-            Page.Add(LCARSLabel(Text=Title, FontSize=28, Align="center", Height=60))
-            if Subtitle:
-                Page.Add(LCARSLabel(Text=Subtitle, FontSize=18, Align="center", Height=32))
-            return Page
-
-        self.Pages["МІСТОК"]          = MakePage("МІСТОК", "ГОЛОВНИЙ ТАКТИЧНИЙ МОНІТОР")
-        self.Pages["МЕНЮ"]            = MakePage("МЕНЮ", "СИСТЕМНЕ УПРАВЛІННЯ БОРТОВИМ КОМП'ЮТЕРОМ")
-        self.Pages["РОБОЧИЙ ПРОСТІР"] = MakePage("РОБОЧИЙ ПРОСТІР", "ОПЕРАТИВНА ЗОНА ОПЕРАТОРА")
-        self.Pages["СИСТЕМИ"]         = MakePage("СИСТЕМИ", "ДІАГНОСТИКА ВСІХ СИСТЕМ ЗОРЕЛЬОТА")
-        self.Pages["ПІДТРИМКА"]       = MakePage("ПІДТРИМКА", "ТЕХНІЧНА ДОПОМОГА ТА ОБСЛУГОВУВАННЯ")
-        self.Pages["КОНСОЛЬ"]         = MakePage("КОНСОЛЬ", "ІНТЕРАКТИВНА КОМАНДНА КОНСОЛЬ LCARS")
-        self.Pages["ДВИГУНИ"]         = MakePage("ДВИГУНИ", "КОНТРОЛЬ ВАРП ТА ІМПУЛЬСНИХ ДВИГУНІВ")
-        self.Pages["НАУКА"]           = MakePage("НАУКА", "НАУКОВІ ПРИЛАДИ ТА АНАЛІЗ ДАНИХ")
-        self.Pages["АГЕНТ"]           = MakePage("АГЕНТ", "АВТОНОМНИЙ АГЕНТ ЗОРЕЛЬОТА")
-        self.Pages["КОНСТРУКТОР"]     = MakePage("КОНСТРУКТОР", "ІНТЕРФЕЙС ДИЗАЙНУ LCARS")
-        self.Pages["КОМАНДУВАННЯ"]    = MakePage("КОМАНДУВАННЯ", "СТРАТЕГІЧНИЙ КОМАНДНИЙ ЦЕНТР")
-        self.Pages["РОЗРОБКА"]        = MakePage("РОЗРОБКА", "ІНТЕГРОВАНЕ СЕРЕДОВИЩЕ РОЗРОБКИ")
-
-        for Page in self.Pages.values():
+            Page.Add(LCARSLabel(Text=Title,    FontSize=28, Align="center", Height=60))
+            Page.Add(LCARSLabel(Text=Subtitle, FontSize=18, Align="center", Height=32))
+            self.Pages[Title] = Page
             self.Chamber.Add(Page)
             Page.hide()
 
     # ─────────────────────────────────────────────────────────────────────────
-    # НАВІГАЦІЯ — ПЕРЕМИКАННЯ СТОРІНОК
+    # ПЕРЕМИКАННЯ СТОРІНОК
     # ─────────────────────────────────────────────────────────────────────────
 
     def Select(self, Name):
-        """Активувати сторінку камери за назвою розділу."""
         self.ActivePage = Name
         if self.ModeLabel:
             self.ModeLabel.SetText("РЕЖИМ // " + Name)
@@ -263,5 +235,5 @@ class LCARSDesktop(Screen):
     def ActivateIDE(self):         self.Select("РОЗРОБКА")
 
     def TriggerLock(self):
-        """Надіслати сигнал блокування бортового комп'ютера."""
+        # Надіслати сигнал блокування бортового комп'ютера
         self.LockRequested.Emit()
